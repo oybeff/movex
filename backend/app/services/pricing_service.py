@@ -102,12 +102,22 @@ def calculate_order_price(
     end_date: date,
     delivery_latitude: Optional[str],
     delivery_longitude: Optional[str],
+    price_per_day_override: Optional[Decimal] = None,
 ) -> OrderPrice:
     """
     Buyurtma narxini to'liq hisoblab beradi.
 
     Xato sanalar yoki narxsiz texnika uchun ValueError qaytaradi —
     chaqiruvchi uni HTTP 400 ga aylantiradi.
+
+    price_per_day_override — zayavka bo'yicha kelishilgan kunlik narx.
+    Egasi taklifda katalogdagidan boshqa narx aytishi mumkin, shuning uchun
+    kerak.
+
+    DIQQAT: bu qiymat FAQAT bazadagi request_offers yozuvidan olinadi.
+    So'rov tanasidan kelgan narxni bu yerga uzatish MUMKIN EMAS — aks holda
+    mijoz o'z narxini yuborib, ekskavatorni 1 000 so'mga olardi. Aynan shu
+    teshik pricing_service yozilishiga sabab bo'lgan.
     """
     days = rental_days(start_date, end_date)
     if days <= 0:
@@ -115,10 +125,15 @@ def calculate_order_price(
     if days > MAX_RENTAL_DAYS:
         raise ValueError(f"Ijara muddati {MAX_RENTAL_DAYS} kundan oshmasligi kerak")
 
-    if equipment.price_per_day is None or Decimal(str(equipment.price_per_day)) <= 0:
+    daily_rate = (
+        price_per_day_override
+        if price_per_day_override is not None
+        else equipment.price_per_day
+    )
+    if daily_rate is None or Decimal(str(daily_rate)) <= 0:
         raise ValueError("Texnikaning kunlik narxi ko'rsatilmagan")
 
-    subtotal = _round_to_sum(Decimal(str(equipment.price_per_day)) * days)
+    subtotal = _round_to_sum(Decimal(str(daily_rate)) * days)
 
     percent = get_commission_percent(db)
     commission = _round_to_sum(subtotal * percent / Decimal("100"))

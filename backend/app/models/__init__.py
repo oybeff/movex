@@ -14,3 +14,4 @@ from .otp_verification import OTPVerification
 from .payout_request import PayoutRequest
 from .notification import DeviceToken, Notification
 from .eskiz_token import EskizToken
+from .equipment_request import EquipmentRequest, RequestOffer

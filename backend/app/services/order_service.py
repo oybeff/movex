@@ -13,7 +13,12 @@ from typing import Optional
 from collections import defaultdict
 
 
-def create_order(db: Session, order: OrderCreate, user_id: int):
+def create_order(
+    db: Session,
+    order: OrderCreate,
+    user_id: int,
+    price_per_day_override=None,
+):
     """
     Yangi buyurtma yaratish
 
@@ -25,6 +30,11 @@ def create_order(db: Session, order: OrderCreate, user_id: int):
 
     MUHIM: Texnika avtomatik 'busy' holatiga o'tmaydi!
     Owner texnikani qo'lda 'busy' yoki 'maintenance' holatiga o'tkazishi mumkin.
+
+    price_per_day_override — zayavka bo'yicha kelishilgan kunlik narx.
+    Uni FAQAT request_service uzatadi va faqat bazadagi taklifdan oladi.
+    HTTP qatlamidan bu yerga tushishi mumkin emas: aks holda mijoz o'z
+    narxini yuborib to'lovni nolga tushirardi.
     """
     # 1. Balansni olish yoki yaratish
     balance = db.query(Balance).filter(Balance.user_id == user_id).first()
@@ -78,6 +88,7 @@ def create_order(db: Session, order: OrderCreate, user_id: int):
             end_date=order.end_date,
             delivery_latitude=order.delivery_latitude,
             delivery_longitude=order.delivery_longitude,
+            price_per_day_override=price_per_day_override,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))

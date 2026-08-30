@@ -6,8 +6,16 @@ class OrderBase(BaseModel):
     equipment_id: int
     start_date: date
     end_date: date
-    total_amount: float = Field(gt=0, description="Total amount must be positive")
-    commission: float = Field(ge=0, description="Commission must be non-negative")
+    # Summalarni SERVER hisoblaydi (pricing_service). Bu maydonlar faqat
+    # eski mobil ilovalar ular bilan so'rov yuborishda davom etayotgani
+    # uchun qolgan — kelgan qiymat e'tiborga olinmaydi va create_order
+    # ichida qayta yoziladi.
+    #
+    # Ilgari ular MAJBURIY edi, va shu sababli serverning o'zi buyurtma
+    # yaratmoqchi bo'lganda (zayavkadan taklif tanlanganda) 500 chiqardi:
+    # yo'q summani to'ldirish kerak bo'lardi.
+    total_amount: Optional[float] = Field(None, description="Server hisoblaydi, e'tiborga olinmaydi")
+    commission: Optional[float] = Field(None, description="Server hisoblaydi, e'tiborga olinmaydi")
     delivery_latitude: str = Field(..., description="Delivery location latitude")
     delivery_longitude: str = Field(..., description="Delivery location longitude")
     delivery_address: Optional[str] = Field(None, description="Delivery address (optional)")

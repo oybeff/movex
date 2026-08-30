@@ -24,7 +24,7 @@ fi
 
 failed=0
 
-for test in verify_equipment_types verify_access verify_money verify_refunds verify_payme verify_payouts verify_notifications verify_otp_security verify_smoke_get; do
+for test in verify_equipment_types verify_access verify_money verify_refunds verify_payme verify_payouts verify_notifications verify_requests verify_otp_security verify_smoke_get; do
   printf '\n\033[1m### %s ###\033[0m\n' "$test"
   if "$PY" "$DIR/$test.py"; then
     :

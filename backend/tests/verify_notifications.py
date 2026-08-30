@@ -207,10 +207,22 @@ check(
     all("equipment_model" in n for n in items),
     "поле equipment_model отсутствует в ответе API",
 )
+# Модель обязательна только там, где машина уже известна. У заявки
+# (request_created) её нет и быть не может: клиент называет ТИП, а
+# конкретную машину предлагает владелец — позже.
+order_notifications = [n for n in with_type if n["type"].startswith("order_")]
 check(
     "у уведомлений о заказе модель заполнена",
-    all(n.get("equipment_model") for n in with_type),
-    str([n["id"] for n in with_type if not n.get("equipment_model")][:5]),
+    all(n.get("equipment_model") for n in order_notifications),
+    str([n["id"] for n in order_notifications if not n.get("equipment_model")][:5]),
+)
+check(
+    "у уведомления о новой заявке модели нет — машина ещё не выбрана",
+    all(
+        not n.get("equipment_model")
+        for n in items
+        if n["type"] == "request_created"
+    ),
 )
 
 leaked = [
