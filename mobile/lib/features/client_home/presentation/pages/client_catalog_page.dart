@@ -105,8 +105,8 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
         final query = _searchController.text.toLowerCase();
         final searchMatch = query.isEmpty ||
             EquipmentTypes.label(eq.type).toLowerCase().contains(query) ||
-            (eq.type?.toLowerCase().contains(query) ?? false) ||
-            (eq.model?.toLowerCase().contains(query) ?? false);
+            eq.type.toLowerCase().contains(query) ||
+            eq.model.toLowerCase().contains(query);
 
         // Type filter
         final typeMatch = _selectedType == 'all' || eq.type == _selectedType;
@@ -139,9 +139,11 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
     });
   }
 
+  /// Filtrda ko'rsatiladigan turlar — faqat ro'yxatda bor texnika turlari.
+  /// Bular kodlar ('excavator'), nomi EquipmentTypes.label orqali olinadi.
   List<String> get _equipmentTypes {
-    final types = _equipmentList.map((e) => e.type).where((t) => t != null).toSet().toList();
-    return ['all', ...types.cast<String>()];
+    final types = _equipmentList.map((e) => e.type).toSet().toList()..sort();
+    return ['all', ...types];
   }
 
   void _showFilterBottomSheet() {
