@@ -14,6 +14,7 @@ from app.core.equipment_types import type_name
 from app.models.equipment import Equipment
 from app.models.notification import DeviceToken, Notification
 from app.models.order import Order
+from app.services import push_service
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,41 @@ def _equipment_label(equipment: Optional[Equipment]) -> str:
         return "Texnika"
     parts = [p for p in (type_name(equipment.type), equipment.model) if p]
     return " ".join(parts) if parts else "Texnika"
+
+
+def _push(db: Session, notification: Notification) -> None:
+    """
+    Xabarnoma uchun push. Xatolar yutiladi — push yuborilmagani
+    xabarnomani bekor qilish uchun sabab emas.
+    """
+    try:
+        push_service.send_to_user(
+            db,
+            notification.user_id,
+            notification.title,
+            notification.body,
+            {
+                "notification_id": notification.id,
+                "type": notification.type,
+                "order_id": notification.order_id,
+                "equipment_type": notification.equipment_type,
+            },
+        )
+    except Exception:
+        logger.exception("Push yuborilmadi: notification=%s", notification.id)
+
+
+def send_pending(db: Session, notifications) -> None:
+    """
+    commit=False bilan yaratilgan xabarnomalar uchun push.
+
+    Ro'yxatga bir nechta xabarnoma yozib, keyin bitta commit qilinadigan
+    joylar bor (zayavka bo'yicha egalar ro'yxati). Ular uchun push shu
+    funksiya orqali, commit'dan KEYIN yuboriladi.
+    """
+    for notification in notifications:
+        if notification is not None:
+            _push(db, notification)
 
 
 def create(
@@ -60,6 +96,13 @@ def create(
         if commit:
             db.commit()
             db.refresh(notification)
+
+            # Push — faqat commit'dan keyin: yozuv bazada turibdi, endi
+            # qurilmaga xabar berish mumkin. commit=False bo'lgan holatda
+            # chaqiruvchi o'zi commit qiladi va push'ni ham o'zi yuboradi
+            # (send_pending), aks holda hali saqlanmagan xabarnoma haqida
+            # push ketib qolardi.
+            _push(db, notification)
         return notification
     except Exception:
         logger.exception("Xabarnoma yaratilmadi: user=%s type=%s", user_id, type_)

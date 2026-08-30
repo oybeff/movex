@@ -177,10 +177,11 @@ def _notify_owners_nearby(db: Session, request: EquipmentRequest) -> None:
 
         owners = db.query(User).filter(User.id.in_(owner_ids)).all()
         title_what = type_name(request.equipment_type)
+        created = []
         for owner in owners:
             if not _within_radius(owner, lat, lon):
                 continue
-            notification_service.create(
+            created.append(notification_service.create(
                 db,
                 owner.id,
                 "request_created",
@@ -191,8 +192,11 @@ def _notify_owners_nearby(db: Session, request: EquipmentRequest) -> None:
                 request.equipment_type,
                 None,
                 commit=False,
-            )
+            ))
         db.commit()
+        # Push commit'dan KEYIN: aks holda hali saqlanmagan xabarnoma
+        # haqida bildirishnoma ketardi.
+        notification_service.send_pending(db, created)
     except Exception:
         logger.exception("Zayavka xabarnomalari yuborilmadi: request=%s", request.id)
         db.rollback()
@@ -265,14 +269,17 @@ def cancel_request(db: Session, request: EquipmentRequest, user: User) -> Equipm
     db.commit()
     db.refresh(request)
 
-    for offer in offers:
+    created = [
         notification_service.create(
             db, offer.owner_id, "request_cancelled",
             "Zayavka bekor qilindi",
             f"Zayavka #{request.id} mijoz tomonidan bekor qilindi",
             None, request.equipment_type, None, commit=False,
         )
+        for offer in offers
+    ]
     db.commit()
+    notification_service.send_pending(db, created)
     return request
 
 
@@ -427,21 +434,22 @@ def accept_offer(db: Session, request_id: int, offer_id: int, client: User):
     accepted_equipment = (
         db.query(Equipment).filter(Equipment.id == offer.equipment_id).first()
     )
-    notification_service.create(
+    created = [notification_service.create(
         db, offer.owner_id, "request_offer_accepted",
         "Taklifingiz qabul qilindi",
         f"Buyurtma #{order.id} yaratildi",
         order.id, request.equipment_type,
         accepted_equipment.model if accepted_equipment else None,
         commit=False,
-    )
+    )]
     for other in others:
-        notification_service.create(
+        created.append(notification_service.create(
             db, other.owner_id, "request_offer_rejected",
             "Taklifingiz tanlanmadi",
             f"Zayavka #{request.id} bo'yicha boshqa taklif tanlandi",
             None, request.equipment_type, None, commit=False,
-        )
+        ))
     db.commit()
+    notification_service.send_pending(db, created)
 
     return request, order

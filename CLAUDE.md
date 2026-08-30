@@ -34,8 +34,8 @@ FastAPI, Python 3.11+. Точка входа `backend/app/main.py`.
 Слои: `routes/` (HTTP) → `services/` (логика) → `models/` (SQLAlchemy) + `schemas/` (Pydantic).
 
 Роуты монтируются с префиксами: `/auth`, `/users`, `/companies`, `/equipment`, `/orders`,
-`/chats`, `/messages`, `/reviews`, `/payments`, `/payouts`, `/notifications`, `/balance`,
-`/settings`, `/admin`. Плюс `/health` и `/`.
+`/requests`, `/chats`, `/messages`, `/reviews`, `/payments`, `/payouts`, `/notifications`,
+`/balance`, `/settings`, `/admin`. Плюс `/health` и `/`.
 Swagger на `/docs` — **автоматически отключается при `APP_ENV=production`**.
 
 Порядок роутов важен: конкретный путь объявляется РАНЬШЕ параметрического.
@@ -49,6 +49,8 @@ Swagger на `/docs` — **автоматически отключается п�
   вебхук `/payments/payme`). Умеет сплит через `receivers`
 - **Eskiz** — SMS и OTP-коды (`services/eskiz_service.py`, токен кэшируется в таблице `eskiz_token`)
 - **Telegram** — уведомления в группу (`services/telegram_service.py`)
+- **Firebase Cloud Messaging** — push (`services/push_service.py`, HTTP v1).
+  Без `FCM_PROJECT_ID` и `FCM_CREDENTIALS_FILE` молчит и ничего не ломает
 
 Подробности по деньгам — `docs/backend/PAYMENTS.md`, по уведомлениям —
 `docs/backend/NOTIFICATIONS.md`.
@@ -88,7 +90,7 @@ bash tests/run_all.sh              # все проверки (нужен зап�
 Flutter 3.8, Dart SDK `^3.8.1`. 69 dart-файлов, 38 экранов.
 
 Структура: `lib/core/` (сеть, модели, сервисы, тема, роутер, виджеты) +
-`lib/features/{auth,client_home,owner_home,balance,settings}/presentation/pages/`.
+`lib/features/{auth,client_home,owner_home,balance,settings,requests,notifications}/presentation/pages/`.
 
 - Навигация — **go_router**, все маршруты объявлены прямо в `lib/main.dart`
 - Состояние — **provider**
@@ -97,7 +99,13 @@ Flutter 3.8, Dart SDK `^3.8.1`. 69 dart-файлов, 38 экранов.
 - Карты — **yandex_mapkit**. Ключ задаётся в двух местах: `MainActivity.kt`
   (Android) и `AppDelegate.swift` (iOS). Забудешь про iOS — карта на iPhone
   просто не запустится, именно так и было
-- Локализация — **easy_localization**, переводы в `assets/translations/` (uz по умолчанию)
+- Локализация — **easy_localization**, переводы в `assets/translations/` (uz по умолчанию).
+  Строку в интерфейсе писать только через `.tr()`: QA находил, что половина
+  русского интерфейса оставалась узбекской из-за текста, записанного прямо в
+  коде. Проверка — `python3 tool/verify_translations.py`
+- Цена приходит с сервера **строкой** (`"1100000.00"`). Сравнивать и сортировать
+  только через `pricePerDayValue` и соседние геттеры: `compareTo` на строках
+  ставит `"950000.00"` выше `"2800000.00"`
 - Тип техники — **код из справочника** (`lib/core/constants/equipment_types.dart`),
   а не свободный текст. В интерфейсе всегда показывай `EquipmentTypes.label(code)`,
   иначе пользователь увидит `excavator` латиницей
@@ -140,7 +148,33 @@ python3 tool/generate_equipment_icons.py     # .svg для интерфейса 
 Вывод денег владельцу — `payout_requests` и `/payouts/*`. Заявка замораживает
 сумму, выплата списывает, отказ снимает заморозку.
 
-Проверки: `bash tests/run_all.sh` — 187 проверок против живого сервера.
+## Два способа заказа
+
+В приложении их два, и они работают параллельно.
+
+**Каталог.** Клиент выбирает конкретную машину конкретного владельца, заказ
+уходит этому владельцу. Цена известна сразу — ставка из карточки.
+
+**Заявки** (`equipment_requests`, `request_offers`, `/requests/*`). Клиент
+называет ТИП техники, даты, место и свой бюджет. Заявку видят все владельцы
+подходящей техники в радиусе, каждый отвечает своей ценой, клиент выбирает
+одно предложение — и только тогда создаётся обычный заказ.
+
+Правило, которое нельзя нарушать: **заявка и предложение не двигают деньги.**
+Бюджет клиента — ориентир, цена в предложении — запрос владельца. Реальная
+сумма считается в момент выбора предложения, внутри `create_order`, по
+`pricing_service`. Ставка берётся из сохранённой записи `request_offers`
+через `price_per_day_override` — из тела запроса её передать нельзя.
+
+Тип техники в заявке проверяется строго, `normalize_type` там не
+используется: он превращает незнакомый текст в `other`, а от типа зависит,
+кому уйдёт уведомление.
+
+**Радиус** — `users.search_latitude/longitude/search_radius_km`. Владельцу
+ограничивает ленту заявок, клиенту — область поиска. Точка не задана — фильтр
+не применяется: не настроивший радиус не должен остаться без данных.
+
+Проверки: `bash tests/run_all.sh` — 234 проверки против живого сервера.
 
 ## Права доступа
 
@@ -164,9 +198,10 @@ python3 tool/generate_equipment_icons.py     # .svg для интерфейса 
 
 1. **Пароль от FTP скомпрометирован** — `mobile/.vscode/sftp.json` лежал в
    архиве открытым текстом. В git не попадает, но пароль надо сменить на сервере.
-2. **Push-уведомления не отправляются.** Серверная часть готова, токены
-   устройств принимаются. Нужен проект Firebase — порядок в
-   `docs/backend/NOTIFICATIONS.md`.
+2. **Push-уведомления не отправляются.** Серверная часть написана целиком
+   (`services/push_service.py`, FCM HTTP v1) и подключена ко всем событиям.
+   Не хватает проекта Firebase: его может создать только владелец
+   Google-аккаунта. Порядок — `docs/backend/NOTIFICATIONS.md`.
 3. **Боевых мерчант-ключей нет.** Click и Payme написаны и проверены на
    вымышленных ключах. Что вписать и куда — в `docs/backend/PAYMENTS.md`.
 4. **Rahmat не интегрирован** — публичного merchant API у сервиса нет.

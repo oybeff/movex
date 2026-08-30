@@ -79,6 +79,22 @@ class Settings(BaseSettings):
     OTP_BLOCK_DURATION_HOURS: int = 1
     OTP_TEST_MODE: bool = False  # Set to True to skip SMS sending
 
+    # Push-bildirishnomalar (Firebase Cloud Messaging, HTTP v1).
+    #
+    # FCM_CREDENTIALS_FILE — Firebase konsolidan yuklab olingan xizmat
+    # akkaunti kaliti (JSON). Fayl serverda yotadi va git ga TUSHMAYDI.
+    # FCM_PROJECT_ID — Firebase loyihasining identifikatori.
+    #
+    # Ikkalasi bo'sh bo'lsa push umuman yuborilmaydi va hech narsa
+    # buzilmaydi: xabarnomalar odatdagidek ilova ichida ko'rinadi.
+    # Sozlash tartibi: docs/backend/NOTIFICATIONS.md
+    FCM_PROJECT_ID: str | None = None
+    FCM_CREDENTIALS_FILE: str | None = None
+
+    @property
+    def fcm_configured(self) -> bool:
+        return bool(self.FCM_PROJECT_ID and self.FCM_CREDENTIALS_FILE)
+
     # qo‘shimcha .env maydonlar uchun (xatolik chiqmasligi uchun)
     APP_ENV: str | None = None
     DEBUG: bool | None = None

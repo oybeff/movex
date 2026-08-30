@@ -120,3 +120,10 @@ Thumbs.db
 *.sql.gz
 *.dump
 *.bak
+
+# Ключи Firebase. Служебный ключ — полный доступ к отправке push,
+# google-services.json и plist — конфиги приложений.
+firebase-key.json
+*firebase*adminsdk*.json
+google-services.json
+GoogleService-Info.plist
