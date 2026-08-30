@@ -8,6 +8,7 @@ from app.models.order import Order
 from app.schemas.equipment import EquipmentCreate, EquipmentRead, EquipmentUpdate, EquipmentPhotoRead
 from app.routes.auth import get_current_user
 from app.core.roles import role_checker
+from app.core.equipment_types import EQUIPMENT_TYPES, normalize_type
 import os
 from datetime import datetime
 
@@ -28,7 +29,10 @@ def create_equipment(
     current_user = Depends(role_checker(["owner","admin"]))
 ):
     # owner_id берём из текущего пользователя
-    eq = Equipment(**equipment_in.dict(), owner_id=current_user.id)
+    data = equipment_in.dict()
+    # Turni kodga keltiramiz: eski mobil ilovalar hali erkin matn yuboradi.
+    data["type"] = normalize_type(data.get("type"))
+    eq = Equipment(**data, owner_id=current_user.id)
     db.add(eq)
     db.commit()
     db.refresh(eq)
@@ -61,6 +65,16 @@ def list_equipment(
     items, total = paginate(q.order_by(Equipment.created_at.desc()), page, limit)
     return items
 
+# DIQQAT: bu route "/{equipment_id}" dan OLDIN turishi shart, aks holda
+# FastAPI "types" so'zini equipment_id deb o'qishga urinadi.
+@router.get("/types")
+def list_equipment_types():
+    """
+    Texnika turlari ma'lumotnomasi. Mobil ilova va adminka shu ro'yxatdan
+    foydalanadi — turlar erkin matn emas, qat'iy kodlar.
+    """
+    return EQUIPMENT_TYPES
+
 @router.get("/{equipment_id}", response_model=EquipmentRead)
 def get_equipment(
     equipment_id: int,
@@ -88,6 +102,8 @@ def update_equipment(
         raise HTTPException(403, "Forbidden")
 
     for field, value in equipment_in.dict(exclude_unset=True).items():
+        if field == "type":
+            value = normalize_type(value)
         setattr(eq, field, value)
 
     db.commit()

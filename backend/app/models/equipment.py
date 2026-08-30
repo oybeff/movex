@@ -11,7 +11,11 @@ class Equipment(Base):
     id = Column(Integer, primary_key=True, index=True)
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     company_id = Column(Integer, ForeignKey("companies.id", ondelete="SET NULL"))
+    # Ma'lumotnomadagi kod: 'excavator', 'truck_crane', ... (app/core/equipment_types.py)
     type = Column(String(50), nullable=False)
+    # Kodga o'tishdan oldingi erkin matn. Vaqtinchalik: ma'lumotlar tekshirilgach,
+    # alohida migratsiya bilan o'chiriladi.
+    type_legacy = Column(String(50), nullable=True)
     model = Column(String(100), nullable=False)
     year = Column(Integer, CheckConstraint("year > 1900 AND year <= EXTRACT(YEAR FROM CURRENT_DATE)"))
     power_hp = Column(Integer)

@@ -1,17 +1,29 @@
 """
-Проверка починок денежного контура MoveX GO.
-Прогоняет настоящий путь оплаты Click (prepare + complete с подписью)
-и заново пробует все три эксплойта, которые раньше срабатывали.
+Pul konturini tekshirish: narx serverda hisoblanadimi, hisob faqat tasdiqlangan
+to'lovdan keyin to'ldiriladimi, buyurtma yakunlanganda pul mijozdan yechiladimi.
+
+Test IDEMPOTENT: absolyut summalarga emas, o'zgarishlarga (delta) qaraydi,
+shuning uchun bazani tozalamasdan qayta-qayta ishga tushirsa bo'ladi.
+
+Ishga tushirish (server ishlab turgan holda):
+    venv/bin/python tests/verify_money.py
 """
 import hashlib
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import requests
 
 API = "http://127.0.0.1:8000"
-SERVICE_ID = "111111"
-SECRET_KEY = "local_dev_click_secret"
+
+# .env dagi mahalliy sinov kalitlari bilan bir xil bo'lishi kerak
+CLICK_SERVICE_ID = "111111"
+CLICK_SECRET_KEY = "local_dev_click_secret"
+
+CLIENT_PHONE = "998901110002"
+OWNER_PHONE = "998901110001"
+EQUIPMENT_ID = 1
+TOPUP = 5_000_000
 
 ok_count = 0
 fail_count = 0
@@ -47,121 +59,132 @@ def balance_of(hdr):
     return float(b["balance"]), float(b["frozen_balance"])
 
 
-def click_sign(click_trans_id, merchant_trans_id, amount, action, sign_time):
-    raw = f"{click_trans_id}{SERVICE_ID}{SECRET_KEY}{merchant_trans_id}{amount}{action}{sign_time}"
-    return hashlib.md5(raw.encode()).hexdigest()
-
-
 def click_callback(path, click_trans_id, merchant_trans_id, amount, action, extra=None):
+    """Click tomonidan yuboriladigan callback'ni imzosi bilan taqlid qilish."""
     sign_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    raw = (f"{click_trans_id}{CLICK_SERVICE_ID}{CLICK_SECRET_KEY}"
+           f"{merchant_trans_id}{amount}{action}{sign_time}")
     payload = {
         "click_trans_id": click_trans_id,
-        "service_id": SERVICE_ID,
+        "service_id": CLICK_SERVICE_ID,
         "merchant_trans_id": merchant_trans_id,
         "amount": amount,
         "action": action,
         "error": 0,
         "error_note": "Success",
         "sign_time": sign_time,
-        "sign_string": click_sign(click_trans_id, merchant_trans_id, amount, action, sign_time),
+        "sign_string": hashlib.md5(raw.encode()).hexdigest(),
     }
     if extra:
         payload.update(extra)
     return requests.post(f"{API}/balance/{path}", data=payload).json()
 
 
-client = token("998901110002")
-owner = token("998901110001")
+def free_dates(days=1):
+    """Band bo'lmagan sanalar — testni qayta ishga tushirganda to'qnashmasligi uchun."""
+    start = datetime.now() + timedelta(days=400 + datetime.now().microsecond % 2000)
+    return start.strftime("%Y-%m-%d"), (start + timedelta(days=days)).strftime("%Y-%m-%d")
 
-head("1. ПОПОЛНЕНИЕ ТЕПЕРЬ ТРЕБУЕТ ПОДТВЕРЖДЁННОЙ ОПЛАТЫ")
+
+client = token(CLIENT_PHONE)
+owner = token(OWNER_PHONE)
+
+client_start, _ = balance_of(client)
+owner_start, _ = balance_of(owner)
+print(f"стартовые балансы — клиент {money(client_start)}, владелец {money(owner_start)}")
+
+head("1. ПОПОЛНЕНИЕ ТРЕБУЕТ ПОДТВЕРЖДЁННОЙ ОПЛАТЫ")
 
 r = requests.post(f"{API}/balance/topup", headers=client,
-                  json={"amount": 5000000, "payment_method": "payme"})
+                  json={"amount": TOPUP, "payment_method": "payme"})
 check("способ без подтверждения оплаты отклонён", r.status_code == 400,
       f"вернулось {r.status_code}")
-if r.status_code == 400:
-    print(f"         сервер: {r.json()['detail']}")
 
 r = requests.post(f"{API}/balance/topup", headers=client,
-                  json={"amount": 5000000, "payment_method": "click"})
+                  json={"amount": TOPUP, "payment_method": "click"})
 top = r.json()
-check("заявка на пополнение через Click создана", r.status_code == 200, r.text[:150])
-check("транзакция в статусе pending, деньги НЕ зачислены",
-      top.get("status") == "pending", f"статус {top.get('status')}")
+check("заявка через Click создана", r.status_code == 200, r.text[:150])
+check("транзакция в статусе pending", top.get("status") == "pending", str(top.get("status")))
 check("ссылка на оплату сгенерирована", bool(top.get("payment_url")))
 
 bal, _ = balance_of(client)
-check("баланс до оплаты остался нулевым", bal == 0, f"баланс {bal}")
+check("до подтверждения баланс не изменился", bal == client_start,
+      f"было {money(client_start)}, стало {money(bal)}")
 
 head("2. КОЛБЭК CLICK ЗАЧИСЛЯЕТ ДЕНЬГИ")
 
 tx_id = top["transaction_id"]
 amount = float(top["amount"])
+click_id = 900000 + tx_id
 
-prep = click_callback("click/prepare", 900001, tx_id, amount, 0)
+prep = click_callback("click/prepare", click_id, tx_id, amount, 0)
 check("prepare принят", prep.get("error") == 0, str(prep))
 
-comp = click_callback("click/complete", 900001, tx_id, amount, 1,
+comp = click_callback("click/complete", click_id, tx_id, amount, 1,
                       extra={"merchant_prepare_id": prep.get("merchant_prepare_id", tx_id)})
 check("complete принят", comp.get("error") == 0, str(comp))
 
 bal, _ = balance_of(client)
-check("после подтверждения баланс пополнен", bal == 5000000, f"баланс {money(bal)}")
+check("баланс вырос ровно на сумму платежа", bal == client_start + TOPUP,
+      f"ожидалось {money(client_start + TOPUP)}, получено {money(bal)}")
 
 head("3. ЦЕНУ СЧИТАЕТ СЕРВЕР, А НЕ КЛИЕНТ")
 
-eq = requests.get(f"{API}/equipment/1", headers=client).json()
+eq = requests.get(f"{API}/equipment/{EQUIPMENT_ID}", headers=client).json()
 day_price = float(eq["price_per_day"])
-print(f"  техника: {eq['type']} {eq['model']}, {money(day_price)} сум/сутки")
-print("  клиент отправляет заведомо заниженные цифры: total_amount=1000, commission=0")
+start_date, end_date = free_dates(days=1)   # двое суток: начало и конец включительно
+print(f"  {eq['type']} {eq['model']}, {money(day_price)} сум/сутки, {start_date} — {end_date}")
+print("  клиент шлёт заниженные цифры: total_amount=1000, commission=0")
 
 order = requests.post(f"{API}/orders/", headers=client, json={
-    "equipment_id": 1,
-    "start_date": "2026-09-01", "end_date": "2026-09-02",
+    "equipment_id": EQUIPMENT_ID,
+    "start_date": start_date, "end_date": end_date,
     "total_amount": 1000, "commission": 0,
     "delivery_latitude": "41.31", "delivery_longitude": "69.28",
 }).json()
+check("заказ создан", "id" in order, str(order)[:200])
 
-expected_subtotal = day_price * 2          # двое суток, включительно
+expected_subtotal = day_price * 2
 expected_commission = round(expected_subtotal * 0.1)
-print(f"  сервер посчитал: сумма {money(order['total_amount'])}, "
-      f"комиссия {money(order['commission'])}, доставка {money(order.get('delivery_fee') or 0)}")
-
-check("присланная клиентом сумма проигнорирована", float(order["total_amount"]) != 1000,
-      f"total_amount={order['total_amount']}")
-check("комиссия посчитана сервером", float(order["commission"]) == expected_commission,
-      f"ожидалось {expected_commission}, получено {order['commission']}")
-check("доставка посчитана по координатам", float(order.get("delivery_fee") or 0) > 0)
-check("заморожена именно серверная сумма",
-      float(order["frozen_amount"]) == float(order["total_amount"]))
-
-head("4. ДЕНЬГИ СХОДЯТСЯ ПОСЛЕ ЗАВЕРШЕНИЯ СДЕЛКИ")
-
 total = float(order["total_amount"])
 commission = float(order["commission"])
+delivery = float(order.get("delivery_fee") or 0)
+print(f"  сервер: аренда {money(expected_subtotal)} + комиссия {money(commission)} "
+      f"+ доставка {money(delivery)} = {money(total)}")
+
+check("присланная клиентом сумма проигнорирована", total != 1000, f"total={total}")
+check("комиссия посчитана сервером", commission == expected_commission,
+      f"ожидалось {expected_commission}, получено {commission}")
+check("доставка посчитана по координатам", delivery > 0)
+check("итог = аренда + комиссия + доставка",
+      total == expected_subtotal + commission + delivery)
+check("заморожена именно серверная сумма", float(order["frozen_amount"]) == total)
+
+head("4. ПОСЛЕ ЗАВЕРШЕНИЯ СДЕЛКИ ДЕНЬГИ СХОДЯТСЯ")
+
+client_before, _ = balance_of(client)
+owner_before, _ = balance_of(owner)
 
 requests.put(f"{API}/orders/{order['id']}", headers=owner, json={"status": "confirmed"})
 r = requests.put(f"{API}/orders/{order['id']}", headers=owner, json={"status": "completed"})
-check("заказ завершён", r.status_code == 200 and r.json().get("status") == "completed", r.text[:150])
+check("заказ завершён", r.status_code == 200 and r.json().get("status") == "completed",
+      r.text[:150])
 
-cl_bal, cl_frozen = balance_of(client)
-ow_bal, _ = balance_of(owner)
+client_after, client_frozen = balance_of(client)
+owner_after, _ = balance_of(owner)
 
-print(f"  клиент:   баланс {money(cl_bal):>12}, заморожено {money(cl_frozen):>10}")
-print(f"  владелец: баланс {money(ow_bal):>12}")
+check("с клиента списана полная сумма заказа", client_after == client_before - total,
+      f"ожидалось {money(client_before - total)}, получено {money(client_after)}")
+check("заморозка снята", client_frozen == 0, f"осталось {money(client_frozen)}")
+check("владелец получил сумму за вычетом комиссии", owner_after == owner_before + total - commission,
+      f"ожидалось {money(owner_before + total - commission)}, получено {money(owner_after)}")
 
-check("с клиента списана полная сумма заказа", cl_bal == 5000000 - total,
-      f"ожидалось {money(5000000 - total)}, получено {money(cl_bal)}")
-check("заморозка снята", cl_frozen == 0)
-check("владелец получил сумму за вычетом комиссии", ow_bal == total - commission,
-      f"ожидалось {money(total - commission)}, получено {money(ow_bal)}")
-
-внесено = 5000000
-в_системе = cl_bal + ow_bal + commission
-print(f"\n  внесено живыми деньгами:      {money(внесено):>12}")
-print(f"  на балансах + резерв платформы:{money(в_системе):>12}")
-check("баланс системы сходится — деньги не создаются из воздуха",
-      abs(в_системе - внесено) < 0.01,
-      f"расхождение {money(в_системе - внесено)}")
+# Sistema bo'yicha pul saqlanishi: kirim (topup) = balanslar o'sishi + komissiya
+system_delta = (client_after - client_start) + (owner_after - owner_start) + commission
+print(f"\n  внесено через Click:            {money(TOPUP):>12}")
+print(f"  прирост балансов + комиссия:    {money(system_delta):>12}")
+check("деньги не создаются и не исчезают", abs(system_delta - TOPUP) < 0.01,
+      f"расхождение {money(system_delta - TOPUP)}")
 
 head(f"ИТОГ: {ok_count} пройдено, {fail_count} провалено")
+raise SystemExit(1 if fail_count else 0)
