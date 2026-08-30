@@ -34,8 +34,14 @@ FastAPI, Python 3.11+. Точка входа `backend/app/main.py`.
 Слои: `routes/` (HTTP) → `services/` (логика) → `models/` (SQLAlchemy) + `schemas/` (Pydantic).
 
 Роуты монтируются с префиксами: `/auth`, `/users`, `/companies`, `/equipment`, `/orders`,
-`/chats`, `/messages`, `/reviews`, `/payments`, `/balance`, `/settings`, `/admin`.
-Плюс `/health` и `/`. Swagger на `/docs` — **автоматически отключается при `APP_ENV=production`**.
+`/chats`, `/messages`, `/reviews`, `/payments`, `/payouts`, `/notifications`, `/balance`,
+`/settings`, `/admin`. Плюс `/health` и `/`.
+Swagger на `/docs` — **автоматически отключается при `APP_ENV=production`**.
+
+Порядок роутов важен: конкретный путь объявляется РАНЬШЕ параметрического.
+`/equipment/types` до `/equipment/{id}`, `/notifications/devices` до
+`/notifications/{id}` — иначе FastAPI пытается разобрать слово как число.
+На этом уже ловились дважды.
 
 Внешние интеграции:
 - **Click** — приём платежей (`services/click_service.py`)
