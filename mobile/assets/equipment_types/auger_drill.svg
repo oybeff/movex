@@ -1,12 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="currentColor">
-  <circle cx="14" cy="49" r="5.2" fill="none" stroke="currentColor" stroke-width="2.6"/>
-  <circle cx="30" cy="49" r="5.2" fill="none" stroke="currentColor" stroke-width="2.6"/>
-  <circle cx="48" cy="49" r="5.2" fill="none" stroke="currentColor" stroke-width="2.6"/>
-  <rect x="6" y="28" width="14" height="14" rx="2"/>
-  <rect x="22" y="34" width="36" height="9" rx="2"/>
-  <rect x="44" y="8" width="6" height="30" rx="1.5"/>
-  <line x1="47" y1="20" x2="47" y2="54" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-  <line x1="43" y1="26" x2="51" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="43" y1="34" x2="51" y2="38" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="43" y1="42" x2="51" y2="46" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <circle cx="14" cy="49" r="5.2" fill="none" stroke="#1C1C1C" stroke-width="2.6"/>
+  <circle cx="30" cy="49" r="5.2" fill="none" stroke="#1C1C1C" stroke-width="2.6"/>
+  <circle cx="48" cy="49" r="5.2" fill="none" stroke="#1C1C1C" stroke-width="2.6"/>
+  <rect x="6" y="28" width="14" height="14" rx="2" fill="#1C1C1C"/>
+  <rect x="8" y="30" width="10" height="6.3" rx="1" fill="#2ECC71"/>
+  <rect x="22" y="34" width="36" height="9" rx="2" fill="#1C1C1C"/>
+  <rect x="44" y="8" width="6" height="30" rx="1.5" fill="#2ECC71"/>
+  <line x1="47" y1="20" x2="47" y2="54" stroke="#2ECC71" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="43" y1="26" x2="51" y2="30" stroke="#2ECC71" stroke-width="2" stroke-linecap="round"/>
+  <line x1="43" y1="34" x2="51" y2="38" stroke="#2ECC71" stroke-width="2" stroke-linecap="round"/>
+  <line x1="43" y1="42" x2="51" y2="46" stroke="#2ECC71" stroke-width="2" stroke-linecap="round"/>
 </svg>

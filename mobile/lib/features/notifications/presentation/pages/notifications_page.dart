@@ -242,11 +242,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
-              child: EquipmentTypeIcon(
-                item.equipmentType,
-                size: 28,
-                color: AppColors.black,
-              ),
+              child: EquipmentTypeIcon(item.equipmentType, size: 28),
             ),
           ),
           title: Text(

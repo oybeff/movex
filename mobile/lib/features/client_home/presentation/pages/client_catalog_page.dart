@@ -557,14 +557,12 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                             // Rasm bo'lmasa — umumiy belgi emas, aynan shu
                             // texnika turining ikonkasi
                             errorBuilder: (_, __, ___) => Center(
-                              child: EquipmentTypeIcon(equipment.type,
-                                  size: 48, color: AppColors.grey),
+                              child: EquipmentTypeIcon(equipment.type, size: 48),
                             ),
                           ),
                         )
                       : Center(
-                          child: EquipmentTypeIcon(equipment.type,
-                              size: 48, color: AppColors.grey),
+                          child: EquipmentTypeIcon(equipment.type, size: 48),
                         ),
                 ),
                 // Info
@@ -756,8 +754,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                           height: 200,
                           color: Colors.grey[300],
                           child: Center(
-                            child: EquipmentTypeIcon(equipment.type,
-                                size: 60, color: AppColors.grey),
+                            child: EquipmentTypeIcon(equipment.type, size: 60),
                           ),
                         ),
                       ),

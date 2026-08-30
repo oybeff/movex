@@ -6,8 +6,15 @@ import '../constants/equipment_types.dart';
 
 /// Texnika turining ikonkasi.
 ///
-/// Turi noma'lum bo'lsa ham hech qachon bo'sh joy qolmaydi — 'other'
-/// ikonkasi ko'rsatiladi (qarang: [EquipmentTypes.normalize]).
+/// Odatda IKKI RANGLI chiziladi: korpus to'q, ishchi qismi (cho'mich, tig',
+/// baraban) yashil — mashinalar bir-biridan aynan shu detal bilan farq
+/// qiladi va ko'z avval o'shanga tushadi.
+///
+/// [color] berilsa — butun ikonka shu rangga bo'yaladi. Bu faqat ikkinchi
+/// darajali joylar uchun: masalan kulrang matn yonidagi kichik belgi.
+///
+/// Turi noma'lum bo'lsa ham bo'sh joy qolmaydi — 'other' ikonkasi
+/// ko'rsatiladi (qarang: [EquipmentTypes.normalize]).
 class EquipmentTypeIcon extends StatelessWidget {
   const EquipmentTypeIcon(
     this.typeCode, {
@@ -26,10 +33,8 @@ class EquipmentTypeIcon extends StatelessWidget {
       EquipmentTypes.svgAsset(typeCode),
       width: size,
       height: size,
-      colorFilter: ColorFilter.mode(
-        color ?? AppColors.black,
-        BlendMode.srcIn,
-      ),
+      colorFilter:
+          color == null ? null : ColorFilter.mode(color!, BlendMode.srcIn),
     );
   }
 }
