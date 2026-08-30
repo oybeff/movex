@@ -86,20 +86,20 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
-  Future<void> _remove(NotificationModel item) async {
-    final removed = item;
-    final index = _items.indexOf(item);
-    setState(() => _items.remove(item));
-
+  /// Serverdan o'chirish. Muvaffaqiyatsiz bo'lsa `false` qaytaradi va satr
+  /// joyida qoladi.
+  ///
+  /// Tartib muhim: tarmoq so'rovi confirmDismiss ichida, ro'yxatdan olib
+  /// tashlash esa onDismissed da. Agar avval ro'yxatdan olib tashlab, xato
+  /// bo'lganda qaytarsak, Flutter "A dismissed Dismissible widget is still
+  /// part of the tree" deb yiqiladi.
+  Future<bool> _confirmRemove(NotificationModel item) async {
     try {
       await _service.delete(item.id);
+      return true;
     } catch (_) {
-      // Server o'chirmagan bo'lsa — ro'yxatga qaytaramiz, aks holda
-      // foydalanuvchi xabarnoma yo'qolgan deb o'ylardi
-      if (mounted) {
-        setState(() => _items.insert(index, removed));
-        _showError();
-      }
+      _showError();
+      return false;
     }
   }
 
@@ -228,7 +228,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
         color: AppColors.error,
         child: const Icon(Icons.delete_outline, color: AppColors.white),
       ),
-      onDismissed: (_) => _remove(item),
+      // O'chirish serverda muvaffaqiyatli bo'lsagina satr ketadi
+      confirmDismiss: (_) => _confirmRemove(item),
+      onDismissed: (_) {
+        setState(() => _items.removeWhere((n) => n.id == item.id));
+      },
       child: Container(
         // O'qilmagan xabarnoma yengil fon bilan ajralib turadi
         color: item.isRead ? AppColors.white : AppColors.primaryGreen.withValues(alpha: 0.06),
