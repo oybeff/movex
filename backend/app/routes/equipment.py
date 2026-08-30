@@ -1,16 +1,17 @@
 # app/routes/equipment.py
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from typing import List, Optional, Tuple
 from app.db.session import get_db
 from app.models.equipment import Equipment, EquipmentPhoto
 from app.models.order import Order
+from app.models.user import User
 from app.schemas.equipment import EquipmentCreate, EquipmentRead, EquipmentUpdate, EquipmentPhotoRead
 from app.routes.auth import get_current_user
 from app.core.roles import role_checker
 from app.core.equipment_types import EQUIPMENT_TYPES, normalize_type
 import os
-from datetime import datetime
+from datetime import date, datetime
 
 router = APIRouter()
 
@@ -49,13 +50,21 @@ def list_equipment(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100)
 ):
-    q = db.query(Equipment).filter(Equipment.deleted_at.is_(None))
+    # selectinload: rasmlar bitta qo'shimcha so'rov bilan yuklanadi.
+    # Ilgari har bir texnika uchun alohida so'rov ketardi — 100 ta
+    # texnika = 101 ta so'rov (N+1).
+    q = (
+        db.query(Equipment)
+        .options(selectinload(Equipment.photos))
+        .filter(Equipment.deleted_at.is_(None))
+    )
 
     if owner_only and current_user.role == "owner":
         q = q.filter(Equipment.owner_id == current_user.id)
 
     if type:
-        q = q.filter(Equipment.type.ilike(f"%{type}%"))
+        # Tur endi ma'lumotnomadagi kod, shuning uchun aniq moslik
+        q = q.filter(Equipment.type == normalize_type(type))
     if status:
         q = q.filter(Equipment.status == status)
     if search:
@@ -171,6 +180,18 @@ def get_active_order(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+    """
+    Texnikaning hozir bajarilayotgan buyurtmasi.
+
+    Ilgari bu endpoint hech qachon ishlamasdi: u `status == "active"` bo'yicha
+    qidirardi, lekin bunday holat tizimda umuman yo'q (pending, confirmed,
+    rejected, cancelled, completed). Ustiga javobda order.title va
+    order.client_name qaytarilardi — Order modelida bunday maydonlar yo'q,
+    ya'ni moslik topilganda 500 xato bo'lardi.
+
+    Endi "faol" degani: tasdiqlangan buyurtma, bugungi sana uning
+    oralig'iga tushadi.
+    """
     eq = db.query(Equipment).filter(
         Equipment.id == equipment_id,
         Equipment.deleted_at.is_(None)
@@ -178,20 +199,40 @@ def get_active_order(
     if not eq:
         raise HTTPException(404, "Equipment not found")
 
-    # здесь предполагаем, что у заказа есть статус (active, finished и т.д.)
-    order = db.query(Order).filter(
-        Order.equipment_id == equipment_id,
-        Order.status == "active"
-    ).first()
+    # Kim ijaraga olganini faqat texnika egasi va admin ko'radi
+    if current_user.role != "admin" and eq.owner_id != current_user.id:
+        raise HTTPException(403, "Forbidden")
+
+    today = date.today()
+    order = (
+        db.query(Order)
+        .filter(
+            Order.equipment_id == equipment_id,
+            Order.status == "confirmed",
+            Order.start_date <= today,
+            Order.end_date >= today,
+        )
+        .order_by(Order.start_date)
+        .first()
+    )
 
     if not order:
         return {"currentOrder": None}
 
+    client = db.query(User).filter(User.id == order.user_id).first()
+
     return {
         "currentOrder": {
             "id": order.id,
-            "title": order.title,
-            "client": order.client_name,
+            "status": order.status,
+            "start_date": order.start_date.isoformat(),
+            "end_date": order.end_date.isoformat(),
+            "total_amount": float(order.total_amount),
+            "client": {
+                "id": client.id if client else None,
+                "full_name": client.full_name if client else None,
+                "phone": client.phone if client else None,
+            },
         }
     }
 
