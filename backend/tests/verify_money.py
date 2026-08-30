@@ -165,7 +165,7 @@ check("заморожена именно серверная сумма", float(o
 
 head("4. ПОСЛЕ ЗАВЕРШЕНИЯ СДЕЛКИ ДЕНЬГИ СХОДЯТСЯ")
 
-client_before, _ = balance_of(client)
+client_before, frozen_before = balance_of(client)
 owner_before, _ = balance_of(owner)
 
 requests.put(f"{API}/orders/{order['id']}", headers=owner, json={"status": "confirmed"})
@@ -178,7 +178,10 @@ owner_after, _ = balance_of(owner)
 
 check("с клиента списана полная сумма заказа", client_after == client_before - total,
       f"ожидалось {money(client_before - total)}, получено {money(client_after)}")
-check("заморозка снята", client_frozen == 0, f"осталось {money(client_frozen)}")
+# frozen_before уже включает заморозку этого заказа — после завершения
+# она снимается, остальное (чужие незавершённые заказы) остаётся как было
+check("заморозка по этому заказу снята", client_frozen == frozen_before - total,
+      f"ожидалось {money(frozen_before - total)}, осталось {money(client_frozen)}")
 check("владелец получил сумму за вычетом комиссии", owner_after == owner_before + total - commission,
       f"ожидалось {money(owner_before + total - commission)}, получено {money(owner_after)}")
 

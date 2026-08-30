@@ -81,30 +81,33 @@ for label, new_status, actor in [
     ("ОТМЕНА клиентом (pending -> cancelled)", "cancelled", client),
 ]:
     print(f"\n=== {label} ===")
-    before, _ = bal(client)
+    before, frozen_before = bal(client)
     o = make_order("2027-05-01", "2027-05-03")
     total = float(o["total_amount"])
     _, frozen = bal(client)
-    check("деньги заморожены при создании", frozen == total, f"заморожено {money(frozen)}")
+    check("деньги заморожены при создании", frozen == frozen_before + total,
+          f"было {money(frozen_before)}, стало {money(frozen)}")
 
     r = requests.put(f"{API}/orders/{o['id']}", headers=actor, json={"status": new_status})
     check(f"переход в {new_status} прошёл",
           r.status_code == 200 and r.json().get("status") == new_status, r.text[:120])
 
     after, frozen_after = bal(client)
-    check("заморозка снята", frozen_after == 0, f"осталось {money(frozen_after)}")
+    check("заморозка снята", frozen_after == frozen_before,
+          f"ожидалось {money(frozen_before)}, осталось {money(frozen_after)}")
     check("деньги вернулись клиенту в полном объёме", after == before,
           f"было {money(before)}, стало {money(after)}")
 
 print("\n=== ОТМЕНА уже подтверждённого заказа (confirmed -> cancelled) ===")
-before, _ = bal(client)
+before, frozen_before = bal(client)
 o = make_order("2027-06-01", "2027-06-03")
 requests.put(f"{API}/orders/{o['id']}", headers=owner, json={"status": "confirmed"})
 r = requests.put(f"{API}/orders/{o['id']}", headers=client, json={"status": "cancelled"})
 check("отмена подтверждённого заказа прошла",
       r.status_code == 200 and r.json().get("status") == "cancelled", r.text[:120])
 after, frozen_after = bal(client)
-check("заморозка снята", frozen_after == 0)
+check("заморозка снята", frozen_after == frozen_before,
+      f"ожидалось {money(frozen_before)}, осталось {money(frozen_after)}")
 check("деньги вернулись клиенту", after == before,
       f"было {money(before)}, стало {money(after)}")
 
