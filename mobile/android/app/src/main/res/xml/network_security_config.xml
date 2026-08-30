@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Tarmoq xavfsizligi sozlamasi.
+
+    Android 9 (API 28) dan boshlab shifrlanmagan HTTP taqiqlangan. Prod uchun
+    bu to'g'ri: https://movex.004.uz HTTPS orqali ishlaydi. Lekin telefonda
+    sinab ko'rish uchun ilova kompyuterdagi serverga murojaat qiladi
+    (http://192.168.x.x:8000), va usiz hech narsa ochilmaydi — xato ham
+    tushunarsiz bo'ladi, shunchaki "ulanib bo'lmadi".
+
+    DIQQAT: bu yerda IP MANZILLAR ANIQ yoziladi. includeSubdomains IP uchun
+    ISHLAMAYDI — Android domenlarni qism-qism solishtiradi, IP'ni esa butunligicha.
+    Ya'ni "192.168.1.0" yozib qo'yish "192.168.1.128" ni qamrab olmaydi.
+
+    Kompyuterning IP'si o'zgarsa (boshqa Wi-Fi, router qayta yuklandi),
+    quyidagi ro'yxatga yangi manzilni qo'shing. IP'ni bilish:
+        ipconfig getifaddr en0
+
+    Cleartext butun ilovaga OCHILMAYDI: base-config da HTTPS majburiy
+    bo'lib qoladi, ya'ni prod-yig'ilishda himoya joyida.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Qurilmaning o'zi va Android emulyatori -->
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+
+        <!-- Ishlab chiqish kompyuteri. Shu ro'yxatni tahrirlang. -->
+        <domain includeSubdomains="false">192.168.1.128</domain>
+    </domain-config>
+
+    <!-- Qolgan hamma narsa: HTTPS majburiy -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

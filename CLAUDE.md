@@ -127,6 +127,9 @@ Flutter 3.8, Dart SDK `^3.8.1`. 69 dart-файлов, 38 экранов.
   а не свободный текст. В интерфейсе всегда показывай `EquipmentTypes.label(code)`,
   иначе пользователь увидит `excavator` латиницей
 
+Проверка на телефоне — **`docs/TESTING_ON_PHONE.md`**. Коротко: через
+браузер телефона работает сразу (кроме карты), APK требует Android SDK.
+
 Сборка. **Адрес сервера обязателен** — без него возьмётся прод:
 
 ```bash
@@ -240,9 +243,15 @@ python3 tool/generate_equipment_icons.py     # .svg для интерфейса 
 
 - Бэкенд работает на **Python 3.12** (venv в `backend/venv`), PostgreSQL 16 ✅, PHP 7.4 ✅
 - **Flutter 3.47.2** ✅, Chrome ✅
-- **Собрать под телефон нечем**: нет ни полного Xcode с CocoaPods (стоят только
-  Command Line Tools), ни Android SDK. Нужен хотя бы один — Android Studio
-  быстрее (~6 ГБ), Xcode обязателен для App Store (~17 ГБ)
+- **Собрать под телефон**: полного Xcode с CocoaPods нет (стоят только
+  Command Line Tools). Android SDK ставится через
+  `brew install --cask android-commandlinetools`. JDK 17 и 21 в системе есть;
+  Flutter направлен на 21, потому что с 23 у Android Gradle Plugin бывают
+  сюрпризы
+- Android с 9-й версии блокирует HTTP. Для проверки на локальном сервере
+  адрес машины должен быть в
+  `android/app/src/main/res/xml/network_security_config.xml` — **точно**,
+  `includeSubdomains` для IP не работает. Прод по HTTPS, ему это не нужно
 - Веб-сборка работает и годится как проверка: `flutter build web --release`
   компилирует весь код. Карта на вебе не заработает (yandex_mapkit только
   под телефоны), остальное рисуется
