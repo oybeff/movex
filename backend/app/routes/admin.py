@@ -9,6 +9,7 @@ from sqlalchemy import func, text
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
 import os
+import re
 import subprocess
 import json
 
@@ -33,6 +34,27 @@ def check_admin_permission(current_user: User):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin users can access this endpoint"
         )
+
+#: Backup fayl nomi: backup_<sana>_<vaqt>.sql yoki .sql.gz
+BACKUP_FILENAME_RE = re.compile(r"^backup_[A-Za-z0-9_\-]+\.sql(\.gz)?$")
+
+
+def safe_backup_filename(filename: str) -> str:
+    """
+    Backup fayl nomini tekshiradi.
+
+    Hozir Starlette yo'ldagi kodlangan sleshni o'tkazmaydi, ya'ni
+    "../.." bilan papkadan chiqib bo'lmaydi. Lekin bazani tiklash —
+    butun tizimni orqaga qaytaradigan amal, va uning xavfsizligi
+    freymvork marshrutlash tafsilotiga bog'liq bo'lib qolmasligi kerak.
+    """
+    if not BACKUP_FILENAME_RE.match(filename or ""):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Noto'g'ri backup fayl nomi",
+        )
+    return filename
+
 
 def get_backup_directory():
     """Backup papkasini olish"""
@@ -240,7 +262,7 @@ def restore_backup(
     check_admin_permission(current_user)
 
     backup_dir = get_backup_directory()
-    backup_file = os.path.join(backup_dir, filename)
+    backup_file = os.path.join(backup_dir, safe_backup_filename(filename))
 
     if not os.path.exists(backup_file):
         raise HTTPException(status_code=404, detail="Backup file not found")
@@ -285,7 +307,7 @@ def delete_backup(
     check_admin_permission(current_user)
 
     backup_dir = get_backup_directory()
-    backup_file = os.path.join(backup_dir, filename)
+    backup_file = os.path.join(backup_dir, safe_backup_filename(filename))
 
     if not os.path.exists(backup_file):
         raise HTTPException(status_code=404, detail="Backup file not found")
