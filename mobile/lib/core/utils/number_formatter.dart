@@ -36,13 +36,19 @@ class NumberFormatter {
     }
   }
   
-  /// Summani so'm bilan birga qaytaradi
-  /// 
+  /// Summa va valyuta belgisi.
+  ///
+  /// DIQQAT: symbol ni ko'rsatmasa, chaqiruvchi tarjimadan olishi kerak:
+  ///   formatCurrencyWithSymbol(x, symbol: 'common.currency'.tr())
+  /// Ilgari bu yerda "so'm" qattiq yozilgan edi va ruscha interfeysda ham
+  /// o'zbekcha chiqardi — bitta kartochkada "сум" va "so'm" yonma-yon
+  /// turardi.
+  ///
   /// Misol:
   /// ```dart
-  /// formatCurrencyWithSymbol(1234567) // "1 234 567 so'm"
+  /// formatCurrencyWithSymbol(1234567, symbol: 'сум') // "1 234 567 сум"
   /// ```
-  static String formatCurrencyWithSymbol(dynamic amount, {String symbol = 'so\'m'}) {
+  static String formatCurrencyWithSymbol(dynamic amount, {required String symbol}) {
     return '${formatCurrency(amount)} $symbol';
   }
   

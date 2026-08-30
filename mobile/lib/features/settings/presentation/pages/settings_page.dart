@@ -107,6 +107,10 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('selected_language', code);
 
+    // Serverga ham aytamiz: xabarnoma va push matnini u yozadi va
+    // foydalanuvchining tilini bilmasa, hammasi o'zbekcha ketadi.
+    await UserService().setLanguage(code);
+
     if (navigator.canPop()) {
       navigator.pop();
     }

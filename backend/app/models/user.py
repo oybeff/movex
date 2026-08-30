@@ -30,6 +30,14 @@ class User(Base):
     search_longitude = Column(Numeric(10, 7), nullable=True)
     search_radius_km = Column(Integer, nullable=False, default=100)
 
+    # Interfeys tili. Serverda yoziladigan matnlar (xabarnoma, push) shu
+    # til bo'yicha tuziladi.
+    #
+    # Ilovaning o'zi tarjimani bilardi, lekin push matnini SERVER yozadi va
+    # telefon ekranida uni qayta tarjima qilib bo'lmaydi. Shuning uchun til
+    # bazada ham turishi kerak.
+    language = Column(String(5), nullable=False, default="uz")
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -39,4 +47,5 @@ class User(Base):
             "search_radius_km > 0 AND search_radius_km <= 1000",
             name="check_search_radius",
         ),
+        CheckConstraint("language IN ('uz','ru')", name="check_user_language"),
     )

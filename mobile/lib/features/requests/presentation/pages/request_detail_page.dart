@@ -149,7 +149,7 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.black),
         title: Text(
-          '${'requests.title'.tr()} #${widget.requestId}',
+          '${'requests.one_title'.tr()} #${widget.requestId}',
           style: const TextStyle(
               color: AppColors.black, fontWeight: FontWeight.bold),
         ),

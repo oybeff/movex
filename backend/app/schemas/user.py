@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
 
@@ -15,6 +15,10 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
+
+    # Interfeys tili. Ilova til almashtirilganda yuboradi — shundan keyin
+    # xabarnomalar va push shu tilda keladi.
+    language: Optional[str] = Field(default=None, pattern="^(uz|ru)$")
 
 class UserRead(UserBase):
     id: int

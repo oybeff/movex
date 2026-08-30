@@ -11,6 +11,8 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from app.core.equipment_types import type_name
+from app.core.messages import normalize_language, t
+from app.models.user import User
 from app.models.equipment import Equipment
 from app.models.notification import DeviceToken, Notification
 from app.models.order import Order
@@ -33,6 +35,57 @@ def _equipment_label(equipment: Optional[Equipment]) -> str:
         return "Texnika"
     parts = [p for p in (type_name(equipment.type), equipment.model) if p]
     return " ".join(parts) if parts else "Texnika"
+
+
+def user_language(db: Session, user_id: int) -> str:
+    """
+    Foydalanuvchining interfeys tili. Topilmasa — sukut bo'yicha o'zbekcha.
+
+    Har bir xabarnoma uchun bitta so'rov ketadi. Bu qimmat emas: xabarnoma
+    bittalab yoziladi, ro'yxat bo'yicha yozilganda esa til
+    notify_many_localized ichida bir marta olinadi.
+    """
+    row = db.query(User.language).filter(User.id == user_id).first()
+    return normalize_language(row[0] if row else None)
+
+
+def create_localized(
+    db: Session,
+    user_id: int,
+    type_: str,
+    title_key: str,
+    body_key: Optional[str] = None,
+    order_id: Optional[int] = None,
+    equipment_type: Optional[str] = None,
+    equipment_model: Optional[str] = None,
+    commit: bool = True,
+    language: Optional[str] = None,
+    **params,
+):
+    """
+    Xabarnoma OLUVCHINING tilida.
+
+    Matn serverda yozilishi shart, chunki push shu matnni oladi va uni
+    telefon ekranida qayta tarjima qilib bo'lmaydi.
+    """
+    # order_id ustun sifatida ham, shablon argumenti sifatida ham kerak.
+    # Ilgari chaqiruvchi uni ikki marta uzatardi va Python
+    # "multiple values for argument" deb yiqilardi — xabarnoma yozilmasdi,
+    # lekin buyurtma yaratilaverardi va xato ko'rinmasdi.
+    params.setdefault("order_id", order_id)
+
+    lang = language or user_language(db, user_id)
+    return create(
+        db,
+        user_id,
+        type_,
+        t(title_key, lang, **params),
+        t(body_key, lang, **params) if body_key else None,
+        order_id,
+        equipment_type,
+        equipment_model,
+        commit=commit,
+    )
 
 
 def _push(db: Session, notification: Notification) -> None:
@@ -116,46 +169,46 @@ def notify_order_event(db: Session, order: Order, event: str, commit: bool = Tru
     Buyurtma bo'yicha hodisa haqida kerakli tomonlarni xabardor qiladi.
 
     event: created | confirmed | rejected | cancelled | completed
+
+    Matn har bir oluvchining tilida yoziladi — shuning uchun bitta hodisa
+    ikki tomonga ikki xil tilda ketishi mumkin.
     """
     try:
         equipment = db.query(Equipment).filter(Equipment.id == order.equipment_id).first()
-        label = _equipment_label(equipment)
         eq_type = equipment.type if equipment else None
         eq_model = equipment.model if equipment else None
         owner_id = equipment.owner_id if equipment else None
         client_id = order.user_id
 
-        if event == "created" and owner_id:
-            create(db, owner_id, "order_created",
-                   f"Yangi buyurtma: {label}",
-                   f"Buyurtma #{order.id}, {order.start_date} — {order.end_date}",
-                   order.id, eq_type, eq_model, commit=commit)
+        def send(user_id: int, type_: str):
+            if user_id is None:
+                return
+            lang = user_language(db, user_id)
+            what = " ".join(
+                p for p in (type_name(eq_type, lang) if eq_type else None, eq_model) if p
+            ) or t("order_created.title", lang, what="").strip(": ")
+            create_localized(
+                db, user_id, type_,
+                f"{type_}.title", f"{type_}.body",
+                order.id, eq_type, eq_model,
+                commit=commit, language=lang,
+                what=what,
+                start=order.start_date,
+                end=order.end_date,
+            )
 
+        if event == "created":
+            send(owner_id, "order_created")
         elif event == "confirmed":
-            create(db, client_id, "order_confirmed",
-                   f"Buyurtma tasdiqlandi: {label}",
-                   f"Buyurtma #{order.id} egasi tomonidan tasdiqlandi",
-                   order.id, eq_type, eq_model, commit=commit)
-
+            send(client_id, "order_confirmed")
         elif event == "rejected":
-            create(db, client_id, "order_rejected",
-                   f"Buyurtma rad etildi: {label}",
-                   f"Buyurtma #{order.id} rad etildi, pul hisobingizga qaytarildi",
-                   order.id, eq_type, eq_model, commit=commit)
-
+            send(client_id, "order_rejected")
         elif event == "cancelled":
             for uid in {client_id, owner_id} - {None}:
-                create(db, uid, "order_cancelled",
-                       f"Buyurtma bekor qilindi: {label}",
-                       f"Buyurtma #{order.id} bekor qilindi",
-                       order.id, eq_type, eq_model, commit=commit)
-
+                send(uid, "order_cancelled")
         elif event == "completed":
             for uid in {client_id, owner_id} - {None}:
-                create(db, uid, "order_completed",
-                       f"Buyurtma yakunlandi: {label}",
-                       f"Buyurtma #{order.id} muvaffaqiyatli yakunlandi",
-                       order.id, eq_type, eq_model, commit=commit)
+                send(uid, "order_completed")
 
     except Exception:
         logger.exception("Buyurtma xabarnomalari yuborilmadi: order=%s event=%s", order.id, event)

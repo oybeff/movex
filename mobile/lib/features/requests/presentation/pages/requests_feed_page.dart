@@ -301,7 +301,7 @@ class _RequestsFeedPageState extends State<RequestsFeedPage> {
                     size: 15, color: Colors.grey[600]),
                 const SizedBox(width: 4),
                 Text(
-                  '${'requests.budget'.tr()}: '
+                  '${'requests.client_budget'.tr()}: '
                   '${NumberFormatter.formatCurrency(request.budget)} '
                   '${'common.currency'.tr()}',
                   style: TextStyle(fontSize: 13, color: Colors.grey[700]),

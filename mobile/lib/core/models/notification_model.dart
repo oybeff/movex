@@ -66,23 +66,31 @@ class NotificationModel {
   /// sarlavhani foydalanuvchi tilida shu yerda yig'amiz; bo'lmasa —
   /// serverning title'iga qaytamiz.
   String get displayTitle {
-    if (equipmentType == null) return title;
-
-    final what = [EquipmentTypes.label(equipmentType!), equipmentModel]
-        .where((p) => p != null && p.isNotEmpty)
-        .join(' ');
-    if (what.isEmpty) return title;
-
+    // Serverning title'i bitta tilda qotib qolgan (o'zbekcha). Tur kodi
+    // ma'lum bo'lsa, sarlavhani foydalanuvchi tilida shu yerda yig'amiz.
     const prefixes = {
       'order_created': 'notifications.order_created',
       'order_confirmed': 'notifications.order_confirmed',
       'order_rejected': 'notifications.order_rejected',
       'order_cancelled': 'notifications.order_cancelled',
       'order_completed': 'notifications.order_completed',
+      'request_created': 'notifications.request_created',
+      'request_offer': 'notifications.request_offer',
+      'request_offer_accepted': 'notifications.request_offer_accepted',
+      'request_offer_rejected': 'notifications.request_offer_rejected',
+      'request_cancelled': 'notifications.request_cancelled',
     };
     final key = prefixes[type];
     if (key == null) return title;
 
-    return '${key.tr()}: $what';
+    // Texnika: turi va (agar ma'lum bo'lsa) modeli. Zayavka haqidagi
+    // xabarnomada model bo'lmaydi — mashina hali tanlanmagan, shuning
+    // uchun faqat tur qoladi.
+    final what = [
+      if (equipmentType != null) EquipmentTypes.label(equipmentType),
+      if (equipmentModel != null && equipmentModel!.isNotEmpty) equipmentModel,
+    ].join(' ');
+
+    return what.isEmpty ? key.tr() : '${key.tr()}: $what';
   }
 }

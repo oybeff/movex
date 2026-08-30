@@ -233,7 +233,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        NumberFormatter.formatCurrency(_balance!.availableBalance) + ' so\'m',
+                        '${NumberFormatter.formatCurrency(_balance!.availableBalance)} ${'common.currency'.tr()}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -275,7 +275,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        NumberFormatter.formatCurrency(_balance!.frozenBalance) + ' so\'m',
+                        '${NumberFormatter.formatCurrency(_balance!.frozenBalance)} ${'common.currency'.tr()}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,

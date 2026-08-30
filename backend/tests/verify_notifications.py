@@ -233,5 +233,59 @@ leaked = [
 ]
 check("код типа не попал в заголовок", not leaked, str(leaked[:3]))
 
+head("7. ТЕКСТ НА ЯЗЫКЕ ПОЛУЧАТЕЛЯ")
+
+# Текст уведомления пишет сервер, и он же уходит в push. Перевести его на
+# телефоне нельзя, поэтому язык должен храниться у пользователя.
+
+def set_language(hdr, code):
+    return requests.put(f"{API}/users/me", headers=hdr, json={"language": code})
+
+r = set_language(client, "ru")
+check("язык сохраняется", r.status_code == 200, f"{r.status_code} {r.text[:120]}")
+
+r = set_language(client, "de")
+check("неподдерживаемый язык отклонён", r.status_code == 422, f"{r.status_code}")
+
+set_language(owner, "uz")
+set_language(client, "ru")
+
+# Заказ -> владельцу по-узбекски
+s2, e2 = free_dates(1)
+order = requests.post(f"{API}/orders/", headers=client, json={
+    "equipment_id": EQUIPMENT_ID, "start_date": s2, "end_date": e2,
+    "delivery_latitude": "41.31", "delivery_longitude": "69.28",
+}).json()
+
+owner_last = notifications(owner)[0]
+check("владельцу пришло по-узбекски",
+      "Yangi buyurtma" in owner_last["title"], owner_last["title"])
+
+# Отмена -> обеим сторонам, каждому на своём
+requests.put(f"{API}/orders/{order['id']}", headers=client,
+             json={"status": "cancelled"})
+
+client_last = notifications(client)[0]
+owner_last = notifications(owner)[0]
+check("клиенту пришло по-русски",
+      "Заказ отменён" in client_last["title"], client_last["title"])
+check("владельцу — по-узбекски",
+      "bekor qilindi" in owner_last["title"], owner_last["title"])
+check("тело клиента тоже по-русски",
+      client_last["body"] and "Заказ" in client_last["body"], str(client_last["body"]))
+
+# Дата в теле — в привычном формате, а не ISO
+set_language(client, "ru")
+s3, e3 = free_dates(1)
+requests.post(f"{API}/orders/", headers=client, json={
+    "equipment_id": EQUIPMENT_ID, "start_date": s3, "end_date": e3,
+    "delivery_latitude": "41.31", "delivery_longitude": "69.28",
+})
+body = notifications(owner)[0]["body"] or ""
+check("дата в теле не в формате ISO", "-" not in body.split(",")[-1] or "." in body,
+      body)
+
+set_language(client, "uz")
+
 head(f"ИТОГ: {ok_count} пройдено, {fail_count} провалено")
 raise SystemExit(1 if fail_count else 0)

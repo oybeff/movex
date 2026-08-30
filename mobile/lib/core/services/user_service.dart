@@ -18,17 +18,33 @@ class UserService {
   }
 
   /// Foydalanuvchi ma'lumotlarini yangilash
+  /// Serverga tilni bildirish.
+  ///
+  /// Xabarnoma va push matnini SERVER yozadi, shuning uchun u
+  /// foydalanuvchining tilini bilishi kerak. Xato bo'lsa jim o'tamiz:
+  /// til almashtirish shu sababli buzilmasligi kerak — interfeys baribir
+  /// almashadi, faqat xabarnomalar eski tilda qoladi.
+  Future<void> setLanguage(String code) async {
+    try {
+      await updateCurrentUser(language: code);
+    } catch (e) {
+      print('Set language error: $e');
+    }
+  }
+
   Future<UserModel> updateCurrentUser({
     String? fullName,
     String? email,
     String? phone,
+    String? language,
   }) async {
     try {
       final Map<String, dynamic> data = {};
-      
+
       if (fullName != null) data['full_name'] = fullName;
       if (email != null) data['email'] = email;
       if (phone != null) data['phone'] = phone;
+      if (language != null) data['language'] = language;
 
       final response = await _dio.put('/users/me', data: data);
       return UserModel.fromJson(response.data);

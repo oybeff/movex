@@ -19,6 +19,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.equipment_types import is_valid_type, type_name
+from app.core.messages import normalize_language
 from app.models.equipment import Equipment
 from app.models.equipment_request import (
     REQUEST_TTL_HOURS,
@@ -176,22 +177,22 @@ def _notify_owners_nearby(db: Session, request: EquipmentRequest) -> None:
             return
 
         owners = db.query(User).filter(User.id.in_(owner_ids)).all()
-        title_what = type_name(request.equipment_type)
         created = []
         for owner in owners:
             if not _within_radius(owner, lat, lon):
                 continue
-            created.append(notification_service.create(
-                db,
-                owner.id,
-                "request_created",
-                f"Yangi zayavka: {title_what}",
-                f"{request.start_date} — {request.end_date}"
-                + (f", {request.delivery_address}" if request.delivery_address else ""),
-                None,
-                request.equipment_type,
-                None,
-                commit=False,
+            lang = normalize_language(owner.language)
+            created.append(notification_service.create_localized(
+                db, owner.id, "request_created",
+                "request_created.title",
+                "request_created.body_with_address"
+                if request.delivery_address else "request_created.body",
+                None, request.equipment_type, None,
+                commit=False, language=lang,
+                what=type_name(request.equipment_type, lang),
+                start=request.start_date,
+                end=request.end_date,
+                address=request.delivery_address or "",
             ))
         db.commit()
         # Push commit'dan KEYIN: aks holda hali saqlanmagan xabarnoma
@@ -270,11 +271,11 @@ def cancel_request(db: Session, request: EquipmentRequest, user: User) -> Equipm
     db.refresh(request)
 
     created = [
-        notification_service.create(
+        notification_service.create_localized(
             db, offer.owner_id, "request_cancelled",
-            "Zayavka bekor qilindi",
-            f"Zayavka #{request.id} mijoz tomonidan bekor qilindi",
+            "request_cancelled.title", "request_cancelled.body",
             None, request.equipment_type, None, commit=False,
+            request_id=request.id,
         )
         for offer in offers
     ]
@@ -329,11 +330,12 @@ def create_offer(db: Session, request_id: int, owner: User, data) -> RequestOffe
     db.commit()
     db.refresh(offer)
 
-    notification_service.create(
+    notification_service.create_localized(
         db, request.client_id, "request_offer",
-        "Zayavkangizga taklif keldi",
-        f"{equipment.model} — {int(offer.price_per_day)} so'm/kun",
+        "request_offer.title", "request_offer.body",
         None, request.equipment_type, equipment.model,
+        model=equipment.model,
+        price=f"{int(offer.price_per_day):,}".replace(",", " "),
     )
     return offer
 
@@ -434,20 +436,19 @@ def accept_offer(db: Session, request_id: int, offer_id: int, client: User):
     accepted_equipment = (
         db.query(Equipment).filter(Equipment.id == offer.equipment_id).first()
     )
-    created = [notification_service.create(
+    created = [notification_service.create_localized(
         db, offer.owner_id, "request_offer_accepted",
-        "Taklifingiz qabul qilindi",
-        f"Buyurtma #{order.id} yaratildi",
+        "request_offer_accepted.title", "request_offer_accepted.body",
         order.id, request.equipment_type,
         accepted_equipment.model if accepted_equipment else None,
         commit=False,
     )]
     for other in others:
-        created.append(notification_service.create(
+        created.append(notification_service.create_localized(
             db, other.owner_id, "request_offer_rejected",
-            "Taklifingiz tanlanmadi",
-            f"Zayavka #{request.id} bo'yicha boshqa taklif tanlandi",
+            "request_offer_rejected.title", "request_offer_rejected.body",
             None, request.equipment_type, None, commit=False,
+            request_id=request.id,
         ))
     db.commit()
     notification_service.send_pending(db, created)
