@@ -83,9 +83,18 @@ owner = token(OWNER_PHONE)
 
 topup_via_click(client, 10_000_000, 970000 + int(datetime.now().timestamp()) % 10000)
 
-owner_before = len(notifications(owner))
-client_before = len(notifications(client))
-print(f"уведомлений до: у владельца {owner_before}, у клиента {client_before}")
+def newest_id(hdr):
+    """
+    Сравниваем по id самого свежего, а не по длине списка: список отдаётся
+    с лимитом, и на накопленных данных длина перестаёт расти.
+    """
+    items = notifications(hdr, limit=1)
+    return items[0]["id"] if items else 0
+
+
+owner_before = newest_id(owner)
+client_before = newest_id(client)
+print(f"последнее уведомление: у владельца #{owner_before}, у клиента #{client_before}")
 
 head("1. НОВЫЙ ЗАКАЗ → УВЕДОМЛЕНИЕ ВЛАДЕЛЬЦУ")
 
@@ -98,8 +107,8 @@ order = requests.post(f"{API}/orders/", headers=client, json={
 check("заказ создан", "id" in order, str(order)[:200])
 
 owner_notifs = notifications(owner)
-check("владельцу пришло уведомление", len(owner_notifs) == owner_before + 1,
-      f"было {owner_before}, стало {len(owner_notifs)}")
+check("владельцу пришло новое уведомление", newest_id(owner) > owner_before,
+      f"было #{owner_before}, стало #{newest_id(owner)}")
 
 newest = owner_notifs[0] if owner_notifs else {}
 check("тип order_created", newest.get("type") == "order_created", str(newest.get("type")))
@@ -109,15 +118,15 @@ check("привязано к заказу", newest.get("order_id") == order.get(
 check("создано непрочитанным", newest.get("is_read") is False, str(newest.get("is_read")))
 
 check("клиенту уведомление о своём же заказе не пришло",
-      len(notifications(client)) == client_before,
-      f"было {client_before}, стало {len(notifications(client))}")
+      newest_id(client) == client_before,
+      f"было #{client_before}, стало #{newest_id(client)}")
 
 head("2. ПОДТВЕРЖДЕНИЕ И ЗАВЕРШЕНИЕ")
 
 requests.put(f"{API}/orders/{order['id']}", headers=owner, json={"status": "confirmed"})
 client_notifs = notifications(client)
-check("клиенту пришло о подтверждении", len(client_notifs) == client_before + 1,
-      f"стало {len(client_notifs)}")
+check("клиенту пришло о подтверждении", newest_id(client) > client_before,
+      f"было #{client_before}, стало #{newest_id(client)}")
 check("тип order_confirmed", client_notifs[0].get("type") == "order_confirmed",
       str(client_notifs[0].get("type")))
 

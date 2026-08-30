@@ -201,6 +201,17 @@ def get_terms_and_privacy(db: Session = Depends(get_db)):
     }
 
 
+# Matn hali yuklanmagan bo'lsa ko'rsatiladigan zaxira javob
+PLACEHOLDER_TERMS = {
+    "uz": "Foydalanish shartlari hali yuklanmagan.",
+    "ru": "Условия использования пока не загружены.",
+}
+PLACEHOLDER_PRIVACY = {
+    "uz": "Maxfiylik siyosati hali yuklanmagan.",
+    "ru": "Политика конфиденциальности пока не загружена.",
+}
+
+
 @router.get("/terms/{lang}")
 def get_terms(lang: str, db: Session = Depends(get_db)):
     """Foydalanish shartlarini olish (uz yoki ru)"""
@@ -211,7 +222,9 @@ def get_terms(lang: str, db: Session = Depends(get_db)):
     setting = db.query(AppSettings).filter(AppSettings.key == key).first()
     
     if not setting or not setting.value:
-        return {"content": "Foydalanish shartlari hali yuklanmagan."}
+        # Zaxira matn ham foydalanuvchi tilida bo'lishi kerak: ilgari
+        # ru so'ralganda ham o'zbekcha matn qaytardi
+        return {"content": PLACEHOLDER_TERMS[lang]}
     
     return {"content": setting.value}
 
@@ -226,7 +239,7 @@ def get_privacy(lang: str, db: Session = Depends(get_db)):
     setting = db.query(AppSettings).filter(AppSettings.key == key).first()
     
     if not setting or not setting.value:
-        return {"content": "Maxfiylik siyosati hali yuklanmagan."}
+        return {"content": PLACEHOLDER_PRIVACY[lang]}
     
     return {"content": setting.value}
 
