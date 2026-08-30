@@ -93,25 +93,6 @@ $unanswered = $db->query("
       )
 ")->fetch()['n'];
 
-$typeNames = [
-    'excavator' => 'Ekskavator',
-    'mini_excavator' => 'Mini ekskavator',
-    'backhoe_loader' => 'Ekskavator-yuklagich',
-    'bulldozer' => 'Buldozer',
-    'front_loader' => 'Frontal yuklagich',
-    'grader' => 'Greyder',
-    'roller' => 'Katok',
-    'truck_crane' => 'Avtokran',
-    'manipulator' => 'Manipulyator',
-    'aerial_platform' => 'Avtovishka',
-    'dump_truck' => 'Samosval',
-    'concrete_mixer' => 'Beton aralashtirgich',
-    'concrete_pump' => 'Betonnasos',
-    'auger_drill' => 'Yamobur',
-    'tow_truck' => 'Tral / Evakuator',
-    'compressor' => 'Kompressor',
-    'other' => 'Boshqa texnika',
-];
 
 include 'includes/header.php';
 ?>
@@ -220,7 +201,7 @@ include 'includes/header.php';
                                 <small class="text-muted"><?= htmlspecialchars($r['client_phone']) ?></small>
                             </td>
                             <td>
-                                <strong><?= htmlspecialchars($typeNames[$r['equipment_type']] ?? $r['equipment_type']) ?></strong>
+                                <strong><?= htmlspecialchars(equipmentTypeName($r['equipment_type'])) ?></strong>
                             </td>
                             <td>
                                 <?= formatDate($r['start_date'], 'd.m.Y') ?><br>

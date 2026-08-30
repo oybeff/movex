@@ -205,7 +205,7 @@ include 'includes/header.php';
                                 <small class="text-muted"><?= htmlspecialchars($order['client_phone']) ?></small>
                             </td>
                             <td>
-                                <strong><?= htmlspecialchars($order['equipment_type']) ?></strong><br>
+                                <strong><?= htmlspecialchars(equipmentTypeName($order['equipment_type'])) ?></strong><br>
                                 <small class="text-muted"><?= htmlspecialchars($order['equipment_model']) ?></small>
                             </td>
                             <td><?= htmlspecialchars($order['owner_name']) ?></td>

@@ -12,7 +12,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.equipment_types import EQUIPMENT_TYPE_CODES, normalize_type
+from app.core.equipment_types import type_name, EQUIPMENT_TYPE_CODES, normalize_type
 
 CASES = [
     # aniqroq moslik umumiysidan ustun turishi kerak
@@ -66,6 +66,39 @@ def main() -> int:
         if expected not in EQUIPMENT_TYPE_CODES:
             failed += 1
             print(f"  [FAIL] ma'lumotnomada '{expected}' kodi yo'q")
+
+    # type_name kodni o'qiladigan nomga aylantiradi
+    for code in EQUIPMENT_TYPE_CODES:
+        for lang in ("uz", "ru"):
+            name = type_name(code, lang)
+            if not name or name == code:
+                failed += 1
+                print(f"  [FAIL] type_name({code!r}, {lang!r}) -> {name!r}")
+
+    if type_name(None) != "":
+        failed += 1
+        print("  [FAIL] type_name(None) bo'sh satr qaytarishi kerak")
+
+    # Kod foydalanuvchi ko'radigan matnga tushib qolmasin.
+    #
+    # Bir necha marta shunday bo'lgan: xabarnoma sarlavhasida
+    # "backhoe_loader JCB 3CX", tranzaksiya izohida "excavator Komatsu
+    # PC200", adminkada "excavator - Komatsu PC200". Har safar sabab bitta —
+    # equipment.type ni to'g'ridan-to'g'ri f-satrga qo'yish.
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "app"
+    leaks = []
+    raw_in_text = re.compile(r'f"[^"]*\{\s*equipment\.type\s*\}')
+    for path in root.rglob("*.py"):
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if raw_in_text.search(line):
+                leaks.append(f"{path.relative_to(root)}:{number}")
+    if leaks:
+        failed += len(leaks)
+        for place in leaks:
+            print(f"  [FAIL] kod matnga tushmoqda: {place}")
 
     print(f"\n{len(CASES)} holat tekshirildi, {failed} ta xato")
     return 1 if failed else 0

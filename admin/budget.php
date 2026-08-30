@@ -249,7 +249,7 @@ include 'includes/header.php';
                                 <small class="text-muted"><?= htmlspecialchars($reserve['client_phone']) ?></small>
                             </td>
                             <td>
-                                <strong><?= htmlspecialchars($reserve['equipment_type']) ?></strong><br>
+                                <strong><?= htmlspecialchars(equipmentTypeName($reserve['equipment_type'])) ?></strong><br>
                                 <small class="text-muted"><?= htmlspecialchars($reserve['equipment_model']) ?></small>
                             </td>
                             <td><?= htmlspecialchars($reserve['owner_name']) ?></td>

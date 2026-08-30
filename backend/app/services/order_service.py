@@ -4,6 +4,7 @@ from app.models.order import Order
 from app.models.balance import Balance, BalanceTransaction
 from app.models.budget_reserve import BudgetReserve
 from app.models.equipment import Equipment
+from app.core.equipment_types import type_name
 from app.schemas.order import OrderCreate, OrderUpdate
 from app.services import notification_service, pricing_service
 from fastapi import HTTPException
@@ -235,7 +236,7 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
             amount=db_order.frozen_amount,
             type='refund',
             status='completed',
-            description=f"Buyurtma #{db_order.id} rad etildi - {equipment.type} {equipment.model}",
+            description=f"Buyurtma #{db_order.id} rad etildi - {type_name(equipment.type)} {equipment.model}",
             order_id=db_order.id
         )
         db.add(refund_transaction)
@@ -262,7 +263,7 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
             amount=db_order.frozen_amount,
             type='refund',
             status='completed',
-            description=f"Buyurtma #{db_order.id} bekor qilindi - {equipment.type} {equipment.model}",
+            description=f"Buyurtma #{db_order.id} bekor qilindi - {type_name(equipment.type)} {equipment.model}",
             order_id=db_order.id
         )
         db.add(refund_transaction)
@@ -312,7 +313,7 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
             budget_reserve = BudgetReserve(
                 order_id=db_order.id,
                 amount=commission_amount,
-                description=f"Buyurtma #{db_order.id} dan komissiya - {equipment.type} {equipment.model}"
+                description=f"Buyurtma #{db_order.id} dan komissiya - {type_name(equipment.type)} {equipment.model}"
             )
             db.add(budget_reserve)
 
@@ -322,7 +323,7 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
             amount=db_order.frozen_amount,
             type='payment',
             status='completed',
-            description=f"Buyurtma #{db_order.id} yakunlandi - {equipment.type} {equipment.model}",
+            description=f"Buyurtma #{db_order.id} yakunlandi - {type_name(equipment.type)} {equipment.model}",
             order_id=db_order.id
         )
         db.add(client_transaction)
@@ -333,7 +334,7 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
             amount=owner_amount,
             type='income',
             status='completed',
-            description=f"Buyurtma #{db_order.id} dan daromad (90%) - {equipment.type} {equipment.model}",
+            description=f"Buyurtma #{db_order.id} dan daromad (90%) - {type_name(equipment.type)} {equipment.model}",
             order_id=db_order.id
         )
         db.add(owner_transaction)
@@ -378,7 +379,7 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
                 amount=db_order.total_amount,
                 type='payment',
                 status='completed',
-                description=f"Buyurtma #{db_order.id} bekor qilindi - {equipment.type} {equipment.model} (qaytarildi)",
+                description=f"Buyurtma #{db_order.id} bekor qilindi - {type_name(equipment.type)} {equipment.model} (qaytarildi)",
                 order_id=db_order.id
             )
             db.add(owner_refund_transaction)
@@ -389,7 +390,7 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
                 amount=db_order.total_amount,
                 type='refund',
                 status='completed',
-                description=f"Buyurtma #{db_order.id} bekor qilindi - {equipment.type} {equipment.model}",
+                description=f"Buyurtma #{db_order.id} bekor qilindi - {type_name(equipment.type)} {equipment.model}",
                 order_id=db_order.id
             )
             db.add(client_refund_transaction)
@@ -405,7 +406,7 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
                 amount=db_order.frozen_amount,
                 type='refund',
                 status='completed',
-                description=f"Buyurtma #{db_order.id} bekor qilindi - {equipment.type} {equipment.model}",
+                description=f"Buyurtma #{db_order.id} bekor qilindi - {type_name(equipment.type)} {equipment.model}",
                 order_id=db_order.id
             )
             db.add(refund_transaction)
@@ -548,7 +549,7 @@ def get_order_statistics(
                 # Owner uchun faqat 90% (komissiyasiz)
                 owner_income = float(order.total_amount) - float(order.commission)
                 orders_by_equipment_dict[key]["income"] += owner_income
-            orders_by_equipment_dict[key]["equipment_name"] = f"{equipment.type} {equipment.model}"
+            orders_by_equipment_dict[key]["equipment_name"] = f"{type_name(equipment.type)} {equipment.model}"
             orders_by_equipment_dict[key]["equipment_id"] = equipment.id
 
     orders_by_equipment_list = [

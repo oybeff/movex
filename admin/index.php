@@ -185,7 +185,7 @@ include 'includes/header.php';
                         <tr>
                             <td>#<?= $order['id'] ?></td>
                             <td><?= htmlspecialchars($order['client_name']) ?></td>
-                            <td><?= htmlspecialchars($order['equipment_type'] . ' - ' . $order['equipment_model']) ?></td>
+                            <td><?= htmlspecialchars(equipmentTypeName($order['equipment_type']) . ' — ' . $order['equipment_model']) ?></td>
                             <td><?= number_format($order['total_amount'], 0) ?> so'm</td>
                             <td>
                                 <?php

@@ -153,6 +153,37 @@ function adminLogout() {
 }
 
 /**
+ * Texnika turining o'qiladigan nomi.
+ *
+ * Bazada tur KOD bo'lib yotadi ('excavator'). Adminkada u to'g'ridan-to'g'ri
+ * chiqarilardi va admin "excavator - Komatsu PC200" ko'rardi. Ro'yxat
+ * backend'dagi app/core/equipment_types.py bilan bir xil bo'lishi kerak.
+ */
+function equipmentTypeName($code) {
+    static $names = [
+        'excavator'       => 'Ekskavator',
+        'mini_excavator'  => 'Mini ekskavator',
+        'backhoe_loader'  => 'Ekskavator-yuklagich',
+        'bulldozer'       => 'Buldozer',
+        'front_loader'    => 'Frontal yuklagich',
+        'grader'          => 'Greyder',
+        'roller'          => 'Katok',
+        'truck_crane'     => 'Avtokran',
+        'manipulator'     => 'Manipulyator',
+        'aerial_platform' => 'Avtovishka',
+        'dump_truck'      => 'Samosval',
+        'concrete_mixer'  => 'Beton aralashtirgich',
+        'concrete_pump'   => 'Betonnasos',
+        'auger_drill'     => 'Yamobur',
+        'tow_truck'       => 'Tral / Evakuator',
+        'compressor'      => 'Kompressor',
+        'other'           => 'Boshqa texnika',
+    ];
+    if ($code === null || $code === '') return '—';
+    return $names[$code] ?? $code;
+}
+
+/**
  * Utility Functions
  */
 function formatBytes($bytes, $precision = 2) {
