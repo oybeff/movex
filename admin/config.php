@@ -4,14 +4,26 @@
  * Movex GO Admin Panel - Database va API sozlamalari
  */
 
-// Error reporting (production'da o'chirish kerak)
+// Muhit: APP_ENV=development bo'lgandagina xatolar ekranga chiqadi.
+// Ilgari display_errors doim yoqilgan edi — bu prodda tashqi odamga
+// stek va baza haqidagi ma'lumotni ko'rsatib qo'yardi.
+define('IS_DEV', getenv('APP_ENV') === 'development');
+
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', IS_DEV ? '1' : '0');
+ini_set('log_errors', '1');
 
 // Session sozlamalari
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_secure', 0); // HTTPS bo'lsa 1 qiling
+// HTTPS aniqlansa — cookie faqat shifrlangan ulanish orqali yuboriladi.
+// Ilgari bu doim 0 edi, ya'ni prod HTTPS da ham sessiya ochiq HTTP orqali
+// ketishi va o'g'irlanishi mumkin edi.
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+    || (($_SERVER['SERVER_PORT'] ?? '') == 443);
+ini_set('session.cookie_secure', $isHttps ? '1' : '0');
+ini_set('session.cookie_samesite', 'Strict');
 
 // Timezone
 date_default_timezone_set('Asia/Tashkent');
@@ -36,8 +48,9 @@ define('ITEMS_PER_PAGE', 20);
 define('BACKUP_DIR', dirname(__DIR__) . '/movex_go_backend/database/backups');
 define('BACKUP_RETENTION_DAYS', 30);
 
-// Security
-define('ADMIN_SECRET_KEY', 'movex_go_admin_secret_2024'); // O'zgartiring!
+// ADMIN_SECRET_KEY olib tashlandi: u shu yerda ochiq yozilgan edi, lekin
+// kodning birorta joyida ishlatilmasdi. Kirish parol bilan tekshiriladi
+// (adminLogin), sessiya esa PHP ning o'z mexanizmi bilan himoyalangan.
 
 /**
  * Database Connection

@@ -38,8 +38,16 @@ from app.models import (
 )
 from app.models.balance import Balance, BalanceTransaction
 
-# Создаем все таблицы (если их еще нет)
-Base.metadata.create_all(bind=engine)
+# СХЕМА ЗДЕСЬ НЕ СОЗДАЁТСЯ.
+#
+# Раньше на старте вызывался Base.metadata.create_all(bind=engine). Из-за
+# этого база создавалась мимо Alembic, и `alembic upgrade head` на чистой
+# базе падал: миграции меняли таблицы, которых ни одна миграция не создаёт.
+# Развернуться по документации из репозитория было невозможно.
+#
+# Теперь источник правды один — миграции:
+#   первая установка:  python scripts/init_db.py
+#   обновление:        alembic upgrade head
 
 app = FastAPI(
     title="Movex GO API",

@@ -91,17 +91,22 @@ location /admin {
 ### Production uchun:
 
 1. **config.php** da error reporting o'chiring:
-```php
-error_reporting(0);
-ini_set('display_errors', 0);
+Xatolarni ekranga chiqarish va sessiya cookie'si endi AVTOMATIK sozlanadi
+(config.php):
+
+- xatolar faqat `APP_ENV=development` bo'lganda ko'rinadi, prodda jurnalgagina
+  yoziladi;
+- HTTPS aniqlansa, cookie `Secure` bayrog'i bilan yuboriladi, ustiga
+  `SameSite=Strict` qo'yiladi.
+
+Ya'ni prodda qo'lda o'zgartiradigan narsa yo'q — faqat muhit o'zgaruvchisi:
+
+```bash
+APP_ENV=production
 ```
 
-2. **ADMIN_SECRET_KEY** ni o'zgartiring
-
-3. **HTTPS** yoqing:
-```php
-ini_set('session.cookie_secure', 1);
-```
+`ADMIN_SECRET_KEY` olib tashlandi: u kodda ochiq yozilgan edi va hech qayerda
+ishlatilmasdi.
 
 4. **Admin parolini** o'zgartiring
 
