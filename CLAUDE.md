@@ -47,6 +47,9 @@ FastAPI, Python 3.11+. Точка входа `backend/app/main.py`.
 Подробности по деньгам — `docs/backend/PAYMENTS.md`, по уведомлениям —
 `docs/backend/NOTIFICATIONS.md`.
 
+Выкат в прод — **`docs/RELEASE.md`**. Старые семь деплой-документов в
+`docs/backend/` пересекаются и написаны до всех изменений.
+
 Команды (из `backend/`, есть `Makefile`):
 
 ```bash
