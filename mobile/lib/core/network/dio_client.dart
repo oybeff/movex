@@ -1,18 +1,23 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../constants/app_config.dart';
 import '../../main.dart';
 
 class DioClient {
   static Dio create() {
     final dio = Dio(
       BaseOptions(
-        baseUrl: "http://192.168.1.101:8000",
+        // Manzil yig'ish vaqtida beriladi (--dart-define=API_BASE_URL=...).
+        // Ilgari bu yerda dasturchining uy IP si turardi.
+        baseUrl: AppConfig.apiBaseUrl,
         connectTimeout: const Duration(seconds: 30),
         receiveTimeout: const Duration(seconds: 30),
         headers: {
           "Content-Type": "application/json",
           "accept": "application/json",
-          },
+        },
       ),
     );
 
@@ -22,35 +27,30 @@ class DioClient {
           final prefs = await SharedPreferences.getInstance();
           final token = prefs.getString("token");
 
-          // Debug: Token mavjudligini tekshirish
-          print("🔑 Request to: ${options.path}");
-          print("🔑 Token exists: ${token != null}");
           if (token != null) {
-            print("🔑 Token: ${token.substring(0, 20)}...");
             options.headers["Authorization"] = "Bearer $token";
-          } else {
-            print("⚠️ No token found in SharedPreferences");
+          }
+
+          // Tokenning bir qismini ham jurnalga yozmaymiz: qurilma
+          // jurnallari boshqa ilovalar va crash-hisobotlarga tushadi.
+          if (kDebugMode) {
+            debugPrint('→ ${options.method} ${options.path}');
           }
 
           return handler.next(options);
         },
         onError: (DioException e, handler) async {
-          print("❌ API Error: ${e.response?.statusCode} - ${e.message}");
-          print("❌ Request path: ${e.requestOptions.path}");
-          print("❌ Response data: ${e.response?.data}");
+          if (kDebugMode) {
+            debugPrint('✕ ${e.response?.statusCode} ${e.requestOptions.path}');
+          }
 
-          // Agar 401 (Unauthorized) xatosi kelsa
+          // 401 — token yaroqsiz: seansni tozalab, kirish sahifasiga
           if (e.response?.statusCode == 401) {
-            print("401 Unauthorized - Redirecting to login page");
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.remove('token');
+            await prefs.remove('role');
+            await prefs.remove('user_id');
 
-              // Token va role ma'lumotlarini o'chirish
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('token');
-              await prefs.remove('role');
-              await prefs.remove('user_id');
-
-            // Login sahifasiga yo'naltirish
-            // Global appRouter orqali login sahifasiga o'tamiz
             appRouter.go('/login');
           }
 
@@ -58,12 +58,20 @@ class DioClient {
         },
       ),
     );
-    dio.interceptors.add(LogInterceptor(
-      request: true,
-      requestBody: true,
-      responseBody: true,
-      responseHeader: false,
-    ));
+
+    // To'liq jurnal — so'rov va javob tanasi bilan. Faqat qo'lda yoqilganda
+    // va faqat debug yig'ilmada: reliz ilovada bu foydalanuvchi ma'lumotlarini
+    // qurilma jurnaliga chiqarib yuboradi.
+    if (kDebugMode && AppConfig.verboseNetworkLog) {
+      dio.interceptors.add(
+        LogInterceptor(
+          request: true,
+          requestBody: true,
+          responseBody: true,
+          responseHeader: false,
+        ),
+      );
+    }
 
     return dio;
   }

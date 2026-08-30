@@ -1,4 +1,4 @@
-package com.example.movex_go
+package uz.movexgo.app
 
 import io.flutter.embedding.android.FlutterActivity
 import com.yandex.mapkit.MapKitFactory

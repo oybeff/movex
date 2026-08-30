@@ -31,9 +31,19 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase
-  firebase_core: ^2.24.2
-  firebase_auth: ^4.16.0
+  # Firebase olib tashlandi: firebase_core va firebase_auth pubspec da bor edi,
+  # lekin lib/ da bir marta ham ishlatilmagan, google-services plagini ham
+  # ulanmagan — ya'ni ular hech narsa qilmasdan iOS uchun og'ir native
+  # podlarni tortib kelardi.
+  #
+  # Push xabarnomalar kerak bo'lganda qaytarish tartibi:
+  #   1. Firebase loyihasini yarating, google-services.json (Android) va
+  #      GoogleService-Info.plist (iOS) fayllarini qo'shing;
+  #   2. android/app/build.gradle.kts ga com.google.gms.google-services
+  #      plaginini qo'shing;
+  #   3. firebase_core va firebase_messaging ni shu yerga qaytaring;
+  #   4. qurilma tokenini serverga yuboring: POST /notifications/devices
+  #      (backend tayyor, docs/backend/NOTIFICATIONS.md ga qarang).
 
   # Для работы с состоянием
   provider: ^6.1.5
