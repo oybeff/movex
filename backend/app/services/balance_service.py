@@ -1,16 +1,13 @@
 from sqlalchemy.orm import Session
-from app.core.config import settings
 from app.models.balance import Balance, BalanceTransaction
 from app.schemas.balance import BalanceTransactionCreate, BalanceTransactionUpdate
-from app.services.click_service import ClickService
-from app.services.payme_service import PaymeService
+from app.services import payment_providers
 from fastapi import HTTPException
 from decimal import Decimal
 
-# Foydalanuvchi o'zi tanlab, ilova orqali to'ldira oladigan usullar.
-# Bu yerga faqat to'lovni TASDIQLAB beradigan integratsiya qo'shiladi:
-# callback kelmaydigan usul (naqd pul, oddiy karta) balansni to'ldira olmaydi.
-SELF_SERVICE_PAYMENT_METHODS = {"click", "payme"}
+# Ruxsat etilgan usullar ro'yxati payment_providers da turadi — yangi tizim
+# qo'shilganda faqat o'sha faylni tahrirlash kifoya.
+SELF_SERVICE_PAYMENT_METHODS = payment_providers.SELF_SERVICE_PAYMENT_METHODS
 
 
 def get_or_create_balance(db: Session, user_id: int):
@@ -137,26 +134,20 @@ def generate_payment_url(payment_method: str, transaction_id: int, amount: float
     Kalitlar sozlanmagan bo'lsa, ishlamaydigan havola qaytarish o'rniga aniq
     xato beramiz: aks holda mijoz to'lov tizimining bo'sh sahifasiga tushardi.
     """
-    if payment_method == "click":
-        if not settings.click_configured:
-            raise HTTPException(
-                status_code=503,
-                detail="Click to'lov tizimi sozlanmagan. Administratorga murojaat qiling."
-            )
-        return ClickService.generate_payment_url(transaction_id=transaction_id, amount=amount)
+    provider = payment_providers.get(payment_method)
+    if provider is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Noma'lum to'lov usuli: {payment_method}"
+        )
 
-    if payment_method == "payme":
-        if not settings.payme_configured:
-            raise HTTPException(
-                status_code=503,
-                detail="Payme to'lov tizimi sozlanmagan. Administratorga murojaat qiling."
-            )
-        return PaymeService.build_checkout_url(transaction_id=transaction_id, amount_sum=amount)
+    if not provider.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail=f"{provider.title} to'lov tizimi sozlanmagan. Administratorga murojaat qiling."
+        )
 
-    raise HTTPException(
-        status_code=400,
-        detail=f"Noma'lum to'lov usuli: {payment_method}"
-    )
+    return provider.build_checkout_url(transaction_id, amount)
 
 
 def generate_click_payment_url(transaction_id: int, amount: float) -> str:
@@ -202,29 +193,12 @@ def update_transaction(
     return transaction
 
 
-def process_payment_from_balance(db: Session, user_id: int, amount: float, description: str = None):
-    """
-    Balansdan to'lov qilish
-    Buyurtma to'lovi uchun ishlatiladi
-    """
-    # Balansni tekshirish
-    balance = get_balance(db, user_id)
-    if balance.balance < amount:
-        raise HTTPException(status_code=400, detail="Insufficient balance")
-    
-    # Tranzaksiya yaratish
-    transaction = create_transaction(
-        db=db,
-        user_id=user_id,
-        amount=amount,
-        transaction_type="payment",
-        payment_method="balance",
-        description=description or "To'lov balansdan",
-        status="completed"
-    )
-    
-    # Balansni kamaytirish
-    update_balance(db, user_id, -amount)
-    
-    return transaction
+# process_payment_from_balance() olib tashlandi.
+#
+# U hech qayerdan chaqirilmasdi va chaqirilganda 500 xato berardi:
+# payment_method sifatida "balance" yozardi, lekin jadval cheklovi bunday
+# qiymatni qabul qilmaydi (faqat click, payme, uzum, card, cash yoki NULL).
+#
+# Buyurtma uchun pul harakati order_service da, escrow mantig'i bilan
+# birga turadi — ikkinchi, yashirin yo'l kerak emas.
 
