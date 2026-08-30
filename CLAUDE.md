@@ -182,12 +182,24 @@ python3 tool/generate_equipment_icons.py     # .svg для интерфейса 
 ## Окружение этой машины
 
 - Бэкенд работает на **Python 3.12** (venv в `backend/venv`), PostgreSQL 16 ✅, PHP 7.4 ✅
-- Flutter ставится через `brew install --cask flutter`
-- **Собрать мобилку нечем**: нет ни полного Xcode (только Command Line Tools),
-  ни Android SDK. Нужен хотя бы один из них — Android Studio быстрее
-  (~6 ГБ), Xcode обязателен для App Store (~17 ГБ)
-- Дартовый код **не компилировался** — проверить `flutter analyze`, когда
-  появится Flutter
+- **Flutter 3.47.2** ✅, Chrome ✅
+- **Собрать под телефон нечем**: нет ни полного Xcode с CocoaPods (стоят только
+  Command Line Tools), ни Android SDK. Нужен хотя бы один — Android Studio
+  быстрее (~6 ГБ), Xcode обязателен для App Store (~17 ГБ)
+- Веб-сборка работает и годится как проверка: `flutter build web --release`
+  компилирует весь код. Карта на вебе не заработает (yandex_mapkit только
+  под телефоны), остальное рисуется
+
+Перед коммитом в мобилку:
+
+```bash
+cd mobile && flutter analyze          # должно быть 0 ошибок
+flutter build web --release           # быстрая проверка, что всё компилируется
+```
+
+`flutter analyze` показывает ~227 замечаний из прежнего кода (print в проде,
+устаревший withOpacity, мёртвые проверки на null). Ошибок — ноль. Не увеличивай
+это число своими правками.
 
 ## Правила
 
