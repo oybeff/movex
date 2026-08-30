@@ -17,6 +17,21 @@ class Settings(BaseSettings):
     ESKIZ_PASSWORD: str
     ESKIZ_API_URL: str = "https://notify.eskiz.uz/api"
 
+    # Click to'lov tizimi.
+    # Ilgari bu qiymatlar click_service ichida os.getenv orqali o'qilardi, ya'ni
+    # .env fayldan KELMASDI (pydantic-settings faylni o'qiydi, lekin os.environ'ga
+    # yozmaydi) — Click faqat systemd EnvironmentFile bilan ishga tushganda ishlardi.
+    CLICK_MERCHANT_ID: str = ""
+    CLICK_SERVICE_ID: str = ""
+    CLICK_SECRET_KEY: str = ""
+    CLICK_MERCHANT_USER_ID: str = ""
+    CLICK_RETURN_URL: str = "movexgo://payment/success"
+
+    @property
+    def click_configured(self) -> bool:
+        """Click bilan ishlash uchun barcha kerakli kalitlar bormi."""
+        return bool(self.CLICK_SERVICE_ID and self.CLICK_SECRET_KEY and self.CLICK_MERCHANT_ID)
+
     # OTP Settings
     OTP_EXPIRY_MINUTES: int = 5
     OTP_MAX_ATTEMPTS: int = 5

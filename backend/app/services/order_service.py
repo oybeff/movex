@@ -5,6 +5,7 @@ from app.models.balance import Balance, BalanceTransaction
 from app.models.budget_reserve import BudgetReserve
 from app.models.equipment import Equipment
 from app.schemas.order import OrderCreate, OrderUpdate
+from app.services import pricing_service
 from fastapi import HTTPException
 from decimal import Decimal
 from datetime import datetime, date
@@ -33,22 +34,12 @@ def create_order(db: Session, order: OrderCreate, user_id: int):
         db.commit()
         db.refresh(balance)
 
-    # 2. Mavjud balansni tekshirish (balance - frozen_balance >= total_amount)
-    available_balance = balance.balance - balance.frozen_balance
-    total_amount = Decimal(str(order.total_amount))
-
-    if available_balance < total_amount:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Hisobingizda yetarli mablag' yo'q. Mavjud: {float(available_balance)} so'm, Kerak: {float(total_amount)} so'm"
-        )
-
-    # 3. Equipment ni tekshirish
+    # 2. Equipment ni tekshirish
     equipment = db.query(Equipment).filter(Equipment.id == order.equipment_id).first()
     if not equipment:
         raise HTTPException(status_code=404, detail="Texnika topilmadi")
 
-    # 4. Texnikaning holatini tekshirish (faqat 'available' bo'lishi kerak)
+    # 3. Texnikaning holatini tekshirish (faqat 'available' bo'lishi kerak)
     if equipment.status != 'available':
         status_messages = {
             'busy': "Texnika hozirda band (owner tomonidan belgilangan)",
@@ -57,7 +48,7 @@ def create_order(db: Session, order: OrderCreate, user_id: int):
         message = status_messages.get(equipment.status, "Texnika mavjud emas")
         raise HTTPException(status_code=400, detail=message)
 
-    # 5. Sana bo'yicha bandlikni tekshirish (overlap check)
+    # 4. Sana bo'yicha bandlikni tekshirish (overlap check)
     # Overlap logic: (start1 <= end2) AND (end1 >= start2)
     conflicting_orders = db.query(Order).filter(
         Order.equipment_id == order.equipment_id,
@@ -76,13 +67,50 @@ def create_order(db: Session, order: OrderCreate, user_id: int):
             detail=f"Bu sana oralig'ida texnika band. To'qnashuvchi buyurtmalar: {conflict_details}"
         )
 
-    # 6. Pul muzlatish
+    # 5. Narxni SERVERDA hisoblash.
+    # Mijoz yuborgan total_amount va commission e'tiborga OLINMAYDI —
+    # ularni o'zgartirib, texnikani tekinga olish mumkin edi.
+    try:
+        price = pricing_service.calculate_order_price(
+            db=db,
+            equipment=equipment,
+            start_date=order.start_date,
+            end_date=order.end_date,
+            delivery_latitude=order.delivery_latitude,
+            delivery_longitude=order.delivery_longitude,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    total_amount = price.total
+
+    # 6. Balansni tekshirish va pulni muzlatish.
+    # Qatorni bloklaymiz: bir vaqtda kelgan ikkita buyurtma bitta mablag'ni
+    # ikki marta muzlatib yubormasligi kerak.
+    balance = (
+        db.query(Balance)
+        .filter(Balance.user_id == user_id)
+        .with_for_update()
+        .one()
+    )
+    available_balance = balance.balance - balance.frozen_balance
+
+    if available_balance < total_amount:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Hisobingizda yetarli mablag' yo'q. Mavjud: {float(available_balance)} so'm, Kerak: {float(total_amount)} so'm"
+        )
+
     balance.frozen_balance += total_amount
 
-    # 7. Order yaratish
+    # 7. Order yaratish — barcha pul maydonlari server hisobidan
     order_data = order.dict()
     order_data['user_id'] = user_id
     order_data['status'] = 'pending'
+    order_data['total_amount'] = total_amount
+    order_data['commission'] = price.commission
+    order_data['delivery_distance'] = price.delivery_distance
+    order_data['delivery_fee'] = price.delivery_fee
     order_data['frozen_amount'] = total_amount
 
     db_order = Order(**order_data)
@@ -223,25 +251,35 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
             owner_balance = Balance(user_id=equipment.owner_id, balance=Decimal('0.0'), frozen_balance=Decimal('0.0'))
             db.add(owner_balance)
 
-        # Client'ning frozen_balance'dan ayirish
+        # Client'dan pulni YECHIB OLISH.
+        # Muzlatishni bekor qilishning o'zi yetarli emas: buyurtma yakunlanganda
+        # pul mijozdan butunlay chiqib ketishi kerak. frozen_balance'ni kamaytirib,
+        # balance'ga tegmaslik — pulni yo'qdan bor qilish demakdir.
+        # (rad etish va bekor qilish shoxobchalarida esa aksincha: u yerda faqat
+        #  muzlatish olib tashlanadi, pul mijozda qoladi.)
         balance.frozen_balance -= db_order.frozen_amount
+        balance.balance -= db_order.frozen_amount
 
         # Pulni taqsimlash:
-        # - commission (10%) budjetga
-        # - qolgan qism (90%) owner'ga
-        commission_amount = Decimal(str(db_order.commission))  # 10% komissiya
-        owner_amount = db_order.frozen_amount - commission_amount  # Qolgan 90%
+        # - commission budjetga
+        # - qolgan qism owner'ga
+        commission_amount = Decimal(str(db_order.commission))
+        owner_amount = db_order.frozen_amount - commission_amount
 
         # Owner'ga qo'shish (faqat 90%)
         owner_balance.balance += owner_amount
 
-        # Budjetga komissiyani saqlash (10%)
-        budget_reserve = BudgetReserve(
-            order_id=db_order.id,
-            amount=commission_amount,
-            description=f"Buyurtma #{db_order.id} dan 10% komissiya - {equipment.type} {equipment.model}"
-        )
-        db.add(budget_reserve)
+        # Budjetga komissiyani saqlash.
+        # Nol summani jadval qabul qilmaydi (check_budget_reserve_amount), shuning
+        # uchun komissiya bo'lmasa yozuv umuman yaratilmaydi — aks holda buyurtma
+        # 500 xato bilan 'confirmed' holatida abadiy qotib qolar edi.
+        if commission_amount > 0:
+            budget_reserve = BudgetReserve(
+                order_id=db_order.id,
+                amount=commission_amount,
+                description=f"Buyurtma #{db_order.id} dan komissiya - {equipment.type} {equipment.model}"
+            )
+            db.add(budget_reserve)
 
         # Client uchun 'payment' transaksiyasi yaratish (to'liq summa)
         client_transaction = BalanceTransaction(

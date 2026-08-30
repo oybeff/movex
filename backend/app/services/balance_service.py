@@ -1,8 +1,15 @@
 from sqlalchemy.orm import Session
+from app.core.config import settings
 from app.models.balance import Balance, BalanceTransaction
 from app.schemas.balance import BalanceTransactionCreate, BalanceTransactionUpdate
+from app.services.click_service import ClickService
 from fastapi import HTTPException
 from decimal import Decimal
+
+# Foydalanuvchi o'zi tanlab, ilova orqali to'ldira oladigan usullar.
+# Bu yerga faqat to'lovni TASDIQLAB beradigan integratsiya qo'shiladi:
+# callback kelmaydigan usul (naqd pul, oddiy karta) balansni to'ldira olmaydi.
+SELF_SERVICE_PAYMENT_METHODS = {"click"}
 
 
 def get_or_create_balance(db: Session, user_id: int):
@@ -79,13 +86,15 @@ def top_up_balance(
     transaction_data: BalanceTransactionCreate
 ):
     """
-    Hisob to'ldirish
+    Hisob to'ldirish.
 
-    Click to'lov uchun: Transaction yaratish va pending holatda qoldirish
-    Boshqa to'lov usullari uchun: To'g'ridan-to'g'ri completed qilish
+    Tranzaksiya HAR DOIM 'pending' holatda yaratiladi. Balans faqat to'lov
+    tizimidan tasdiq kelganda to'ldiriladi (Click uchun — /balance/click/complete).
+
+    Ilgari 'click'dan boshqa har qanday usul balansni darhol to'ldirar edi,
+    hech qanday to'lovni tekshirmasdan: bitta so'rov bilan 10 000 000 so'm
+    olish mumkin edi. Shuning uchun tasdiqlanmagan usullar endi rad etiladi.
     """
-    import os
-
     # Validatsiya
     if transaction_data.amount < 10000 or transaction_data.amount > 10000000:
         raise HTTPException(
@@ -93,7 +102,16 @@ def top_up_balance(
             detail="Amount must be between 10,000 and 10,000,000"
         )
 
-    # Tranzaksiya yaratish
+    if transaction_data.payment_method not in SELF_SERVICE_PAYMENT_METHODS:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Bu to'lov usuli hozircha mavjud emas. "
+                f"Mavjud usullar: {', '.join(sorted(SELF_SERVICE_PAYMENT_METHODS))}"
+            )
+        )
+
+    # Tranzaksiya yaratish — 'pending', to'lov tizimi tasdiqlagunicha
     transaction = create_transaction(
         db=db,
         user_id=user_id,
@@ -105,51 +123,29 @@ def top_up_balance(
         phone_number=transaction_data.phone_number
     )
 
-    # Agar Click to'lov bo'lsa, pending holatda qoldiramiz
-    # Click callback orqali completed qilinadi
-    if transaction_data.payment_method == "click":
-        db.commit()
-        db.refresh(transaction)
-        return transaction
-
-    # Boshqa to'lov usullari uchun to'g'ridan-to'g'ri completed qilish
-    transaction.status = "completed"
-
-    # Balansni yangilash
-    update_balance(db, user_id, transaction_data.amount)
-
     db.commit()
     db.refresh(transaction)
 
     return transaction
 
 
-def generate_click_payment_url(transaction_id: int, amount: float, return_url: str = None) -> str:
+def generate_click_payment_url(transaction_id: int, amount: float) -> str:
     """
-    Click to'lov URL'ini yaratish
+    Click to'lov havolasini yaratish.
 
-    Format: https://my.click.uz/services/pay?service_id=SERVICE_ID&merchant_id=MERCHANT_ID&amount=AMOUNT&transaction_param=TRANSACTION_ID&return_url=RETURN_URL
+    URL'ni ClickService yasaydi — ilgari bu yerda ikkinchi, mustaqil nusxasi bor
+    edi va u kalitlarni os.getenv orqali olardi, ya'ni .env dan kelmasdi.
+
+    Kalitlar sozlanmagan bo'lsa, ishlamaydigan havola qaytarish o'rniga aniq
+    xato beramiz: aks holda mijoz Click'ning bo'sh sahifasiga tushib qolardi.
     """
-    import os
+    if not settings.click_configured:
+        raise HTTPException(
+            status_code=503,
+            detail="Click to'lov tizimi sozlanmagan. Administratorga murojaat qiling."
+        )
 
-    service_id = os.getenv("CLICK_SERVICE_ID", "")
-    merchant_id = os.getenv("CLICK_MERCHANT_ID", "")
-
-    # Return URL - mobil ilovaga qaytish uchun
-    if not return_url:
-        return_url = os.getenv("CLICK_RETURN_URL", "movexgo://payment/success")
-
-    # Click to'lov URL'i
-    payment_url = (
-        f"https://my.click.uz/services/pay?"
-        f"service_id={service_id}&"
-        f"merchant_id={merchant_id}&"
-        f"amount={amount}&"
-        f"transaction_param={transaction_id}&"
-        f"return_url={return_url}"
-    )
-
-    return payment_url
+    return ClickService.generate_payment_url(transaction_id=transaction_id, amount=amount)
 
 
 def get_transaction(db: Session, transaction_id: int, user_id: int):

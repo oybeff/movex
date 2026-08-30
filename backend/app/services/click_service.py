@@ -2,10 +2,10 @@
 Click to'lov tizimi integratsiyasi uchun service
 """
 import hashlib
-import os
 from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from app.core.config import settings
 from app.models.balance import BalanceTransaction
 from decimal import Decimal
 
@@ -13,12 +13,12 @@ from decimal import Decimal
 class ClickService:
     """Click to'lov tizimi bilan ishlash uchun service"""
 
-    # Click credentials (environment variables'dan olinadi)
-    MERCHANT_ID = os.getenv("CLICK_MERCHANT_ID", "")
-    SERVICE_ID = os.getenv("CLICK_SERVICE_ID", "")
-    SECRET_KEY = os.getenv("CLICK_SECRET_KEY", "")
-    MERCHANT_USER_ID = os.getenv("CLICK_MERCHANT_USER_ID", "")
-    RETURN_URL = os.getenv("CLICK_RETURN_URL", "movexgo://payment/success")
+    # Click credentials — .env dan settings orqali (os.getenv .env ni ko'rmaydi)
+    MERCHANT_ID = settings.CLICK_MERCHANT_ID
+    SERVICE_ID = settings.CLICK_SERVICE_ID
+    SECRET_KEY = settings.CLICK_SECRET_KEY
+    MERCHANT_USER_ID = settings.CLICK_MERCHANT_USER_ID
+    RETURN_URL = settings.CLICK_RETURN_URL
     
     # Click error codes
     ERROR_CODES = {
