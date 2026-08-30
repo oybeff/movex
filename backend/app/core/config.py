@@ -66,6 +66,14 @@ class Settings(BaseSettings):
     SPLIT_MODE: str = "escrow"
 
     # OTP Settings
+    # Kodni qayta so'rash oralig'i va soatiga eng ko'p yuborish soni.
+    # Ikkalasi ham kerak: kodni cheksiz so'rash mumkin bo'lsa, har safar
+    # yangi urinishlar oynasi ochiladi va 4 xonali kodni tanlab olsa
+    # bo'ladi. Bundan tashqari har bir SMS pul turadi.
+    # OTP_TEST_MODE yoqilganda cheklovlar ishlamaydi.
+    OTP_RESEND_COOLDOWN_SECONDS: int = 60
+    OTP_MAX_SENDS_PER_HOUR: int = 5
+
     OTP_EXPIRY_MINUTES: int = 5
     OTP_MAX_ATTEMPTS: int = 5
     OTP_BLOCK_DURATION_HOURS: int = 1

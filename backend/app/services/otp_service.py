@@ -57,13 +57,48 @@ class OTPService:
                     "blocked_until": existing_otp.blocked_until.isoformat()
                 }
             
-            # Delete old unverified OTP records for this phone
+            now = datetime.now(timezone.utc)
+            window_start = now - timedelta(hours=1)
+
+            recent = self.db.query(OTPVerification).filter(
+                OTPVerification.phone == clean_phone,
+                OTPVerification.is_verified == False,
+                OTPVerification.created_at >= window_start,
+            ).order_by(OTPVerification.created_at.desc()).all()
+
+            # Yuborish chastotasi. Test rejimida cheklov yo'q — u yerda kod
+            # javobning o'zida qaytadi va SMS umuman yuborilmaydi.
+            if not settings.OTP_TEST_MODE:
+                if recent:
+                    since_last = (now - recent[0].created_at).total_seconds()
+                    if since_last < settings.OTP_RESEND_COOLDOWN_SECONDS:
+                        wait = int(settings.OTP_RESEND_COOLDOWN_SECONDS - since_last)
+                        return {
+                            "success": False,
+                            "message": f"Yangi kodni {wait} soniyadan keyin so'rash mumkin.",
+                        }
+
+                if len(recent) >= settings.OTP_MAX_SENDS_PER_HOUR:
+                    return {
+                        "success": False,
+                        "message": "Kod juda ko'p marta so'raldi. Bir soatdan keyin qayta urinib ko'ring.",
+                    }
+
+            # Urinishlar soni yangi kodda NOLDAN boshlanmaydi.
+            # Ilgari bu yerda eski yozuvlar o'chirilardi va hisoblagich ham
+            # birga ketardi: 4 marta xato kiritib, yangi kod so'rab, yana 4
+            # marta urinish mumkin edi — ya'ni 4 xonali kodni tanlab olsa
+            # bo'lardi. Endi soat davomidagi urinishlar saqlanadi.
+            previous_attempts = max((r.attempts for r in recent), default=0)
+
+            # Oynadan chiqib ketgan eski yozuvlarni tozalaymiz
             self.db.query(OTPVerification).filter(
                 OTPVerification.phone == clean_phone,
-                OTPVerification.is_verified == False
+                OTPVerification.is_verified == False,
+                OTPVerification.created_at < window_start,
             ).delete()
             self.db.commit()
-            
+
             # Generate new OTP code
             otp_code = self.generate_otp_code()
             
@@ -71,7 +106,8 @@ class OTPService:
             otp_record = OTPVerification(
                 phone=clean_phone,
                 otp_code=otp_code,
-                attempts=0,
+                # Soat davomidagi xato urinishlar hisobi davom etadi
+                attempts=previous_attempts,
                 is_verified=False,
                 is_blocked=False,
                 expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXPIRY_MINUTES)
