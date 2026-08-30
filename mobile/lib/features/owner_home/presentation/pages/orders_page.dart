@@ -453,6 +453,45 @@ class _OrdersPageState extends State<OrdersPage> {
     }
   }
 
+  /// Navigatorda marshrut quradi.
+  ///
+  /// _openInMap faqat nuqtani ko'rsatadi; egaga esa u yergacha QANDAY
+  /// borishni bilish kerak, shuning uchun alohida tugma.
+  Future<void> _buildRoute(OrderModel order) async {
+    final lat = double.tryParse(order.deliveryLatitude);
+    final lng = double.tryParse(order.deliveryLongitude);
+    if (lat == null || lng == null) {
+      _mapToast('messages.location_not_found'.tr());
+      return;
+    }
+
+    try {
+      final maps = await MapLauncher.installedMaps;
+      if (maps.isEmpty) {
+        _mapToast('messages.no_map_app'.tr());
+        return;
+      }
+      await maps.first.showDirections(
+        destination: Coords(lat, lng),
+        destinationTitle: order.deliveryAddress ?? 'orders.delivery_location'.tr(),
+      );
+    } catch (_) {
+      _mapToast('errors.cannot_open_map'.tr());
+    }
+  }
+
+  void _mapToast(String text) {
+    if (!mounted) return;
+    toastification.show(
+      context: context,
+      type: ToastificationType.warning,
+      style: ToastificationStyle.flatColored,
+      title: Text(text),
+      autoCloseDuration: const Duration(seconds: 3),
+      alignment: Alignment.topCenter,
+    );
+  }
+
   Future<void> _openInMap(OrderModel order) async {
     try {
       final deliveryLat = double.tryParse(order.deliveryLatitude);
@@ -1191,6 +1230,39 @@ class _OrdersPageState extends State<OrdersPage> {
                             ),
                           ),
                           // "Xaritada ochish" tugmasi
+                          Positioned(
+                            bottom: 8,
+                            left: 8,
+                            child: Material(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              elevation: 2,
+                              child: InkWell(
+                                onTap: () => _buildRoute(order),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.directions,
+                                          size: 18, color: AppColors.primaryGreen),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'orders.build_route'.tr(),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.primaryGreen,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                           Positioned(
                             bottom: 8,
                             right: 8,

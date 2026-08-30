@@ -18,6 +18,8 @@ import 'client_profile_detail_page.dart';
 import 'client_payments_page.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
 import 'client_balance_page.dart';
+import '../../../requests/presentation/pages/my_requests_page.dart';
+import '../../../requests/presentation/pages/search_area_page.dart';
 import '../../../settings/presentation/pages/terms_page.dart';
 import '../../../settings/presentation/pages/privacy_page.dart';
 
@@ -799,6 +801,43 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => const ClientProfileDetailPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Zayavkalar: katalogdan boshqa yo'l — mijoz turni
+                        // aytadi, egalar narx taklif qiladi.
+                        _SettingsCard(
+                          children: [
+                            _SettingsTile(
+                              icon: Icons.campaign_outlined,
+                              title: 'requests.my_requests'.tr(),
+                              subtitle: 'requests.find_equipment'.tr(),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const MyRequestsPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                            const Divider(height: 1, color: Colors.black12),
+                            _SettingsTile(
+                              icon: Icons.radar,
+                              title: 'area.title'.tr(),
+                              subtitle: 'area.client_hint'.tr(),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const SearchAreaPage(isOwner: false),
                                   ),
                                 );
                               },

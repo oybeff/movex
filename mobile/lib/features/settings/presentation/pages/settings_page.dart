@@ -11,6 +11,8 @@ import '../../../../core/services/user_service.dart';
 import '../../../../core/models/contact_method_model.dart';
 import '../../../../core/models/user_model.dart';
 import '../../../owner_home/presentation/pages/payments_page.dart';
+import '../../../requests/presentation/pages/requests_feed_page.dart';
+import '../../../requests/presentation/pages/search_area_page.dart';
 import 'profile_page.dart';
 import 'terms_page.dart';
 import 'privacy_page.dart';
@@ -536,7 +538,40 @@ class _SettingsPageState extends State<SettingsPage> {
                       );
                     },
                   ),
+                  const Divider(height: 1, color: Colors.black12),
+                  _SettingsTile(
+                    icon: Icons.campaign_outlined,
+                    title: 'requests.feed'.tr(),
+                    subtitle: 'requests.feed_hint'.tr(),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RequestsFeedPage(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
+                // Radius ikkala rolga ham kerak: egaga zayavkalarni,
+                // mijozga texnikani filtrlaydi.
+                const Divider(height: 1, color: Colors.black12),
+                _SettingsTile(
+                  icon: Icons.radar,
+                  title: 'area.title'.tr(),
+                  subtitle: _user?.role == 'owner'
+                      ? 'area.owner_hint'.tr()
+                      : 'area.client_hint'.tr(),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SearchAreaPage(isOwner: _user?.role == 'owner'),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
             

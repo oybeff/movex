@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/models/notification_model.dart';
@@ -25,10 +26,44 @@ class _NotificationsPageState extends State<NotificationsPage> {
   bool _isLoading = true;
   bool _hasError = false;
 
+  /// Mahkamlangan xabarnomalar ro'yxatning tepasida turadi.
+  ///
+  /// Bu FAQAT shu qurilmadagi belgi, serverga yuborilmaydi: mahkamlash —
+  /// bu foydalanuvchining o'zi uchun qulaylik, boshqa qurilmada yoki
+  /// boshqa odamda ko'rinishi shart emas.
+  Set<int> _pinned = {};
+
+  static const String _pinnedKey = 'pinned_notifications';
+
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadPinned().then((_) => _load());
+  }
+
+  Future<void> _loadPinned() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList(_pinnedKey) ?? const [];
+    if (!mounted) return;
+    setState(() {
+      _pinned = saved.map(int.tryParse).whereType<int>().toSet();
+    });
+  }
+
+  Future<void> _togglePin(NotificationModel item) async {
+    setState(() {
+      if (!_pinned.remove(item.id)) _pinned.add(item.id);
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+        _pinnedKey, _pinned.map((e) => e.toString()).toList());
+  }
+
+  /// Mahkamlanganlar tepada, qolganlari o'z tartibida.
+  List<NotificationModel> get _ordered {
+    final pinned = _items.where((n) => _pinned.contains(n.id)).toList();
+    final rest = _items.where((n) => !_pinned.contains(n.id)).toList();
+    return [...pinned, ...rest];
   }
 
   Future<void> _load() async {
@@ -180,9 +215,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: _items.length,
+      itemCount: _ordered.length,
       separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
-      itemBuilder: (context, index) => _tile(_items[index]),
+      itemBuilder: (context, index) => _tile(_ordered[index]),
     );
   }
 
@@ -219,19 +254,39 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   Widget _tile(NotificationModel item) {
+    final isPinned = _pinned.contains(item.id);
+
     return Dismissible(
       key: ValueKey(item.id),
-      direction: DismissDirection.endToStart,
+      // O'ngga surish — mahkamlash, chapga — o'chirish.
       background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 24),
+        color: AppColors.grey,
+        child: Icon(isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+            color: AppColors.white),
+      ),
+      secondaryBackground: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
         color: AppColors.error,
         child: const Icon(Icons.delete_outline, color: AppColors.white),
       ),
-      // O'chirish serverda muvaffaqiyatli bo'lsagina satr ketadi
-      confirmDismiss: (_) => _confirmRemove(item),
+      confirmDismiss: (direction) async {
+        // Mahkamlash satrni o'chirmaydi, shuning uchun har doim false:
+        // aks holda Dismissible satrni daraxtdan olib tashlashga urinardi.
+        if (direction == DismissDirection.startToEnd) {
+          await _togglePin(item);
+          return false;
+        }
+        // O'chirish serverda muvaffaqiyatli bo'lsagina satr ketadi
+        return _confirmRemove(item);
+      },
       onDismissed: (_) {
-        setState(() => _items.removeWhere((n) => n.id == item.id));
+        setState(() {
+          _items.removeWhere((n) => n.id == item.id);
+          _pinned.remove(item.id);
+        });
       },
       child: Container(
         // O'qilmagan xabarnoma yengil fon bilan ajralib turadi
@@ -249,13 +304,24 @@ class _NotificationsPageState extends State<NotificationsPage> {
               child: EquipmentTypeIcon(item.equipmentType, size: 28),
             ),
           ),
-          title: Text(
-            item.displayTitle,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: item.isRead ? FontWeight.w500 : FontWeight.bold,
-              color: AppColors.black,
-            ),
+          title: Row(
+            children: [
+              if (isPinned) ...[
+                const Icon(Icons.push_pin, size: 14, color: AppColors.grey),
+                const SizedBox(width: 4),
+              ],
+              Expanded(
+                child: Text(
+                  item.displayTitle,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight:
+                        item.isRead ? FontWeight.w500 : FontWeight.bold,
+                    color: AppColors.black,
+                  ),
+                ),
+              ),
+            ],
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
