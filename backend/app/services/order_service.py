@@ -5,7 +5,7 @@ from app.models.balance import Balance, BalanceTransaction
 from app.models.budget_reserve import BudgetReserve
 from app.models.equipment import Equipment
 from app.schemas.order import OrderCreate, OrderUpdate
-from app.services import pricing_service
+from app.services import notification_service, pricing_service
 from fastapi import HTTPException
 from decimal import Decimal
 from datetime import datetime, date
@@ -121,6 +121,10 @@ def create_order(db: Session, order: OrderCreate, user_id: int):
 
     db.commit()
     db.refresh(db_order)
+
+    # Egasiga "yangi buyurtma" xabarnomasi. Xato bo'lsa ham buyurtma
+    # yaratilgan qoladi — notify_order_event xatolarni yutadi.
+    notification_service.notify_order_event(db, db_order, "created")
 
     return db_order
 
@@ -410,7 +414,22 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
 
     db.commit()
     db.refresh(db_order)
+
+    # Xabarnoma pul harakatidan KEYIN yuboriladi va uni buza olmaydi:
+    # notify_order_event ichida barcha xatolar yutiladi.
+    notification_service.notify_order_event(db, db_order, new_status_event(new_status))
+
     return db_order
+
+
+def new_status_event(status: str) -> str:
+    """Buyurtma holatini xabarnoma hodisasi nomiga aylantiradi."""
+    return {
+        "confirmed": "confirmed",
+        "rejected": "rejected",
+        "cancelled": "cancelled",
+        "completed": "completed",
+    }.get(status, "system")
 
 
 def delete_order(db: Session, order_id: int):

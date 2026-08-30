@@ -12,4 +12,5 @@ from .budget_reserve import BudgetReserve
 from .app_settings import AppSettings, ContactMethod
 from .otp_verification import OTPVerification
 from .payout_request import PayoutRequest
+from .notification import DeviceToken, Notification
 from .eskiz_token import EskizToken

@@ -480,7 +480,8 @@
     "password_too_short": "Parol juda qisqa",
     "required_field": "Bu maydon to'ldirilishi shart",
     "invalid_phone": "Noto'g'ri telefon raqam",
-    "cannot_open_click": "Click ilovasini ochib bo'lmadi"
+    "cannot_open_click": "Click ilovasini ochib bo'lmadi",
+    "something_went_wrong": "Xatolik yuz berdi"
   },
   "messages": {
     "otp_sent": "Tasdiqlash kodi yuborildi",
@@ -608,5 +609,14 @@
     "tow_truck": "Tral / Evakuator",
     "compressor": "Kompressor",
     "other": "Boshqa texnika"
+  },
+  "notifications": {
+    "title": "Xabarnomalar",
+    "empty": "Hozircha xabarnomalar yo'q",
+    "mark_all_read": "Hammasini o'qilgan deb belgilash",
+    "just_now": "Hozirgina",
+    "minutes_ago": "{} daqiqa oldin",
+    "hours_ago": "{} soat oldin",
+    "days_ago": "{} kun oldin"
   }
 }

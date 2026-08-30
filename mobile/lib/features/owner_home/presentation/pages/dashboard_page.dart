@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:movex_go/core/constants/app_colors.dart';
+import 'package:movex_go/core/widgets/notification_bell.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:toastification/toastification.dart';
 import '../../../../core/services/equipment_service.dart';
@@ -154,6 +155,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ],
         ),
         actions: [
+          const NotificationBell(),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => context.push('/settings'),

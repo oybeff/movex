@@ -16,6 +16,7 @@ import '../../../../core/models/balance_model.dart';
 import '../../../../core/utils/number_formatter.dart';
 import 'client_profile_detail_page.dart';
 import 'client_payments_page.dart';
+import '../../../notifications/presentation/pages/notifications_page.dart';
 import 'client_balance_page.dart';
 import '../../../settings/presentation/pages/terms_page.dart';
 import '../../../settings/presentation/pages/privacy_page.dart';
@@ -833,6 +834,20 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => const ClientPaymentsPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                            const Divider(height: 1, color: Colors.black12),
+                            _SettingsTile(
+                              icon: Icons.notifications_none_rounded,
+                              title: 'notifications.title'.tr(),
+                              subtitle: 'Buyurtmalar bo\'yicha xabarlar',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const NotificationsPage(),
                                   ),
                                 );
                               },

@@ -480,7 +480,8 @@
     "password_too_short": "Пароль слишком короткий",
     "required_field": "Это поле обязательно для заполнения",
     "invalid_phone": "Неверный номер телефона",
-    "cannot_open_click": "Не удалось открыть приложение Click"
+    "cannot_open_click": "Не удалось открыть приложение Click",
+    "something_went_wrong": "Что-то пошло не так"
   },
   "messages": {
     "otp_sent": "Код подтверждения отправлен",
@@ -608,5 +609,14 @@
     "tow_truck": "Трал / Эвакуатор",
     "compressor": "Компрессор",
     "other": "Другая техника"
+  },
+  "notifications": {
+    "title": "Уведомления",
+    "empty": "Уведомлений пока нет",
+    "mark_all_read": "Прочитать все",
+    "just_now": "Только что",
+    "minutes_ago": "{} мин. назад",
+    "hours_ago": "{} ч. назад",
+    "days_ago": "{} дн. назад"
   }
 }
