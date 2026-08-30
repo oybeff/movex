@@ -5,6 +5,8 @@ import 'package:movex_go/core/constants/app_colors.dart';
 import '../../../../core/services/equipment_service.dart';
 import '../../../../core/models/equipment_model.dart';
 import '../../../../core/constants/equipment_types.dart';
+import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/widgets/equipment_type_icon.dart';
 
 class MyEquipmentPage extends StatefulWidget {
   const MyEquipmentPage({super.key});
@@ -268,9 +270,9 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
   String _getStatusName(String status) {
     switch (status) {
       case 'available':
-        return 'Bo\'sh';
+        return 'messages.available'.tr();
       case 'busy':
-        return 'Band';
+        return 'messages.busy'.tr();
       case 'maintenance':
         return 'Ta\'mirda';
       default:
@@ -449,10 +451,10 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                                     CircleAvatar(
                                       radius: 28,
                                       backgroundColor: _statusColor(eq.status),
-                                      child: const Icon(
-                                        Icons.construction,
+                                      child: EquipmentTypeIcon(
+                                        eq.type,
+                                        size: 30,
                                         color: Colors.white,
-                                        size: 28,
                                       ),
                                     ),
                                     const SizedBox(width: 16),
@@ -477,7 +479,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                                           ),
                                           if (eq.pricePerDay != null)
                                             Text(
-                                              '${eq.pricePerDay} ${'common.currency'.tr()}/${'common.day'.tr()}',
+                                              '${NumberFormatter.formatCurrency(eq.pricePerDay)} ${'common.currency'.tr()}/${'common.day'.tr()}',
                                               style: const TextStyle(color: Colors.grey),
                                             ),
                                         ],

@@ -180,7 +180,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${NumberFormatter.formatCurrency(_balance!.balance)} so\'m',
+                    '${NumberFormatter.formatCurrency(_balance!.balance)} ${'common.currency'.tr()}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 24,
@@ -814,7 +814,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                             _SettingsTile(
                               icon: Icons.account_balance_wallet_rounded,
                               title: 'balance.topup'.tr(),
-                              subtitle: 'Hisobni to\'ldirish va tarix',
+                              subtitle: 'profile.topup_and_history'.tr(),
                               onTap: () {
                                 Navigator.push(
                                   context,
@@ -828,7 +828,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                             _SettingsTile(
                               icon: Icons.payment_rounded,
                               title: 'client.payments'.tr(),
-                              subtitle: 'To\'lovlar tarixi',
+                              subtitle: 'profile.payments_history'.tr(),
                               onTap: () {
                                 Navigator.push(
                                   context,
@@ -842,7 +842,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                             _SettingsTile(
                               icon: Icons.notifications_none_rounded,
                               title: 'notifications.title'.tr(),
-                              subtitle: 'Buyurtmalar bo\'yicha xabarlar',
+                              subtitle: 'profile.order_messages'.tr(),
                               onTap: () {
                                 Navigator.push(
                                   context,

@@ -4,6 +4,7 @@ import 'package:movex_go/core/constants/app_colors.dart';
 import '../../../../core/services/franchise_service.dart';
 import '../../../../core/models/franchise_model.dart';
 import '../../../../core/constants/equipment_types.dart';
+import '../../../../core/utils/number_formatter.dart';
 
 class FranchiseManagePage extends StatefulWidget {
   const FranchiseManagePage({super.key});
@@ -253,7 +254,7 @@ class _FranchiseEquipmentPageState extends State<FranchiseEquipmentPage> {
                 children: [
                   const SizedBox(height: 4),
                   Text('${'messages.status_with_colon'.tr()} $statusText'),
-                  Text('${'messages.price'.tr()}: ${equipment.pricePerDay} ${'common.currency'.tr()}/kun'),
+                  Text('${'messages.price'.tr()}: ${NumberFormatter.formatCurrency(equipment.pricePerDay)} ${'common.currency'.tr()}/${'common.day'.tr()}'),
                 ],
               ),
               trailing: IconButton(
@@ -345,17 +346,17 @@ class _FranchiseOrdersPageState extends State<FranchiseOrdersPage> {
           final status = order.status;
 
           Color statusColor = Colors.blue;
-          String statusText = 'Yangi';
+          String statusText = 'orders.status_pending'.tr();
 
           if (status == 'active') {
             statusColor = Colors.green;
-            statusText = 'Faol';
+            statusText = 'orders.status_active'.tr();
           } else if (status == 'completed') {
             statusColor = Colors.grey;
             statusText = 'Yakunlangan';
           } else if (status == 'cancelled') {
             statusColor = Colors.red;
-            statusText = 'Bekor qilingan';
+            statusText = 'orders.status_canceled'.tr();
           }
 
           return Card(
@@ -363,7 +364,7 @@ class _FranchiseOrdersPageState extends State<FranchiseOrdersPage> {
             child: ListTile(
               leading: Icon(Icons.assignment, color: statusColor, size: 32),
               title: Text(
-                'Buyurtma #${order.id}',
+                "${'orders.order_number'.tr()} #${order.id}",
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Column(
@@ -479,21 +480,21 @@ class _FranchiseIncomePageState extends State<FranchiseIncomePage> {
           children: [
             // Statistika kartochkalari
             _buildStatCard(
-              'Bugungi daromad',
+              'franchise.income_today'.tr(),
               '${_todayIncome.toStringAsFixed(0)} ${'common.currency'.tr()}',
               Icons.today,
               Colors.green,
             ),
             const SizedBox(height: 12),
             _buildStatCard(
-              'Oylik daromad',
+              'franchise.income_monthly'.tr(),
               '${_monthIncome.toStringAsFixed(0)} ${'common.currency'.tr()}',
               Icons.calendar_month,
               Colors.blue,
             ),
             const SizedBox(height: 12),
             _buildStatCard(
-              'Umumiy daromad',
+              'franchise.income_total'.tr(),
               '${_totalIncome.toStringAsFixed(0)} ${'common.currency'.tr()}',
               Icons.account_balance_wallet,
               Colors.purple,

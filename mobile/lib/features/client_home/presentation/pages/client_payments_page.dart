@@ -348,7 +348,7 @@ class _BalanceCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${NumberFormatter.formatCurrency(amount)} so\'m',
+            '${NumberFormatter.formatCurrency(amount)} ${'common.currency'.tr()}',
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -514,7 +514,7 @@ class _TransactionCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${isIncome ? '+' : '-'} ${NumberFormatter.formatCurrency(transaction.amount)} so\'m',
+                  '${isIncome ? '+' : '-'} ${NumberFormatter.formatCurrency(transaction.amount)} ${'common.currency'.tr()}',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

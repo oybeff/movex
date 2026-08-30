@@ -186,5 +186,40 @@ r = requests.request("DELETE", f"{API}/notifications/devices", headers=client,
                      json={"token": device_token})
 check("токен снимается при выходе", r.status_code == 200, f"{r.status_code}")
 
+head("6. НАЗВАНИЕ ТЕХНИКИ, А НЕ КОД")
+
+# QA нашёл в ленте "Yangi buyurtma: backhoe_loader JCB 3CX" — пользователю
+# показывался служебный код. Название техники теперь собирает приложение
+# из equipment_type + equipment_model, поэтому оба поля обязаны приходить.
+
+# Коды берём из самого API — так тест не зависит от того, откуда запущен
+TYPE_CODES = [t["code"] for t in
+              requests.get(f"{API}/equipment/types", headers=owner).json()]
+
+items = notifications(owner)
+check("лента владельца не пуста", len(items) > 0, "нет уведомлений для проверки")
+
+with_type = [n for n in items if n.get("equipment_type")]
+check("в уведомлениях есть тип техники", len(with_type) > 0, "ни одного equipment_type")
+
+check(
+    "приходит модель техники",
+    all("equipment_model" in n for n in items),
+    "поле equipment_model отсутствует в ответе API",
+)
+check(
+    "у уведомлений о заказе модель заполнена",
+    all(n.get("equipment_model") for n in with_type),
+    str([n["id"] for n in with_type if not n.get("equipment_model")][:5]),
+)
+
+leaked = [
+    (n["id"], n["title"], code)
+    for n in items
+    for code in TYPE_CODES
+    if code in (n.get("title") or "")
+]
+check("код типа не попал в заголовок", not leaked, str(leaked[:3]))
+
 head(f"ИТОГ: {ok_count} пройдено, {fail_count} провалено")
 raise SystemExit(1 if fail_count else 0)

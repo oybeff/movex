@@ -309,7 +309,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                                   }
                                   final currentYear = DateTime.now().year;
                                   if (year <= 1900 || year > currentYear) {
-                                    return 'Yil 1900 dan katta va $currentYear dan kichik bo\'lishi kerak';
+                                    return 'errors.year_range'.tr(args: ['\$currentYear']);
                                   }
                                 }
                                 return null;
@@ -336,7 +336,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                                     return 'Noto\'g\'ri qiymat';
                                   }
                                   if (power < 0) {
-                                    return 'Manfiy bo\'lishi mumkin emas';
+                                    return 'errors.negative_not_allowed'.tr();
                                   }
                                 }
                                 return null;
@@ -364,7 +364,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                               return 'Noto\'g\'ri narx';
                             }
                             if (price <= 0) {
-                              return 'Narx 0 dan katta bo\'lishi kerak';
+                              return 'errors.price_positive'.tr();
                             }
                             if (price > 99999999.99) {
                               return 'Narx juda katta';
@@ -392,7 +392,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                               return 'Noto\'g\'ri narx';
                             }
                             if (price <= 0) {
-                              return 'Narx 0 dan katta bo\'lishi kerak';
+                              return 'errors.price_positive'.tr();
                             }
                             if (price > 99999999.99) {
                               return 'Narx juda katta';
@@ -419,7 +419,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                             return 'Noto\'g\'ri narx';
                           }
                           if (price <= 0) {
-                            return 'Narx 0 dan katta bo\'lishi kerak';
+                            return 'errors.price_positive'.tr();
                           }
                           if (price > 99999999.99) {
                             return 'Narx juda katta';
@@ -430,12 +430,12 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                     ),
                     const SizedBox(height: 16),
                     _buildSection(
-                      title: 'Yetkazish narxi (km uchun)',
+                      title: 'equipment.delivery_price'.tr(),
                       child: TextFormField(
                         controller: _deliveryPricePerKmController,
-                        decoration: _inputDecoration('Masalan: 5000').copyWith(
-                          suffixText: 'so\'m/km',
-                          helperText: 'Texnikani yetkazish uchun 1 km ga narx',
+                        decoration: _inputDecoration('equipment.delivery_price_hint'.tr()).copyWith(
+                          suffixText: '${'common.currency'.tr()}/${'common.km'.tr()}',
+                          helperText: 'equipment.delivery_price_help'.tr(),
                         ),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
@@ -446,7 +446,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                               return 'Noto\'g\'ri narx';
                             }
                             if (price < 0) {
-                              return 'Narx manfiy bo\'lishi mumkin emas';
+                              return 'errors.negative_not_allowed'.tr();
                             }
                             if (price > 99999999.99) {
                               return 'Narx juda katta';
@@ -496,7 +496,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                                         return 'Noto\'g\'ri qiymat';
                                       }
                                       if (lat < -90 || lat > 90) {
-                                        return 'Latitude -90 va 90 orasida bo\'lishi kerak';
+                                        return 'errors.latitude_range'.tr();
                                       }
                                     }
                                     return null;
@@ -518,7 +518,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                                         return 'Noto\'g\'ri qiymat';
                                       }
                                       if (lon < -180 || lon > 180) {
-                                        return 'Longitude -180 va 180 orasida bo\'lishi kerak';
+                                        return 'errors.longitude_range'.tr();
                                       }
                                     }
                                     return null;
@@ -560,7 +560,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                               return 'Noto\'g\'ri qiymat';
                             }
                             if (payload < 0) {
-                              return 'Manfiy bo\'lishi mumkin emas';
+                              return 'errors.negative_not_allowed'.tr();
                             }
                           }
                           return null;

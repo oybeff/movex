@@ -542,7 +542,7 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                                           Icon(Icons.map, size: 18, color: AppColors.primaryGreen),
                                           const SizedBox(width: 4),
                                           Text(
-                                            'Xaritada ochish',
+                                            'orders.open_in_map'.tr(),
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: AppColors.primaryGreen,

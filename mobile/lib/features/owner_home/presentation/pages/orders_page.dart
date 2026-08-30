@@ -19,6 +19,7 @@ import '../../../../core/utils/error_handler.dart';
 import '../../../../core/utils/number_formatter.dart';
 import 'chat_page.dart';
 import '../../../../core/constants/equipment_types.dart';
+import '../../../../core/widgets/equipment_type_icon.dart';
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
@@ -136,7 +137,7 @@ class _OrdersPageState extends State<OrdersPage> {
           children: [
             Text('messages.confirm_order_question'.tr()),
             const SizedBox(height: 8),
-            Text('${'messages.amount'.tr()}: ${order.totalAmount.toStringAsFixed(0)} so\'m'),
+            Text('${'messages.amount'.tr()}: ${order.totalAmount.toStringAsFixed(0)} ${'common.currency'.tr()}'),
             const SizedBox(height: 4),
             Text(
               'messages.frozen_money_transferred'.tr(),
@@ -677,7 +678,9 @@ class _OrdersPageState extends State<OrdersPage> {
                             statusText = order.status;
                         }
 
-                        final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
+                        // startDate — bu SANA, soati yo'q: 'HH:mm' doim
+                        // 00:00 chiqarardi va hech qanday ma'no bermasdi.
+                        final dateFormat = DateFormat('dd.MM.yyyy');
                         final dateStr = dateFormat.format(order.startDate);
 
                         return GestureDetector(
@@ -749,9 +752,8 @@ class _OrdersPageState extends State<OrdersPage> {
                                               color: AppColors.primaryGreen.withValues(alpha: 0.1),
                                               borderRadius: BorderRadius.circular(12),
                                             ),
-                                            child: Icon(
-                                              Icons.construction,
-                                              color: AppColors.primaryGreen,
+                                            child: EquipmentTypeIcon(
+                                              equipment?.type,
                                               size: 28,
                                             ),
                                           ),
@@ -775,7 +777,11 @@ class _OrdersPageState extends State<OrdersPage> {
                                                     Icon(Icons.person_outline, size: 14, color: Colors.grey[600]),
                                                     const SizedBox(width: 4),
                                                     Text(
-                                                      '${'orders.user'.tr()} #${order.userId}',
+                                                      // Ism _userCache'da bor — ilgari u yuklanardi,
+                                                      // lekin ekranga chiqmasdi va ega mijozning
+                                                      // o'rniga "Foydalanuvchi #19" ko'rardi.
+                                                      _userCache[order.userId]?.fullName ??
+                                                          '${'orders.user'.tr()} #${order.userId}',
                                                       style: TextStyle(
                                                         color: Colors.grey[600],
                                                         fontSize: 13,
@@ -979,7 +985,7 @@ class _OrdersPageState extends State<OrdersPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Buyurtma tafsilotlari',
+                        'orders.details'.tr(),
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -1005,7 +1011,7 @@ class _OrdersPageState extends State<OrdersPage> {
                     // Equipment info
                     if (equipment != null) ...[
                       Text(
-                        'Texnika',
+                        'orders.equipment'.tr(),
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -1085,18 +1091,18 @@ class _OrdersPageState extends State<OrdersPage> {
                       child: Column(
                         children: [
                           _buildPriceRow(
-                            'Jami summa',
+                            'orders.total'.tr(),
                             '${NumberFormatter.formatCurrency(order.totalAmount)} ${'common.currency'.tr()}',
                           ),
                           const SizedBox(height: 8),
                           _buildPriceRow(
-                            'Komissiya',
+                            'rent.commission'.tr(),
                             '${NumberFormatter.formatCurrency(order.commission)} ${'common.currency'.tr()}',
                           ),
                           if (order.deliveryFee != null && order.deliveryFee! > 0) ...[
                             const SizedBox(height: 8),
                             _buildPriceRow(
-                              'Yetkazish (${order.deliveryDistance?.toStringAsFixed(1) ?? '0'} km)',
+                              "${'equipment.delivery'.tr()} (${order.deliveryDistance?.toStringAsFixed(1) ?? '0'} ${'common.km'.tr()})",
                               '${NumberFormatter.formatCurrency(order.deliveryFee!)} ${'common.currency'.tr()}',
                             ),
                           ],
@@ -1108,7 +1114,7 @@ class _OrdersPageState extends State<OrdersPage> {
 
                     // Delivery location map
                     Text(
-                      'Yetkazish joyi',
+                      'orders.delivery_location'.tr(),
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -1203,7 +1209,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                       Icon(Icons.map, size: 18, color: AppColors.primaryGreen),
                                       const SizedBox(width: 4),
                                       Text(
-                                        'Xaritada ochish',
+                                        'orders.open_in_map'.tr(),
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: AppColors.primaryGreen,

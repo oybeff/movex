@@ -55,6 +55,23 @@ def get_type(code: str) -> Optional[Dict[str, str]]:
     return None
 
 
+def type_name(code: Optional[str], lang: str = "uz") -> str:
+    """
+    Tur kodini o'qiladigan nomga aylantiradi: 'backhoe_loader' ->
+    'Ekskavator-yuklagich'.
+
+    Kod ko'rinadigan matnga tushib qolmasligi uchun kerak. Ilova o'z
+    tarjimasini ishlatadi, bu esa server yozadigan matnlar uchun
+    (xabarnoma sarlavhasi, push) — shuning uchun sukut bo'yicha o'zbekcha.
+    """
+    if not code:
+        return ""
+    t = get_type(code)
+    if t is None:
+        return code
+    return t.get(f"name_{lang}") or t.get("name_uz") or code
+
+
 # Eski erkin matnli qiymatlarni kodga o'girish uchun kalit so'zlar.
 # Tartib MUHIM: aniqroq moslik oldinroq turadi, aks holda "ekskavator-yuklagich"
 # oddiy "ekskavator" deb tushunib qolinadi.

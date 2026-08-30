@@ -10,6 +10,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.equipment_types import type_name
 from app.models.equipment import Equipment
 from app.models.notification import DeviceToken, Notification
 from app.models.order import Order
@@ -18,9 +19,18 @@ logger = logging.getLogger(__name__)
 
 
 def _equipment_label(equipment: Optional[Equipment]) -> str:
+    """
+    Zaxira sarlavha uchun nom. Ilova sarlavhani equipment_type va
+    equipment_model dan o'zi yig'adi, bu esa faqat eski ilovalar va push
+    uchun qoladi.
+
+    equipment.type — bu KOD ('backhoe_loader'). Uni to'g'ridan-to'g'ri
+    matnga qo'yish mumkin emas: foydalanuvchi "backhoe_loader JCB 3CX"
+    ko'rardi. type_name kodni o'qiladigan nomga aylantiradi.
+    """
     if equipment is None:
         return "Texnika"
-    parts = [p for p in (equipment.type, equipment.model) if p]
+    parts = [p for p in (type_name(equipment.type), equipment.model) if p]
     return " ".join(parts) if parts else "Texnika"
 
 
@@ -32,6 +42,7 @@ def create(
     body: Optional[str] = None,
     order_id: Optional[int] = None,
     equipment_type: Optional[str] = None,
+    equipment_model: Optional[str] = None,
     commit: bool = True,
 ) -> Optional[Notification]:
     """Bitta xabarnoma. Xato bo'lsa — jurnalga yozamiz va davom etamiz."""
@@ -43,6 +54,7 @@ def create(
             body=body,
             order_id=order_id,
             equipment_type=equipment_type,
+            equipment_model=equipment_model,
         )
         db.add(notification)
         if commit:
@@ -66,6 +78,7 @@ def notify_order_event(db: Session, order: Order, event: str, commit: bool = Tru
         equipment = db.query(Equipment).filter(Equipment.id == order.equipment_id).first()
         label = _equipment_label(equipment)
         eq_type = equipment.type if equipment else None
+        eq_model = equipment.model if equipment else None
         owner_id = equipment.owner_id if equipment else None
         client_id = order.user_id
 
@@ -73,33 +86,33 @@ def notify_order_event(db: Session, order: Order, event: str, commit: bool = Tru
             create(db, owner_id, "order_created",
                    f"Yangi buyurtma: {label}",
                    f"Buyurtma #{order.id}, {order.start_date} — {order.end_date}",
-                   order.id, eq_type, commit=commit)
+                   order.id, eq_type, eq_model, commit=commit)
 
         elif event == "confirmed":
             create(db, client_id, "order_confirmed",
                    f"Buyurtma tasdiqlandi: {label}",
                    f"Buyurtma #{order.id} egasi tomonidan tasdiqlandi",
-                   order.id, eq_type, commit=commit)
+                   order.id, eq_type, eq_model, commit=commit)
 
         elif event == "rejected":
             create(db, client_id, "order_rejected",
                    f"Buyurtma rad etildi: {label}",
                    f"Buyurtma #{order.id} rad etildi, pul hisobingizga qaytarildi",
-                   order.id, eq_type, commit=commit)
+                   order.id, eq_type, eq_model, commit=commit)
 
         elif event == "cancelled":
             for uid in {client_id, owner_id} - {None}:
                 create(db, uid, "order_cancelled",
                        f"Buyurtma bekor qilindi: {label}",
                        f"Buyurtma #{order.id} bekor qilindi",
-                       order.id, eq_type, commit=commit)
+                       order.id, eq_type, eq_model, commit=commit)
 
         elif event == "completed":
             for uid in {client_id, owner_id} - {None}:
                 create(db, uid, "order_completed",
                        f"Buyurtma yakunlandi: {label}",
                        f"Buyurtma #{order.id} muvaffaqiyatli yakunlandi",
-                       order.id, eq_type, commit=commit)
+                       order.id, eq_type, eq_model, commit=commit)
 
     except Exception:
         logger.exception("Buyurtma xabarnomalari yuborilmadi: order=%s event=%s", order.id, event)

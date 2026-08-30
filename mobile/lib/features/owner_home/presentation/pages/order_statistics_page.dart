@@ -31,7 +31,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
   int? _selectedEquipmentId;
 
   final List<String> _statusOptions = [
-    'Barchasi',
+    'common.all'.tr(),
     'pending',
     'confirmed',
     'completed',
@@ -55,7 +55,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
         _orderService.getOrderStatistics(
           startDate: _selectedDateRange?.start.toIso8601String().split('T')[0],
           endDate: _selectedDateRange?.end.toIso8601String().split('T')[0],
-          status: _selectedStatus == 'Barchasi' ? null : _selectedStatus,
+          status: _selectedStatus == 'common.all'.tr() ? null : _selectedStatus,
           equipmentId: _selectedEquipmentId,
         ),
       ]);
@@ -253,7 +253,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                   ),
                 ),
                 Text(
-                  'Buyurtmalar tahlili',
+                  'statistics.orders_analysis'.tr(),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -372,7 +372,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Sana oralig\'i',
+                            'statistics.date_range'.tr(),
                             style: TextStyle(
                               fontSize: 11,
                               color: Colors.grey[600],
@@ -382,7 +382,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                           const SizedBox(height: 2),
                           Text(
                             _selectedDateRange == null
-                                ? 'Tanlang'
+                                ? 'common.choose'.tr()
                                 : '${DateFormat('dd.MM.yyyy').format(_selectedDateRange!.start)} - ${DateFormat('dd.MM.yyyy').format(_selectedDateRange!.end)}',
                             style: TextStyle(
                               color: _selectedDateRange == null ? Colors.grey[600] : Colors.black87,
@@ -430,7 +430,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
               child: DropdownButtonFormField<String>(
                 value: _selectedStatus,
                 decoration: InputDecoration(
-                  labelText: 'Holat',
+                  labelText: 'orders.status'.tr(),
                   labelStyle: TextStyle(
                     color: _selectedStatus != null ? Colors.blue : Colors.grey[600],
                     fontWeight: FontWeight.w600,
@@ -449,8 +449,8 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                 ),
                 items: _statusOptions.map((status) {
                   return DropdownMenuItem(
-                    value: status == 'Barchasi' ? null : status,
-                    child: Text(status == 'Barchasi' ? status : 'orders.$status'.tr()),
+                    value: status == 'common.all'.tr() ? null : status,
+                    child: Text(status == 'common.all'.tr() ? status : 'orders.$status'.tr()),
                   );
                 }).toList(),
                 onChanged: (value) {
@@ -478,7 +478,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
               child: DropdownButtonFormField<int>(
                 value: _selectedEquipmentId,
                 decoration: InputDecoration(
-                  labelText: 'Texnika',
+                  labelText: 'orders.equipment'.tr(),
                   labelStyle: TextStyle(
                     color: _selectedEquipmentId != null ? Colors.orange : Colors.grey[600],
                     fontWeight: FontWeight.w600,
@@ -524,7 +524,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
       children: [
         Expanded(
           child: _buildSummaryCard(
-            'Jami buyurtmalar',
+            'statistics.total_orders'.tr(),
             _statistics!.totalOrders.toString(),
             Icons.shopping_cart_rounded,
             [AppColors.primaryGreen, Colors.teal],
@@ -533,7 +533,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildSummaryCard(
-            'Jami daromad',
+            'statistics.total_income'.tr(),
             NumberFormatter.formatCurrency(_statistics!.totalIncome),
             Icons.payments_rounded,
             [Colors.blue, Colors.purple],
@@ -619,7 +619,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
               Icon(Icons.show_chart_rounded, size: 60, color: Colors.grey[300]),
               const SizedBox(height: 12),
               Text(
-                'Sana bo\'yicha ma\'lumot yo\'q',
+                'statistics.no_data_by_date'.tr(),
                 style: TextStyle(color: Colors.grey[600], fontSize: 14),
               ),
             ],
@@ -658,10 +658,10 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                   child: const Icon(Icons.show_chart_rounded, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Sana bo\'yicha buyurtmalar',
-                    style: TextStyle(
+                    'statistics.orders_by_date'.tr(),
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -903,10 +903,10 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                   child: const Icon(Icons.pie_chart_rounded, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Holat bo\'yicha buyurtmalar',
-                    style: TextStyle(
+                    'statistics.orders_by_status'.tr(),
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -1051,10 +1051,10 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                   child: const Icon(Icons.construction_rounded, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Texnika bo\'yicha buyurtmalar',
-                    style: TextStyle(
+                    'statistics.orders_by_equipment'.tr(),
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,

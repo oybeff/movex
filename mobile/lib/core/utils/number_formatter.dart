@@ -67,10 +67,16 @@ class NumberFormatter {
       value = 0;
     }
     
+    // Butun son bo'lsa kasr qismini ko'rsatmaymiz: "10.0K" emas, "10K".
+    String trim(double v) {
+      final s = v.toStringAsFixed(1);
+      return s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
+    }
+
     if (value >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M';
+      return '${trim(value / 1000000)}M';
     } else if (value >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}K';
+      return '${trim(value / 1000)}K';
     } else {
       return value.toStringAsFixed(0);
     }

@@ -21,6 +21,7 @@ import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/services/permission_service.dart';
 import '../../../../core/widgets/date_range_calendar.dart';
 import '../../../../core/constants/equipment_types.dart';
+import '../../../../core/widgets/equipment_type_icon.dart';
 
 class RentEquipmentPage extends StatefulWidget {
   final EquipmentModel equipment;
@@ -231,7 +232,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Buyurtma berish',
+                'rent.booking'.tr(),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -263,25 +264,25 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                 children: [
                   _buildConfirmationRow(
                     Icons.calendar_today,
-                    'Sana',
+                    'orders.date'.tr(),
                     '${DateFormat('dd.MM.yyyy').format(_startDate!)} - ${DateFormat('dd.MM.yyyy').format(_endDate!)}',
                   ),
                   const SizedBox(height: 8),
                   _buildConfirmationRow(
                     Icons.access_time,
                     'Davomiyligi',
-                    '$_totalDays kun',
+                    'rent.days_count'.plural(_totalDays),
                   ),
                   const SizedBox(height: 8),
                   _buildConfirmationRow(
                     Icons.location_on,
                     'Manzil',
-                    _deliveryAddress ?? 'Tanlangan',
+                    _deliveryAddress ?? 'common.selected'.tr(),
                   ),
                   const Divider(height: 24),
                   _buildConfirmationRow(
                     Icons.payments,
-                    'Jami to\'lov',
+                    'rent.total_payment'.tr(),
                     '${NumberFormatter.formatCurrency(_total)} ${'common.currency'.tr()}',
                     isTotal: true,
                   ),
@@ -303,7 +304,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
-              'Bekor qilish',
+              'common.cancel'.tr(),
               style: TextStyle(color: Colors.grey[600]),
             ),
           ),
@@ -377,7 +378,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Sana oralig\'ini tanlang',
+                  'rent.select_dates'.tr(),
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
@@ -390,8 +391,8 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                     ),
                     child: Text(
                       tempStart!.isAtSameMomentAs(tempEnd!)
-                          ? '${DateFormat('dd.MM.yyyy').format(tempStart!)} (1 kun)'
-                          : '${DateFormat('dd.MM.yyyy').format(tempStart!)} - ${DateFormat('dd.MM.yyyy').format(tempEnd!)} (${tempEnd!.difference(tempStart!).inDays + 1} kun)',
+                          ? '${DateFormat('dd.MM.yyyy').format(tempStart!)} (${'rent.days_count'.plural(1)})'
+                          : '${DateFormat('dd.MM.yyyy').format(tempStart!)} - ${DateFormat('dd.MM.yyyy').format(tempEnd!)} (${'rent.days_count'.plural(tempEnd!.difference(tempStart!).inDays + 1)})',
                       style: TextStyle(
                         color: AppColors.primaryGreen,
                         fontWeight: FontWeight.bold,
@@ -416,7 +417,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text('Bekor qilish'),
+                      child: Text('common.cancel'.tr()),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
@@ -434,7 +435,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryGreen,
                       ),
-                      child: Text('Tanlash'),
+                      child: Text('common.select'.tr()),
                     ),
                   ],
                 ),
@@ -662,7 +663,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                         ),
                       ),
                       Text(
-                        '${NumberFormatter.formatCurrency(totalAmount)} so\'m',
+                        '${NumberFormatter.formatCurrency(totalAmount)} ${'common.currency'.tr()}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -740,8 +741,8 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${'messages.available_balance'.tr()}: ${NumberFormatter.formatCurrency(availableBalance)} so\'m'),
-            Text('${'messages.required_amount'.tr()}: ${NumberFormatter.formatCurrency(requiredAmount)} so\'m'),
+            Text('${'messages.available_balance'.tr()}: ${NumberFormatter.formatCurrency(availableBalance)} ${'common.currency'.tr()}'),
+            Text('${'messages.required_amount'.tr()}: ${NumberFormatter.formatCurrency(requiredAmount)} ${'common.currency'.tr()}'),
             const SizedBox(height: 8),
             Text(
               'messages.topup_balance_title'.tr(),
@@ -851,10 +852,10 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                                         widget.equipment.photos.first.url,
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) =>
-                                            Icon(Icons.construction, size: 40, color: AppColors.primaryGreen),
+                                            EquipmentTypeIcon(widget.equipment.type, size: 42),
                                       ),
                                     )
-                                  : Icon(Icons.construction, size: 40, color: AppColors.primaryGreen),
+                                  : EquipmentTypeIcon(widget.equipment.type, size: 42),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -893,7 +894,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                                         const Icon(Icons.payments, color: Colors.white, size: 16),
                                         const SizedBox(width: 4),
                                         Text(
-                                          '$_dailyRate ${'common.currency'.tr()}/${'common.day'.tr()}',
+                                          '${NumberFormatter.formatCurrency(_dailyRate)} ${'common.currency'.tr()}/${'common.day'.tr()}',
                                           style: const TextStyle(
                                             fontSize: 14,
                                             color: Colors.white,
@@ -912,7 +913,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
-                                            '${widget.equipment.deliveryPricePerKm} so\'m/km',
+                                            '${NumberFormatter.formatCurrency(widget.equipment.deliveryPricePerKm)} ${'common.currency'.tr()}/${'common.km'.tr()}',
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.grey[600],
@@ -969,8 +970,8 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                               children: [
                                 Text(
                                   _startDate != null && _endDate != null
-                                      ? 'Sana tanlandi'
-                                      : 'Sana oralig\'ini tanlang',
+                                      ? 'rent.date_selected'.tr()
+                                      : 'rent.select_dates'.tr(),
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -980,7 +981,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                                 if (_startDate != null && _endDate != null) ...[
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${DateFormat('dd.MM.yyyy').format(_startDate!)} - ${DateFormat('dd.MM.yyyy').format(_endDate!)} ($_totalDays kun)',
+                                    '${DateFormat('dd.MM.yyyy').format(_startDate!)} - ${DateFormat('dd.MM.yyyy').format(_endDate!)} (${'rent.days_count'.plural(_totalDays)})',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey[600],
@@ -1003,7 +1004,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
 
                   // Location Selection
                   Text(
-                    'Yetkazib berish joyi',
+                    'rent.delivery_place'.tr(),
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -1037,8 +1038,8 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                               children: [
                                 Text(
                                   _selectedLocation != null
-                                      ? 'Joylashuv tanlandi'
-                                      : 'Joylashuvni tanlang',
+                                      ? 'rent.location_selected'.tr()
+                                      : 'rent.select_location'.tr(),
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -1097,7 +1098,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                             const SizedBox(height: 8),
                             _buildPriceRow(
                               'rent.total_days'.tr(),
-                              '$_totalDays ${'rent.days'.tr()}',
+                              'rent.days_count'.plural(_totalDays),
                             ),
                             const Divider(height: 24),
                             _buildPriceRow(
@@ -1113,7 +1114,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                             if (_deliveryFee > 0) ...[
                               const SizedBox(height: 8),
                               _buildPriceRow(
-                                'Yetkazish (${_deliveryDistance!.toStringAsFixed(1)} km)',
+                                "${'equipment.delivery'.tr()} (${_deliveryDistance!.toStringAsFixed(1)} ${'common.km'.tr()})",
                                 '${NumberFormatter.formatCurrency(_deliveryFee)} ${'common.currency'.tr()}',
                               ),
                             ],

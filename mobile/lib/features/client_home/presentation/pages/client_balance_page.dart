@@ -353,7 +353,7 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
                 _isLoadingBalance
                     ? const CircularProgressIndicator(color: Colors.white)
                     : Text(
-                        '${NumberFormatter.formatCurrency(_balance?.balance ?? 0)} so\'m',
+                        '${NumberFormatter.formatCurrency(_balance?.balance ?? 0)} ${'common.currency'.tr()}',
                         style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -389,7 +389,7 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
                                   ),
                                 )
                               : Text(
-                                  '${NumberFormatter.formatCurrency(_balance?.availableBalance ?? 0)} so\'m',
+                                  '${NumberFormatter.formatCurrency(_balance?.availableBalance ?? 0)} ${'common.currency'.tr()}',
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -422,7 +422,7 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
                                   ),
                                 )
                               : Text(
-                                  '${NumberFormatter.formatCurrency(_balance?.frozenBalance ?? 0)} so\'m',
+                                  '${NumberFormatter.formatCurrency(_balance?.frozenBalance ?? 0)} ${'common.currency'.tr()}',
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -469,7 +469,7 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
               ),
-              suffixText: 'so\'m',
+              suffixText: 'common.currency'.tr(),
               suffixStyle: TextStyle(
                 fontSize: 16,
                 color: Colors.grey.shade600,
@@ -509,7 +509,7 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
                     ),
                   ),
                   child: Text(
-                    '${NumberFormatter.formatCurrency(amount)} so\'m',
+                    '${NumberFormatter.formatCurrency(amount)} ${'common.currency'.tr()}',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -869,7 +869,7 @@ class _TransactionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${transaction.type.toLowerCase() == 'topup' ? '+' : '-'}${NumberFormatter.formatCurrency(transaction.amount)} so\'m',
+                      '${transaction.type.toLowerCase() == 'topup' ? '+' : '-'}${NumberFormatter.formatCurrency(transaction.amount)} ${'common.currency'.tr()}',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

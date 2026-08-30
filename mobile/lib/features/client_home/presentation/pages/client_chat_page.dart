@@ -731,13 +731,13 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
                           ),
                           const SizedBox(height: 8),
                           _buildPriceRow(
-                            'Komissiya',
+                            'rent.commission'.tr(),
                             '${NumberFormatter.formatCurrency(order.commission)} ${'common.currency'.tr()}',
                           ),
                           if (order.deliveryFee != null && order.deliveryFee! > 0) ...[
                             const SizedBox(height: 8),
                             _buildPriceRow(
-                              'Yetkazish (${order.deliveryDistance?.toStringAsFixed(1) ?? '0'} km)',
+                              "${'equipment.delivery'.tr()} (${order.deliveryDistance?.toStringAsFixed(1) ?? '0'} ${'common.km'.tr()})",
                               '${NumberFormatter.formatCurrency(order.deliveryFee!)} ${'common.currency'.tr()}',
                             ),
                           ],
@@ -749,7 +749,7 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
 
                     // Delivery location map
                     Text(
-                      'Yetkazish joyi',
+                      'orders.delivery_location'.tr(),
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -846,7 +846,7 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
                                       Icon(Icons.map, size: 18, color: AppColors.primaryGreen),
                                       const SizedBox(width: 4),
                                       Text(
-                                        'Xaritada ochish',
+                                        'orders.open_in_map'.tr(),
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: AppColors.primaryGreen,

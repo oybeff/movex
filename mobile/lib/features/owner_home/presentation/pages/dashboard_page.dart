@@ -119,7 +119,7 @@ class _DashboardPageState extends State<DashboardPage> {
     const double cardRadius = 16;
 
     final stats = [
-      {'title': 'Joriy balans', 'value': '${NumberFormatter.formatCurrency(_currentBalance)} so\'m', 'icon': Icons.account_balance_wallet},
+      {'title': 'balance.current_balance'.tr(), 'value': '${NumberFormatter.formatCurrency(_currentBalance)} ${'common.currency'.tr()}', 'icon': Icons.account_balance_wallet},
       {'title': 'owner.active_equipment'.tr(), 'value': '$_activeEquipmentCount', 'icon': Icons.construction},
       {'title': 'owner.current_orders'.tr(), 'value': '$_currentOrdersCount', 'icon': Icons.assignment},
       {'title': 'owner.income_today'.tr(), 'value': '${_todayIncome.toStringAsFixed(0)} ${'common.currency'.tr()}', 'icon': Icons.attach_money},
@@ -365,7 +365,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                 final date = DateTime.now().subtract(
                                   Duration(days: 6 - value.toInt()),
                                 );
-                                final dayNames = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
+                                final dayNames = 'common.weekdays_short'.tr().split(',');
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 8.0),
                                   child: Column(

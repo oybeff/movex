@@ -265,8 +265,16 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
               mapId: MapObjectId('tech_${tech.id}'),
               point: Point(latitude: lat, longitude: lng),
               icon: PlacemarkIcon.single(
-                // 256 px * 0.45 ≈ 115 px — generate_equipment_icons.py ga qarang
-                PlacemarkIconStyle(image: icon, scale: 0.45),
+                PlacemarkIconStyle(
+                  image: icon,
+                  // Rasm 256x308: 256 px kvadrat va pastida 52 px dum.
+                  // 0.42 => ekranda ~108 px kenglik.
+                  scale: 0.42,
+                  // Anchor rasmning nisbiy nuqtasi: (0.5, 1.0) — dumning
+                  // uchi. Aynan shu nuqta koordinataga tushishi kerak,
+                  // aks holda marker texnikadan yuqorida turadi.
+                  anchor: const Offset(0.5, 1.0),
+                ),
               ),
               opacity: isAvailable ? 1.0 : 0.5,
               onTap: (mapObject, point) {
@@ -576,7 +584,7 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Xarita ko\'rinishi',
+                    'equipment.map_view'.tr(),
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -830,7 +838,7 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
               Icon(Icons.construction, size: 64, color: Colors.grey[400]),
               const SizedBox(height: 16),
               Text(
-                'Texnikalar topilmadi',
+                'equipment.none_found'.tr(),
                 style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
             ],
@@ -1056,7 +1064,7 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              isAvailable ? 'Bo\'sh' : 'Band',
+                              isAvailable ? 'messages.available'.tr() : 'messages.busy'.tr(),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 11,

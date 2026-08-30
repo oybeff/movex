@@ -21,9 +21,13 @@ class Notification(Base):
     """
     Foydalanuvchiga ko'rsatiladigan xabarnoma.
 
-    equipment_type ataylab shu yerda saqlanadi (buyurtmadan har safar
-    olinmaydi): buyurtma o'chirilsa ham xabarnoma ro'yxatida to'g'ri
-    ikonka qolishi kerak.
+    equipment_type va equipment_model ataylab shu yerda saqlanadi
+    (buyurtmadan har safar olinmaydi): buyurtma o'chirilsa ham xabarnoma
+    ro'yxatida to'g'ri ikonka va nom qolishi kerak.
+
+    Ilova sarlavhani shu ikki maydondan O'ZI yig'adi — shunda u
+    foydalanuvchi tilida bo'ladi. title esa faqat zaxira: eski ilovalar
+    va push-bildirishnomalar uchun.
     """
 
     __tablename__ = "notifications"
@@ -37,6 +41,7 @@ class Notification(Base):
 
     order_id = Column(Integer, ForeignKey("orders.id", ondelete="SET NULL"), nullable=True)
     equipment_type = Column(String(50), nullable=True)
+    equipment_model = Column(String(120), nullable=True)
 
     is_read = Column(Boolean, nullable=False, default=False, index=True)
 

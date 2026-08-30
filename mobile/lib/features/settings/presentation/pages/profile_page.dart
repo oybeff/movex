@@ -284,7 +284,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          _user!.role == 'owner' ? 'Texnika egasi' : 'Mijoz',
+                          _user!.role == 'owner' ? 'role_select.owner'.tr() : 'role_select.client'.tr(),
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,

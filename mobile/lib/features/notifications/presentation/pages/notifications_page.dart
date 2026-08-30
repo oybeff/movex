@@ -250,7 +250,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             ),
           ),
           title: Text(
-            item.title,
+            item.displayTitle,
             style: TextStyle(
               fontSize: 15,
               fontWeight: item.isRead ? FontWeight.w500 : FontWeight.bold,

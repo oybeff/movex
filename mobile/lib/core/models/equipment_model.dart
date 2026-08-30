@@ -107,6 +107,19 @@ class EquipmentModel {
           [],
     );
   }
+
+  // Narxlar serverdan matn ko'rinishida keladi ("1100000.00"), chunki
+  // backend'da ular Decimal. Matnni saralash yoki solishtirish MUMKIN EMAS:
+  // "950000.00" matn sifatida "2800000.00" dan katta chiqadi ('9' > '2'),
+  // shuning uchun narx bo'yicha saralash noto'g'ri ishlardi.
+  // Hisob-kitob va saralash uchun faqat shu getterlardan foydalaning.
+  double get pricePerDayValue => double.tryParse(pricePerDay) ?? 0;
+  double? get pricePerHourValue =>
+      pricePerHour == null ? null : double.tryParse(pricePerHour!);
+  double? get pricePerShiftValue =>
+      pricePerShift == null ? null : double.tryParse(pricePerShift!);
+  double get deliveryPricePerKmValue =>
+      double.tryParse(deliveryPricePerKm ?? '') ?? 0;
 }
 
 class EquipmentCreateModel {

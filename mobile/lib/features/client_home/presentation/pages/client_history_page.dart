@@ -18,6 +18,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/number_formatter.dart';
 import 'client_chat_page.dart';
 import '../../../../core/constants/equipment_types.dart';
+import '../../../../core/widgets/equipment_type_icon.dart';
 
 class ClientHistoryPage extends StatefulWidget {
   const ClientHistoryPage({super.key});
@@ -564,10 +565,11 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                           child: Image.network(
                             equipment.photos!.first.url,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.construction, size: 32),
+                            errorBuilder: (_, __, ___) =>
+                                EquipmentTypeIcon(equipment.type, size: 34),
                           ),
                         )
-                      : const Icon(Icons.construction, size: 32, color: Colors.grey),
+                      : EquipmentTypeIcon(equipment?.type, size: 34),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -825,13 +827,13 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                           ),
                           const SizedBox(height: 8),
                           _buildPriceRow(
-                            'Komissiya',
+                            'rent.commission'.tr(),
                             '${NumberFormatter.formatCurrency(order.commission)} ${'common.currency'.tr()}',
                           ),
                           if (order.deliveryFee != null && order.deliveryFee! > 0) ...[
                             const SizedBox(height: 8),
                             _buildPriceRow(
-                              'Yetkazish (${order.deliveryDistance?.toStringAsFixed(1) ?? '0'} km)',
+                              "${'equipment.delivery'.tr()} (${order.deliveryDistance?.toStringAsFixed(1) ?? '0'} ${'common.km'.tr()})",
                               '${NumberFormatter.formatCurrency(order.deliveryFee!)} ${'common.currency'.tr()}',
                             ),
                           ],
@@ -843,7 +845,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
 
                     // Delivery location map
                     Text(
-                      'Yetkazish joyi',
+                      'orders.delivery_location'.tr(),
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -939,7 +941,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                                     Icon(Icons.map, size: 18, color: AppColors.primaryGreen),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'Xaritada ochish',
+                                      'orders.open_in_map'.tr(),
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,

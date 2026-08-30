@@ -10,6 +10,7 @@ import '../../../../core/services/settings_service.dart';
 import '../../../../core/services/user_service.dart';
 import '../../../../core/models/contact_method_model.dart';
 import '../../../../core/models/user_model.dart';
+import '../../../owner_home/presentation/pages/payments_page.dart';
 import 'profile_page.dart';
 import 'terms_page.dart';
 import 'privacy_page.dart';
@@ -90,6 +91,32 @@ class _SettingsPageState extends State<SettingsPage> {
 
 
 
+  /// Tilni almashtirish.
+  ///
+  /// Tartib muhim: avval oynani yopamiz, keyin til almashadi.
+  /// Ilgari teskarisi edi — setLocale butun daraxtni qayta quradi va
+  /// undan keyingi `if (!mounted) return;` ishga tushib, Navigator.pop()
+  /// bajarilmay qolardi: til o'zgarardi, lekin oyna ochiq qolib,
+  /// belgi eski tilda turaverardi.
+  ///
+  /// [sheetContext] — oynaning o'z konteksti, uni yopish uchun kerak.
+  Future<void> _applyLanguage(BuildContext sheetContext, String code) async {
+    final navigator = Navigator.of(sheetContext);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selected_language', code);
+
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+
+    if (!mounted) return;
+    await context.setLocale(Locale(code));
+
+    if (!mounted) return;
+    final role = prefs.getString('role');
+    context.go(role == 'owner' ? '/ownerHome' : '/clientHome');
+  }
+
   Future<void> _showLanguageBottomSheet() async {
     final currentLocale = context.locale.languageCode;
 
@@ -136,44 +163,14 @@ class _SettingsPageState extends State<SettingsPage> {
               title: 'O\'zbek',
               flag: '🇺🇿',
               isSelected: currentLocale == 'uz',
-              onTap: () async {
-                await context.setLocale(const Locale('uz'));
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setString('selected_language', 'uz');
-                if (!mounted) return;
-
-                // BottomSheet'ni yopish
-                Navigator.of(context).pop();
-
-                // Foydalanuvchi role'ini olish
-                final role = prefs.getString('role');
-                final homePath = role == 'owner' ? '/ownerHome' : '/clientHome';
-
-                // Asosiy sahifaga qaytish va barcha stackni tozalash
-                context.go(homePath);
-              },
+              onTap: () => _applyLanguage(context, 'uz'),
             ),
             const SizedBox(height: 12),
             _LanguageOption(
               title: 'Русский',
               flag: '🇷🇺',
               isSelected: currentLocale == 'ru',
-              onTap: () async {
-                await context.setLocale(const Locale('ru'));
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setString('selected_language', 'ru');
-                if (!mounted) return;
-
-                // BottomSheet'ni yopish
-                Navigator.of(context).pop();
-
-                // Foydalanuvchi role'ini olish
-                final role = prefs.getString('role');
-                final homePath = role == 'owner' ? '/ownerHome' : '/clientHome';
-
-                // Asosiy sahifaga qaytish va barcha stackni tozalash
-                context.go(homePath);
-              },
+              onTap: () => _applyLanguage(context, 'ru'),
             ),
             const SizedBox(height: 24),
           ],
@@ -444,7 +441,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
-                              _user!.role == 'owner' ? 'Texnika egasi' : 'Mijoz',
+                              _user!.role == 'owner' ? 'role_select.owner'.tr() : 'role_select.client'.tr(),
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -521,15 +518,25 @@ class _SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
-                // const Divider(height: 1, color: Colors.black12,),
-                // _SettingsTile(
-                //   icon: Icons.lock_rounded,
-                //   title: 'settings.security'.tr(),
-                //   subtitle: 'settings.security_desc'.tr(),
-                //   onTap: () {
-                //     // Security sahifasiga o'tish
-                //   },
-                // ),
+                // Ega uchun to'lovlar: shu yergacha yetib borish yo'li yo'q
+                // edi — PaymentsPage va undagi pul yechish ekrani faqat
+                // to'g'ridan-to'g'ri manzil orqali ochilardi.
+                if (_user?.role == 'owner') ...[
+                  const Divider(height: 1, color: Colors.black12),
+                  _SettingsTile(
+                    icon: Icons.account_balance_wallet_rounded,
+                    title: 'owner.payments'.tr(),
+                    subtitle: 'payout.title'.tr(),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PaymentsPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ],
             ),
             

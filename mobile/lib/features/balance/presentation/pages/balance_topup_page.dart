@@ -370,7 +370,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
           ),
           const SizedBox(height: 8),
           Text(
-            '${NumberFormatter.formatCurrency(_balance?.balance ?? 0)} so\'m',
+            '${NumberFormatter.formatCurrency(_balance?.balance ?? 0)} ${'common.currency'.tr()}',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 32,
@@ -389,7 +389,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                   Text(
-                    '${NumberFormatter.formatCurrency(_balance?.availableBalance ?? 0)} so\'m',
+                    '${NumberFormatter.formatCurrency(_balance?.availableBalance ?? 0)} ${'common.currency'.tr()}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -406,7 +406,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                   Text(
-                    '${NumberFormatter.formatCurrency(_balance?.frozenBalance ?? 0)} so\'m',
+                    '${NumberFormatter.formatCurrency(_balance?.frozenBalance ?? 0)} ${'common.currency'.tr()}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -439,8 +439,8 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
-            hintText: 'Summani kiriting',
-            suffixText: 'so\'m',
+            hintText: 'balance.enter_amount'.tr(),
+            suffixText: 'common.currency'.tr(),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(

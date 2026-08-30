@@ -130,9 +130,12 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
           return 0;
         });
       } else if (_sortBy == 'price_asc') {
-        _filteredList.sort((a, b) => (a.pricePerDay).compareTo(b.pricePerDay));
+        // ...Value getterlari — matnni emas, sonni solishtiradi.
+        _filteredList
+            .sort((a, b) => a.pricePerDayValue.compareTo(b.pricePerDayValue));
       } else if (_sortBy == 'price_desc') {
-        _filteredList.sort((a, b) => (b.pricePerDay).compareTo(a.pricePerDay));
+        _filteredList
+            .sort((a, b) => b.pricePerDayValue.compareTo(a.pricePerDayValue));
       } else if (_sortBy == 'name') {
         _filteredList.sort((a, b) => (a.model ?? '').compareTo(b.model ?? ''));
       }
@@ -833,7 +836,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                     _buildPriceRow('equipment.price_per_shift'.tr(), equipment.pricePerShift!, 'common.shift'.tr()),
                   _buildPriceRow('equipment.price_per_day'.tr(), equipment.pricePerDay, 'common.day'.tr()),
                   if (equipment.deliveryPricePerKm != null && equipment.deliveryPricePerKm!.isNotEmpty)
-                    _buildPriceRow('Yetkazish', equipment.deliveryPricePerKm!, 'so\'m/km'),
+                    _buildPriceRow('equipment.delivery'.tr(), equipment.deliveryPricePerKm!, '${'common.currency'.tr()}/${'common.km'.tr()}'),
 
                   const SizedBox(height: 24),
 
@@ -865,7 +868,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                         ? 'client.rent'.tr()
                         : (equipment.status == 'maintenance'
                             ? 'Ta\'mirda - buyurtma berib bo\'lmaydi'
-                            : 'Band - buyurtma berib bo\'lmaydi'),
+                            : 'equipment.busy_cannot_order'.tr()),
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),

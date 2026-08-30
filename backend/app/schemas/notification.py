@@ -10,8 +10,10 @@ class NotificationRead(BaseModel):
     title: str
     body: Optional[str] = None
     order_id: Optional[int] = None
-    # Ilova shu kod bo'yicha texnika ikonkasini ko'rsatadi
+    # Ilova shu ikkitasidan sarlavhani o'z tilida yig'adi:
+    # <turning tarjimasi> <model>. Ikonka ham shu koddan olinadi.
     equipment_type: Optional[str] = None
+    equipment_model: Optional[str] = None
     is_read: bool
     created_at: datetime
 

@@ -1,10 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <circle cx="16" cy="49" r="5.6" fill="none" stroke="#1C1C1C" stroke-width="2.8"/>
-  <circle cx="34" cy="49" r="5.6" fill="none" stroke="#1C1C1C" stroke-width="2.8"/>
-  <circle cx="48" cy="49" r="5.6" fill="none" stroke="#1C1C1C" stroke-width="2.8"/>
-  <rect x="6" y="26" width="15" height="16" rx="2" fill="#1C1C1C"/>
-  <rect x="8" y="28" width="11" height="7.2" rx="1" fill="#2ECC71"/>
-  <polygon points="22,34 60,34 60,42 22,42" fill="#1C1C1C"/>
-  <polygon points="24,30 62,14 64,22 26,36" fill="#2ECC71"/>
-  <line x1="24" y1="34" x2="24" y2="42" stroke="#1C1C1C" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="16" cy="49" r="7" fill="#23282E"/>
+  <circle cx="16" cy="49" r="3.15" fill="#B9C0C6"/>
+  <circle cx="35" cy="49" r="7" fill="#23282E"/>
+  <circle cx="35" cy="49" r="3.15" fill="#B9C0C6"/>
+  <circle cx="49" cy="49" r="7" fill="#23282E"/>
+  <circle cx="49" cy="49" r="3.15" fill="#B9C0C6"/>
+  <rect x="5" y="24" width="16" height="17" rx="2" fill="#E2631F" stroke="#23282E" stroke-width="0.9"/>
+  <rect x="6.6" y="25.6" width="12.8" height="8.5" rx="1" fill="#5B87AD"/>
+  <rect x="7.2" y="26.2" width="5.120000000000001" height="7.3" rx="0.6" fill="#8FBCDC"/>
+  <rect x="22" y="35" width="38" height="7" rx="1.5" fill="#33393F"/>
+  <polygon points="24,31 62,13 64,22 26,37" fill="#F2B10A" stroke="#23282E" stroke-width="0.9"/>
+  <line x1="24" y1="32" x2="24" y2="42" stroke="#23282E" stroke-width="2.4" stroke-linecap="round"/>
 </svg>

@@ -136,7 +136,10 @@ class _DateRangeCalendarState extends State<DateRangeCalendar> {
           icon: const Icon(Icons.chevron_left),
         ),
         Text(
-          DateFormat('MMMM yyyy', context.locale.toString()).format(_focusedMonth),
+          // LLLL — mustaqil oy nomi. MMMM ruschada qaratqich kelishigida
+          // beradi: "августа 2026" o'rniga "Август 2026" kerak.
+          _capitalize(DateFormat('LLLL yyyy', context.locale.toString())
+              .format(_focusedMonth)),
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         IconButton(
@@ -152,7 +155,7 @@ class _DateRangeCalendarState extends State<DateRangeCalendar> {
   }
 
   Widget _buildWeekDaysHeader() {
-    final weekDays = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
+    final weekDays = 'common.weekdays_short'.tr().split(',');
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: weekDays.map((day) => Expanded(
@@ -254,13 +257,16 @@ class _DateRangeCalendarState extends State<DateRangeCalendar> {
     );
   }
 
+  static String _capitalize(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
   Widget _buildLegend() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _buildLegendItem(Colors.white, 'Bo\'sh'),
-        _buildLegendItem(Colors.red.withOpacity(0.3), 'Band'),
-        _buildLegendItem(AppColors.primaryGreen, 'Tanlangan'),
+        _buildLegendItem(Colors.white, 'messages.available'.tr()),
+        _buildLegendItem(Colors.red.withOpacity(0.3), 'messages.busy'.tr()),
+        _buildLegendItem(AppColors.primaryGreen, 'common.selected'.tr()),
       ],
     );
   }

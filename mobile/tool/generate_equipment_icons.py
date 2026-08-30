@@ -1,23 +1,18 @@
 #!/usr/bin/env python3
 """
-Texnika turlari uchun ikonkalarni yasaydi.
+Texnika turlari uchun RANGLI ikonkalar.
 
 Har bir mashina primitivlar ro'yxati sifatida tasvirlangan va shu bitta
-tavsifdan IKKI xil fayl chiqadi:
+tavsifdan ikki xil fayl chiqadi:
 
-  assets/equipment_types/<code>.svg   — interfeys uchun, IKKI RANGLI:
-                                        korpus to'q, ishchi qismi (cho'mich,
-                                        tig', baraban, strela) yashil
-  assets/equipment_types/<code>.png   — Yandex xaritadagi marker: yashil
-                                        doira ichida oq belgi
+  assets/equipment_types/<code>.svg   — interfeys uchun (katalog, kartochkalar,
+                                        bildirishnomalar, tur tanlash)
+  assets/equipment_types/<code>.png   — xarita markeri: oq yumaloq kvadrat,
+                                        pastida yashil uchburchak, ichida mashina
 
-Nega ishchi qismi ajratilgan: mashinalar bir-biridan aynan shu bilan farq
-qiladi. Buldozerni tig'i, katokni barabani, betonnasosni strelasi bilan
-taniydilar — rang shu detalga qaratadi.
-
-Nega tayyor to'plam emas: bepul MIT to'plamlarda (Tabler va boshqalar) bizga
-kerak 17 turdan atigi 6 tasi bor — greyder, katok, yamobur, betonnasos,
-avtovishka uchun umuman ikonka yo'q.
+Ranglar haqiqiy texnikadan olingan: sariq korpus, qora oyna, qora g'ildiraklar
+kulrang disk bilan, po'lat rangli strela va gidravlika. Kichik o'lchamda ham
+mashina taniladigan bo'lishi uchun asosiy shakllarda quyuq hoshiya bor.
 
 Ishga tushirish:
     python3 tool/generate_equipment_icons.py
@@ -27,282 +22,323 @@ Koordinatalar 64x64 maydonda, yer chizig'i y=56 da.
 import os
 
 try:
-    from PIL import Image, ImageDraw
+    from PIL import Image, ImageDraw, ImageFilter
 except ImportError:
     raise SystemExit("Pillow kerak:  pip install Pillow")
 
-SIZE = 64
-# Xarita markeri: 256 * 0.45 ≈ 115 px ekranda (client_main_page.dart)
-PNG_SIZE = 256
-MARKER_SCALE_HINT = 0.45
+SIZE = 64                 # chizma koordinatalari va SVG viewBox
+
+# Xarita markeri: oq kvadrat + pastdagi uchburchak.
+# Kvadrat 256x256, uchburchak yana 52 px — jami 256x308.
+PNG_W, PNG_H = 256, 308
+MARKER_SQUARE = 256
+MARKER_TAIL = 52
 SUPERSAMPLE = 3
 
-BODY_COLOR = "#1C1C1C"        # AppColors.black
-ACCENT_COLOR = "#2ECC71"      # AppColors.primaryGreen
+# --------------------------------------------------------------------- palitra
 
-MARKER_FILL = (46, 204, 113)
-MARKER_STROKE = (255, 255, 255)
-GLYPH_ON_MARKER = (255, 255, 255)
+YELLOW      = "#F2B10A"   # asosiy korpus
+YELLOW_DK   = "#C98D05"   # soya, korpusning pastki qismi
+ORANGE      = "#E2631F"   # yuk mashinalari kabinasi
+ORANGE_DK   = "#B44C14"
+DARK        = "#23282E"   # g'ildiraklar, izlar, shassi
+DARK_2      = "#33393F"   # kabina ramkasi
+GLASS       = "#5B87AD"   # oyna
+GLASS_LT    = "#8FBCDC"   # oynadagi yorug'lik
+STEEL       = "#8A939B"   # strela, gidravlika, baraban
+STEEL_DK    = "#5E666D"
+HUB         = "#B9C0C6"   # g'ildirak diski
+WHITE       = "#FFFFFF"
+GREEN       = "#2ECC71"   # marker dumi (AppColors.primaryGreen)
+BORDER      = "#E3E6E8"   # marker kvadratining hoshiyasi
 
 OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                        "assets", "equipment_types")
 
-BODY = "body"
-ACCENT = "accent"
-
 
 # ---------------------------------------------------------------- primitivlar
-# Har bir primitivning oxirgi elementi — rang roli.
+# Har biri: (tur, argumentlar, to'ldirish rangi, hoshiya rangi yoki None)
 
-def rect(x, y, w, h, r=0, c=BODY):
-    return ("rect", (x, y, w, h, r), c)
-
-
-def circle(cx, cy, r, c=BODY):
-    return ("circle", (cx, cy, r), c)
+def rect(x, y, w, h, r=0, c=YELLOW, stroke=None):
+    return ("rect", (x, y, w, h, r), c, stroke)
 
 
-def ring(cx, cy, r, w, c=BODY):
-    return ("ring", (cx, cy, r, w), c)
+def circle(cx, cy, r, c=DARK, stroke=None):
+    return ("circle", (cx, cy, r), c, stroke)
 
 
-def poly(points, c=BODY):
-    return ("poly", tuple(points), c)
+def poly(points, c=YELLOW, stroke=None):
+    return ("poly", tuple(points), c, stroke)
 
 
-def line(x1, y1, x2, y2, w, c=BODY):
-    return ("line", (x1, y1, x2, y2, w), c)
+def line(x1, y1, x2, y2, w, c=STEEL):
+    return ("line", (x1, y1, x2, y2, w), c, None)
 
 
-def wheels(xs, cy, r, w=None, c=BODY):
-    return [ring(x, cy, r, w or max(2, r * 0.55), c) for x in xs]
+# --------------------------------------------------------------- yig'ma qismlar
 
-
-def tracks(x, y, w, h, c=BODY):
-    """Kraul izlar: cho'zilgan yumaloq to'rtburchak."""
-    return [rect(x, y, w, h, h / 2, c)]
-
-
-def boom(points, w=4, c=BODY):
-    return [line(points[i][0], points[i][1], points[i + 1][0], points[i + 1][1], w, c)
-            for i in range(len(points) - 1)]
-
-
-def cab(x, y, w, h):
-    """Kabina: korpus va ichida oynani bildiruvchi yorug' to'rtburchak."""
+def wheel(cx, cy, r):
+    """Shina + disk. Ikki doira — kichkina o'lchamda ham g'ildirakka o'xshaydi."""
     return [
-        rect(x, y, w, h, 2),
-        rect(x + 2, y + 2, w - 4, h * 0.45, 1, ACCENT),
+        circle(cx, cy, r, DARK),
+        circle(cx, cy, r * 0.45, HUB),
     ]
+
+
+def wheels(xs, cy, r):
+    out = []
+    for x in xs:
+        out += wheel(x, cy, r)
+    return out
+
+
+def track(x, y, w, h):
+    """Kraul iz: quyuq yumaloq to'rtburchak va ichidagi g'ildirakchalar."""
+    parts = [rect(x, y, w, h, h / 2, DARK)]
+    step = w / 5
+    for i in range(1, 5):
+        parts.append(circle(x + step * i, y + h / 2, h * 0.22, HUB))
+    return parts
+
+
+def cab(x, y, w, h, body=YELLOW):
+    """Kabina: korpus + oyna + oynadagi yorug'lik."""
+    return [
+        rect(x, y, w, h, 2, body, DARK),
+        rect(x + 1.6, y + 1.6, w - 3.2, h * 0.5, 1, GLASS),
+        rect(x + 2.2, y + 2.2, (w - 3.2) * 0.4, h * 0.5 - 1.2, 0.6, GLASS_LT),
+    ]
+
+
+def boom(points, w=4, c=YELLOW):
+    """Strela: bo'g'inlar + tutashgan joylarda shtiftlar."""
+    out = []
+    for i in range(len(points) - 1):
+        (x1, y1), (x2, y2) = points[i], points[i + 1]
+        out.append(line(x1, y1, x2, y2, w, c))
+    for x, y in points:
+        out.append(circle(x, y, w * 0.42, STEEL_DK))
+    return out
+
+
+def bucket(points):
+    """Cho'mich: po'lat korpus, quyuq hoshiya."""
+    return [poly(points, STEEL, DARK)]
 
 
 # ------------------------------------------------------------------ mashinalar
 
 MACHINES = {
-    # Ekskavator: izlar, aylanuvchi korpus, pastga egilgan strela va cho'mich
+    # Ekskavator: izlar, sariq korpus, kabina, strela va cho'mich
     "excavator": lambda: [
-        *tracks(6, 46, 40, 10),
-        *wheels([13, 22, 31, 40], 51, 3.2, 1.6),
-        rect(14, 32, 26, 13, 2.5),
-        *cab(16, 22, 12, 11),
-        *boom([(36, 30), (50, 16), (56, 30)], 4, ACCENT),
-        poly([(51, 30), (61, 28), (59, 38), (50, 38)], ACCENT),
+        *track(6, 46, 40, 10),
+        rect(13, 31, 28, 14, 3, YELLOW, DARK),
+        rect(13, 41, 28, 4, 1.5, YELLOW_DK),
+        *cab(15, 21, 13, 11),
+        rect(35, 27, 5, 5, 1, DARK_2),           # dvigatel bloki
+        *boom([(37, 30), (50, 16), (56, 29)], 4.5),
+        line(41, 24, 47, 29, 2, STEEL_DK),        # gidrosilindr
+        *bucket([(51, 29), (62, 27), (60, 38), (50, 38)]),
     ],
 
-    # Mini ekskavator: past va ixcham — kattasidan aniq farq qilishi kerak
+    # Mini ekskavator: past va ixcham
     "mini_excavator": lambda: [
-        *tracks(10, 46, 30, 9),
-        *wheels([16, 24, 32], 50.5, 2.6, 1.4),
-        rect(15, 34, 20, 12, 2.5),
-        *cab(17, 25, 10, 9),
-        *boom([(31, 32), (41, 24), (45, 33)], 3, ACCENT),
-        poly([(42, 33), (50, 31), (49, 39), (42, 39)], ACCENT),
+        *track(11, 47, 28, 8),
+        rect(15, 34, 20, 12, 2.5, YELLOW, DARK),
+        *cab(16, 25, 10, 9),
+        *boom([(32, 32), (41, 24), (45, 32)], 3.4),
+        *bucket([(42, 32), (51, 30), (50, 39), (42, 39)]),
     ],
 
-    # Ekskavator-yuklagich: oldida cho'mich, orqasida strela — ikkalasi ham yashil
+    # Ekskavator-yuklagich: oldida cho'mich, orqasida strela
     "backhoe_loader": lambda: [
-        *wheels([15, 47], 48, 8, 3.2),
-        rect(20, 34, 24, 11, 2.5),
-        *cab(26, 24, 12, 11),
-        *boom([(22, 38), (10, 34)], 3.5, ACCENT),
-        poly([(11, 30), (4, 32), (4, 42), (11, 40)], ACCENT),
-        *boom([(42, 32), (52, 22), (58, 34)], 3.5, ACCENT),
-        poly([(54, 34), (62, 33), (61, 41), (53, 40)], ACCENT),
+        *wheels([15], 47, 9),
+        *wheels([47], 48, 8),
+        rect(20, 33, 25, 12, 2.5, YELLOW, DARK),
+        *cab(26, 22, 13, 11),
+        *boom([(22, 37), (11, 33)], 3.6),
+        *bucket([(12, 29), (3, 31), (3, 42), (12, 40)]),
+        *boom([(43, 31), (52, 21), (58, 33)], 3.6),
+        *bucket([(54, 33), (62, 32), (61, 41), (53, 40)]),
     ],
 
-    # Buldozer: asosiy belgisi — oldindagi baland tig'
+    # Buldozer: oldindagi baland tig'
     "bulldozer": lambda: [
-        *tracks(18, 42, 36, 13),
-        *wheels([25, 34, 43, 50], 48.5, 3.6, 1.8),
-        rect(24, 30, 26, 12, 2.5),
-        *cab(28, 20, 14, 11),
-        poly([(3, 26), (13, 30), (13, 56), (3, 60)], ACCENT),
-        line(13, 44, 20, 42, 3, ACCENT),
+        *track(18, 42, 36, 13),
+        rect(24, 29, 26, 13, 2.5, YELLOW, DARK),
+        *cab(28, 19, 15, 11),
+        poly([(3, 25), (13, 29), (13, 55), (3, 59)], STEEL, DARK),
+        line(13, 43, 21, 41, 3, YELLOW),
+        line(13, 34, 24, 32, 2.4, STEEL_DK),
     ],
 
-    # Frontal yuklagich: orqada strela yo'q, oldida juda katta cho'mich
+    # Frontal yuklagich: katta cho'mich oldinda
     "front_loader": lambda: [
-        *wheels([28, 52], 47, 8, 3.2),
-        rect(36, 30, 20, 14, 2.5),
-        *cab(38, 20, 13, 11),
-        *boom([(38, 36), (21, 29)], 4, ACCENT),
-        poly([(21, 24), (3, 30), (3, 44), (21, 38)], ACCENT),
+        *wheels([28, 52], 47, 8.5),
+        rect(34, 29, 23, 15, 2.5, YELLOW, DARK),
+        *cab(38, 19, 14, 11),
+        *boom([(38, 35), (21, 28)], 4.2),
+        *bucket([(22, 23), (3, 29), (3, 44), (22, 38)]),
     ],
 
-    # Avtokran: uzun teleskopik strela — eng taniqli siluet
+    # Avtokran: uzun teleskopik strela
     "truck_crane": lambda: [
-        *wheels([13, 26, 40, 52], 49, 6.5, 2.6),
-        rect(8, 34, 50, 10, 2),
-        *cab(9, 24, 13, 11),
-        *boom([(28, 34), (58, 12)], 5, ACCENT),
-        line(58, 12, 58, 24, 2, ACCENT),
-        circle(58, 26, 3, ACCENT),
-        line(10, 44, 6, 52, 2.5),
-        line(56, 44, 60, 52, 2.5),
+        *wheels([13, 26, 41, 53], 49, 6.5),
+        rect(7, 33, 52, 11, 2, ORANGE, DARK),
+        rect(7, 40, 52, 4, 1.5, ORANGE_DK),
+        *cab(8, 23, 13, 11, ORANGE),
+        *boom([(27, 33), (58, 11)], 5, STEEL),
+        line(58, 11, 58, 23, 2, DARK),
+        circle(58, 25, 3, STEEL_DK),
+        line(9, 44, 5, 52, 2.6, DARK),
+        line(57, 44, 61, 52, 2.6, DARK),
     ],
 
-    # Manipulyator: tik ustun va Z shaklida bukilgan kran
+    # Manipulyator: tik ustun va bukilgan kran
     "manipulator": lambda: [
-        *wheels([14, 32, 50], 49, 6.5, 2.6),
-        *cab(5, 24, 14, 12),
-        rect(21, 36, 39, 6, 1.5),
-        rect(36, 27, 23, 9, 1.5),
-        rect(23, 14, 5, 22, 1, ACCENT),
-        *boom([(25, 16), (40, 10), (53, 19)], 3.5, ACCENT),
-        line(53, 19, 53, 26, 2, ACCENT),
-        circle(53, 28, 2.5, ACCENT),
+        *wheels([14, 32, 50], 49, 6.5),
+        *cab(4, 23, 15, 13, ORANGE),
+        rect(21, 36, 40, 6, 1.5, DARK_2),
+        rect(36, 26, 24, 10, 1.5, YELLOW, DARK),
+        rect(23, 13, 5, 23, 1, STEEL, DARK),
+        *boom([(25, 15), (40, 9), (53, 18)], 3.6, STEEL),
+        line(53, 18, 53, 25, 2, DARK),
+        circle(53, 27, 2.6, STEEL_DK),
     ],
 
     # Avtovishka: strela va tepadagi savat
     "aerial_platform": lambda: [
-        *wheels([14, 30, 48], 49, 6.5, 2.6),
-        *cab(8, 24, 14, 12),
-        rect(24, 34, 34, 9, 2),
-        *boom([(30, 34), (52, 14)], 4, ACCENT),
-        rect(48, 6, 14, 9, 1.5, ACCENT),
-        line(10, 43, 6, 52, 2.5),
-        line(56, 43, 60, 52, 2.5),
+        *wheels([14, 30, 48], 49, 6.5),
+        *cab(5, 23, 15, 13, ORANGE),
+        rect(22, 34, 37, 9, 2, YELLOW, DARK),
+        *boom([(29, 33), (51, 13)], 4.4, STEEL),
+        # savat — sariq, quyuq hoshiya bilan, tepada aniq ko'rinadi
+        rect(45, 4, 16, 10, 1.5, YELLOW, DARK),
+        rect(45, 4, 16, 3.5, 1, YELLOW_DK),
+        line(9, 43, 5, 52, 2.6, DARK),
+        line(57, 43, 61, 52, 2.6, DARK),
     ],
 
     # Samosval: ko'tarilgan kuzov
     "dump_truck": lambda: [
-        *wheels([16, 34, 48], 49, 7, 2.8),
-        *cab(6, 26, 15, 16),
-        poly([(22, 34), (60, 34), (60, 42), (22, 42)]),
-        poly([(24, 30), (62, 14), (64, 22), (26, 36)], ACCENT),
-        line(24, 34, 24, 42, 2),
+        *wheels([16, 35, 49], 49, 7),
+        *cab(5, 24, 16, 17, ORANGE),
+        rect(22, 35, 38, 7, 1.5, DARK_2),
+        poly([(24, 31), (62, 13), (64, 22), (26, 37)], YELLOW, DARK),
+        line(24, 32, 24, 42, 2.4, DARK),
     ],
 
     # Beton aralashtirgich: yotiq baraban
     "concrete_mixer": lambda: [
-        *wheels([14, 32, 48], 49, 7, 2.8),
-        *cab(4, 26, 14, 16),
-        rect(20, 38, 40, 5, 1.5),
-        poly([(24, 34), (34, 18), (54, 18), (58, 34)], ACCENT),
-        line(30, 22, 52, 22, 2),
-        line(27, 28, 56, 28, 2),
+        *wheels([14, 33, 49], 49, 7),
+        *cab(3, 25, 15, 16, ORANGE),
+        rect(19, 38, 42, 5, 1.5, DARK_2),
+        # baraban: bochkasimon, o'ng tomonda tarnov. Qiya chiziqlar aylanishni
+        # ko'rsatadi — tekis chiziqlar bilan u panjaraga o'xshab qolgan edi.
+        poly([(25, 34), (30, 19), (52, 17), (56, 34)], STEEL, DARK),
+        line(34, 20, 31, 33, 1.8, STEEL_DK),
+        line(41, 19, 39, 33, 1.8, STEEL_DK),
+        line(48, 18, 47, 33, 1.8, STEEL_DK),
+        poly([(55, 22), (62, 26), (62, 32), (56, 30)], STEEL_DK),
     ],
 
-    # Betonnasos: strela tik ko'tarilib, oldinga oshib tushadi
+    # Betonnasos: strela ko'tarilib, oldinga oshib tushadi
     "concrete_pump": lambda: [
-        *wheels([13, 27, 44], 49, 6.5, 2.6),
-        *cab(5, 28, 14, 14),
-        rect(21, 34, 36, 9, 2),
-        *boom([(26, 34), (26, 11), (46, 5), (59, 16)], 3.5, ACCENT),
-        line(59, 16, 59, 29, 2.5, ACCENT),
-        line(7, 43, 3, 52, 2.5),
-        line(55, 43, 59, 52, 2.5),
+        *wheels([13, 28, 45], 49, 6.5),
+        *cab(3, 27, 15, 15, ORANGE),
+        rect(20, 34, 39, 9, 2, YELLOW, DARK),
+        # strela — qalinroq va sariq: kulrang ingichka chiziq ko'rinmasdi
+        *boom([(26, 34), (26, 9), (46, 3), (59, 14)], 4.2, YELLOW),
+        line(59, 14, 59, 30, 3, STEEL_DK),
+        line(6, 43, 2, 52, 2.6, DARK),
+        line(56, 43, 60, 52, 2.6, DARK),
     ],
 
-    # Greyder: uzun burun, o'rtada ramaga osilgan qiya tig'
+    # Greyder: uzun burun, o'rtada qiya tig'
     "grader": lambda: [
-        *wheels([9, 46, 58], 51, 5.5, 2.2),
-        rect(5, 31, 55, 4, 2),
-        rect(41, 18, 19, 13, 2),
-        *cab(44, 11, 13, 8),
-        poly([(15, 38), (40, 38), (37, 50), (12, 50)], ACCENT),
-        line(26, 34, 26, 41, 2.5, ACCENT),
+        *wheels([9, 46, 58], 50, 6),
+        rect(5, 30, 55, 5, 2, YELLOW, DARK),
+        rect(40, 17, 20, 14, 2, YELLOW, DARK),
+        *cab(43, 9, 14, 9),
+        poly([(15, 37), (40, 37), (37, 49), (12, 49)], STEEL, DARK),
+        line(26, 33, 26, 40, 2.6, STEEL_DK),
     ],
 
     # Katok: oldinda katta silliq baraban
     "roller": lambda: [
-        rect(6, 38, 20, 18, 8, ACCENT),
-        *wheels([50], 48, 8, 3.2),
-        rect(24, 30, 28, 12, 2.5),
-        *cab(30, 20, 14, 11),
-        line(26, 44, 42, 44, 2.5),
+        # baraban — tik silindr, doira emas: aks holda oddiy g'ildirakka o'xshaydi
+        rect(4, 34, 20, 22, 4, STEEL, DARK),
+        line(9, 37, 9, 53, 1.6, STEEL_DK),
+        line(14, 37, 14, 53, 1.6, STEEL_DK),
+        line(19, 37, 19, 53, 1.6, STEEL_DK),
+        *wheels([50], 48, 8),
+        rect(24, 29, 28, 13, 2.5, YELLOW, DARK),
+        *cab(30, 19, 15, 11),
+        rect(22, 41, 22, 4, 1.5, YELLOW_DK),
     ],
 
     # Yamobur: vertikal machta va shnek
     "auger_drill": lambda: [
-        *wheels([14, 30, 48], 49, 6.5, 2.6),
-        *cab(6, 28, 14, 14),
-        rect(22, 34, 36, 9, 2),
-        rect(44, 8, 6, 30, 1.5, ACCENT),
-        line(47, 20, 47, 54, 2.5, ACCENT),
-        *[line(43, y, 51, y + 4, 2, ACCENT) for y in (26, 34, 42)],
+        *wheels([14, 30, 48], 49, 6.5),
+        *cab(5, 27, 15, 15, ORANGE),
+        rect(21, 34, 37, 9, 2, YELLOW, DARK),
+        rect(43, 6, 7, 32, 1.5, YELLOW, DARK),
+        line(46.5, 18, 46.5, 54, 2.6, STEEL_DK),
+        *[line(42, y, 51, y + 4, 2.2, STEEL) for y in (24, 33, 42)],
     ],
 
     # Tral / evakuator: qiya platforma
     "tow_truck": lambda: [
-        *wheels([14, 34, 50], 49, 7, 2.8),
-        *cab(4, 24, 15, 18),
-        poly([(21, 42), (62, 26), (62, 34), (21, 46)], ACCENT),
-        line(21, 42, 21, 30, 2.5),
-        *boom([(21, 32), (34, 26)], 3),
+        *wheels([14, 35, 51], 49, 7),
+        *cab(3, 23, 16, 18, ORANGE),
+        poly([(21, 41), (62, 25), (62, 34), (21, 45)], YELLOW, DARK),
+        line(21, 41, 21, 29, 2.6, DARK),
+        line(22, 31, 35, 25, 3, STEEL),
     ],
 
     # Kompressor: pritsepdagi quti
     "compressor": lambda: [
-        rect(12, 26, 40, 22, 3),
-        rect(18, 31, 26, 5, 1, ACCENT),
-        *wheels([22, 42], 51, 5, 2),
-        line(12, 36, 2, 40, 2.5),
-        line(20, 41, 34, 41, 2),
+        rect(11, 25, 42, 23, 3, YELLOW, DARK),
+        rect(17, 30, 28, 6, 1, DARK_2),
+        rect(17, 39, 16, 4, 1, STEEL_DK),
+        *wheels([22, 43], 51, 5),
+        line(11, 35, 2, 39, 2.6, DARK),
     ],
 
     # Boshqa texnika: g'ildirak va kalit
+    # Boshqa texnika: tishli g'ildirak — "mexanizm" degan umumiy belgi
     "other": lambda: [
-        ring(24, 34, 14, 5),
-        circle(24, 34, 4, ACCENT),
-        *boom([(35, 43), (52, 54)], 5, ACCENT),
-        poly([(48, 14), (56, 14), (56, 22), (52, 26), (48, 22)], ACCENT),
-        line(52, 24, 52, 40, 4, ACCENT),
+        *[rect(30 - 4, 8, 8, 48, 1, STEEL_DK) for _ in (0,)],
+        poly([(8, 26), (14, 20), (50, 20), (56, 26), (56, 38), (50, 44),
+              (14, 44), (8, 38)], YELLOW, DARK),
+        circle(32, 32, 15, YELLOW, DARK),
+        circle(32, 32, 7, DARK_2),
+        circle(32, 32, 3.5, HUB),
     ],
 }
 
 
 # --------------------------------------------------------------------- chizish
 
-def _svg_color(role):
-    return ACCENT_COLOR if role == ACCENT else BODY_COLOR
-
-
 def to_svg(parts) -> str:
     body = []
-    for kind, args, role in parts:
-        color = _svg_color(role)
+    for kind, args, fill, stroke in parts:
+        sw = ' stroke="%s" stroke-width="0.9"' % stroke if stroke else ""
         if kind == "rect":
             x, y, w, h, r = args
             rx = f' rx="{r}"' if r else ""
-            body.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}"{rx} fill="{color}"/>')
+            body.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}"{rx} fill="{fill}"{sw}/>')
         elif kind == "circle":
             cx, cy, r = args
-            body.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{color}"/>')
-        elif kind == "ring":
-            cx, cy, r, w = args
-            body.append(
-                f'<circle cx="{cx}" cy="{cy}" r="{r - w / 2}" fill="none" '
-                f'stroke="{color}" stroke-width="{w}"/>'
-            )
+            body.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{fill}"{sw}/>')
         elif kind == "poly":
             pts = " ".join(f"{x},{y}" for x, y in args)
-            body.append(f'<polygon points="{pts}" fill="{color}"/>')
+            body.append(f'<polygon points="{pts}" fill="{fill}"{sw}/>')
         elif kind == "line":
             x1, y1, x2, y2, w = args
             body.append(
                 f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" '
-                f'stroke="{color}" stroke-width="{w}" stroke-linecap="round"/>'
+                f'stroke="{fill}" stroke-width="{w}" stroke-linecap="round"/>'
             )
     shapes = "\n  ".join(body)
     return (
@@ -311,63 +347,90 @@ def to_svg(parts) -> str:
     )
 
 
-def draw_parts(draw, parts, color, k):
-    """Pillow bilan chizish. Marker uchun hamma narsa bitta rangda."""
-    def s(v):
-        return v * k
+def _rgb(color: str):
+    color = color.lstrip("#")
+    return tuple(int(color[i:i + 2], 16) for i in (0, 2, 4))
 
-    for kind, args, _role in parts:
+
+def draw_parts(draw, parts, k, dx=0.0, dy=0.0):
+    """Primitivlarni Pillow bilan chizish. k — masshtab, dx/dy — siljish."""
+    def sx(v):
+        return v * k + dx
+
+    def sy(v):
+        return v * k + dy
+
+    for kind, args, fill, stroke in parts:
+        fill_rgb = _rgb(fill)
+        stroke_rgb = _rgb(stroke) if stroke else None
+        width = max(1, int(k * 0.9))
+
         if kind == "rect":
             x, y, w, h, r = args
-            box = [s(x), s(y), s(x + w), s(y + h)]
+            box = [sx(x), sy(y), sx(x + w), sy(y + h)]
             if r:
-                draw.rounded_rectangle(box, radius=s(r), fill=color)
+                draw.rounded_rectangle(box, radius=r * k, fill=fill_rgb,
+                                       outline=stroke_rgb, width=width)
             else:
-                draw.rectangle(box, fill=color)
+                draw.rectangle(box, fill=fill_rgb, outline=stroke_rgb, width=width)
         elif kind == "circle":
             cx, cy, r = args
-            draw.ellipse([s(cx - r), s(cy - r), s(cx + r), s(cy + r)], fill=color)
-        elif kind == "ring":
-            cx, cy, r, w = args
-            rr = r - w / 2
-            draw.ellipse([s(cx - rr), s(cy - rr), s(cx + rr), s(cy + rr)],
-                         outline=color, width=max(1, int(s(w))))
+            draw.ellipse([sx(cx - r), sy(cy - r), sx(cx + r), sy(cy + r)],
+                         fill=fill_rgb, outline=stroke_rgb, width=width)
         elif kind == "poly":
-            draw.polygon([(s(x), s(y)) for x, y in args], fill=color)
+            draw.polygon([(sx(x), sy(y)) for x, y in args], fill=fill_rgb,
+                         outline=stroke_rgb)
         elif kind == "line":
             x1, y1, x2, y2, w = args
-            draw.line([s(x1), s(y1), s(x2), s(y2)], fill=color,
-                      width=max(1, int(s(w))), joint="curve")
+            draw.line([sx(x1), sy(y1), sx(x2), sy(y2)], fill=fill_rgb,
+                      width=max(1, int(w * k)), joint="curve")
             rr = w / 2
             for cx, cy in ((x1, y1), (x2, y2)):
-                draw.ellipse([s(cx - rr), s(cy - rr), s(cx + rr), s(cy + rr)], fill=color)
+                draw.ellipse([sx(cx - rr), sy(cy - rr), sx(cx + rr), sy(cy + rr)],
+                             fill=fill_rgb)
 
 
 def to_png(parts) -> Image.Image:
     """
-    Xarita markeri: yashil doira, oq hoshiya, ichida OQ belgi.
-
-    Bu yerda ikki rang ishlamaydi — 100 px doira ichida yashil detal
-    yashil fonda ko'rinmay qoladi.
+    Xarita markeri: oq yumaloq kvadrat, ostida yashil uchburchak, ichida
+    rangli mashina. Oq fon rangli texnikani xaritada aniq ko'rsatadi.
     """
-    k = PNG_SIZE * SUPERSAMPLE / SIZE
-    canvas = PNG_SIZE * SUPERSAMPLE
-    img = Image.new("RGBA", (canvas, canvas), (0, 0, 0, 0))
+    s = SUPERSAMPLE
+    W, H = PNG_W * s, PNG_H * s
+    square = MARKER_SQUARE * s
+    tail = MARKER_TAIL * s
+
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+
+    # Yumshoq soya — marker xarita ustida "yotgandek" ko'rinadi
+    shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).rounded_rectangle(
+        [6 * s, 10 * s, square - 6 * s, square - 2 * s],
+        radius=54 * s, fill=(0, 0, 0, 70),
+    )
+    img.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(7 * s)))
+
     draw = ImageDraw.Draw(img)
 
-    pad = canvas * 0.02
-    draw.ellipse([pad, pad, canvas - pad, canvas - pad],
-                 fill=MARKER_FILL, outline=MARKER_STROKE,
-                 width=int(canvas * 0.045))
+    # Yashil uchburchak — joyni ko'rsatadi
+    draw.polygon(
+        [(square * 0.38, square - 8 * s),
+         (square * 0.62, square - 8 * s),
+         (square * 0.50, square + tail - 8 * s)],
+        fill=_rgb(GREEN),
+    )
 
-    glyph = Image.new("RGBA", (canvas, canvas), (0, 0, 0, 0))
-    draw_parts(ImageDraw.Draw(glyph), parts, GLYPH_ON_MARKER, k)
-    inner = int(canvas * 0.62)
-    glyph = glyph.resize((inner, inner), Image.LANCZOS)
-    off = (canvas - inner) // 2
-    img.alpha_composite(glyph, (off, off))
+    # Oq kvadrat
+    draw.rounded_rectangle([0, 0, square, square], radius=54 * s,
+                           fill=(255, 255, 255, 255),
+                           outline=_rgb(BORDER), width=int(2 * s))
 
-    return img.resize((PNG_SIZE, PNG_SIZE), Image.LANCZOS)
+    # Mashina kvadrat ichida, chetlaridan bo'sh joy qoldirib
+    inset = square * 0.11
+    scale = (square - inset * 2) / SIZE
+    draw_parts(draw, parts, scale, dx=inset, dy=inset)
+
+    return img.resize((PNG_W, PNG_H), Image.LANCZOS)
 
 
 def main():
@@ -380,8 +443,8 @@ def main():
 
         to_png(parts).save(os.path.join(OUT_DIR, f"{code}.png"))
 
-    print(f"{len(MACHINES)} ta tur uchun ikonka yasaldi: {OUT_DIR}")
-    print("SVG — ikki rangli, interfeys uchun. PNG — xarita markerlari uchun.")
+    print(f"{len(MACHINES)} ta tur uchun rangli ikonka yasaldi: {OUT_DIR}")
+    print(f"SVG — interfeys uchun, PNG {PNG_W}x{PNG_H} — xarita markerlari uchun.")
 
 
 if __name__ == "__main__":
