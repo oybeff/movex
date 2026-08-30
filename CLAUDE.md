@@ -38,18 +38,28 @@ FastAPI, Python 3.11+. Точка входа `backend/app/main.py`.
 Плюс `/health` и `/`. Swagger на `/docs` — **автоматически отключается при `APP_ENV=production`**.
 
 Внешние интеграции:
-- **Click** — приём платежей (`services/click_service.py`, `docs/backend/CLICK_INTEGRATION.md`)
+- **Click** — приём платежей (`services/click_service.py`)
+- **Payme** — приём платежей, полный Merchant API (`services/payme_service.py`,
+  вебхук `/payments/payme`). Умеет сплит через `receivers`
 - **Eskiz** — SMS и OTP-коды (`services/eskiz_service.py`, токен кэшируется в таблице `eskiz_token`)
 - **Telegram** — уведомления в группу (`services/telegram_service.py`)
+
+Подробности по деньгам — `docs/backend/PAYMENTS.md`, по уведомлениям —
+`docs/backend/NOTIFICATIONS.md`.
 
 Команды (из `backend/`, есть `Makefile`):
 
 ```bash
-make install                  # pip install -r requirements.txt
-make run                      # uvicorn app.main:app --reload --port 8000
-make migrate                  # alembic upgrade head
-make migrate-create           # новая миграция
+make install                       # pip install -r requirements.txt
+make run                           # uvicorn app.main:app --reload --port 8000
+python scripts/init_db.py          # ТОЛЬКО первая установка на пустой базе
+make migrate                       # alembic upgrade head — обновление схемы
+bash tests/run_all.sh              # все проверки (нужен запущенный сервер)
 ```
+
+Схема **не создаётся при старте приложения**. Раньше там был
+`Base.metadata.create_all()`, из-за него база расходилась с Alembic и
+`alembic upgrade head` на чистой базе падал.
 
 ## Admin
 
@@ -58,7 +68,11 @@ make migrate-create           # новая миграция
 запросы в `admin/*.php`.
 
 Страницы: `index.php` (дашборд), `users.php`, `orders.php`, `balance.php`, `budget.php`,
-`system.php`, `backup.php` (дампы БД), `login.php`/`logout.php`. Конфиг — `admin/config.php`.
+`payouts.php` (заявки на вывод денег), `system.php`, `backup.php` (дампы БД),
+`login.php`/`logout.php`. Конфиг — `admin/config.php`.
+
+`payouts.php` дублирует логику движения денег из `payout_service.py`. Меняешь
+одно — меняй и второе, иначе панель и API разойдутся.
 
 ## Mobile
 
@@ -71,16 +85,27 @@ Flutter 3.8, Dart SDK `^3.8.1`. 69 dart-файлов, 38 экранов.
 - Состояние — **provider**
 - HTTP — **dio**, единственный клиент `lib/core/network/dio_client.dart`
   (интерцептор подставляет Bearer-токен из SharedPreferences, на 401 чистит сессию и кидает на `/login`)
-- Карты — **yandex_mapkit**
+- Карты — **yandex_mapkit**. Ключ задаётся в двух местах: `MainActivity.kt`
+  (Android) и `AppDelegate.swift` (iOS). Забудешь про iOS — карта на iPhone
+  просто не запустится, именно так и было
 - Локализация — **easy_localization**, переводы в `assets/translations/` (uz по умолчанию)
+- Тип техники — **код из справочника** (`lib/core/constants/equipment_types.dart`),
+  а не свободный текст. В интерфейсе всегда показывай `EquipmentTypes.label(code)`,
+  иначе пользователь увидит `excavator` латиницей
 
-Сборка:
+Сборка. **Адрес сервера обязателен** — без него возьмётся прод:
 
 ```bash
 flutter pub get
-flutter run                                  # dev
-flutter build apk --release                  # Android
-flutter build ipa --release                  # iOS
+flutter run --dart-define=API_BASE_URL=http://192.168.1.101:8000
+flutter build apk --release --dart-define=API_BASE_URL=https://movex.004.uz
+flutter build ipa --release --dart-define=API_BASE_URL=https://movex.004.uz
+```
+
+Иконки техники генерируются, а не рисуются руками:
+
+```bash
+python3 tool/generate_equipment_icons.py     # .svg для интерфейса + .png для карты
 ```
 
 ## Деньги: как это работает и почему так
@@ -103,41 +128,63 @@ flutter build ipa --release                  # iOS
 - **Баланс блокируется через `with_for_update()`** при создании заказа, иначе два
   одновременных запроса замораживают одну и ту же сумму дважды.
 
-Проверки: `verify_fixes.py` и `verify_refunds.py` (28 проверок против живого сервера).
+Вывод денег владельцу — `payout_requests` и `/payouts/*`. Заявка замораживает
+сумму, выплата списывает, отказ снимает заморозку.
+
+Проверки: `bash tests/run_all.sh` — 187 проверок против живого сервера.
+
+## Права доступа
+
+Правило в одном месте — `app/core/access.py`. Раньше проверок владения не было
+почти нигде, и любой авторизованный пользователь мог читать чужие заказы и
+переписку, менять чужой телефон и удалять чужие аккаунты.
+
+- участники заказа — клиент и владелец техники; они видят свой заказ, свою
+  переписку и профиль друг друга (иначе им не созвониться);
+- списки (`/orders/`, `/chats/`, `/payments/`, `/notifications/`) всегда
+  фильтруются по текущему пользователю;
+- удаление заказов, чатов, платежей и пользователей — только админ;
+- `/users/` целиком — только админ.
+
+Добавляешь эндпоинт со списком или доступом по id — используй хелперы из
+`access.py`, не пиши проверку заново.
 
 ## Известные проблемы
 
 Актуально, ещё не исправлено:
 
-1. **API-адрес захардкожен на локалку разработчика** — `lib/core/network/dio_client.dart:9`
-   содержит `http://192.168.1.101:8000`. Нужен `--dart-define` или конфиг dev/prod.
-   Это единственное место в `lib/`, где зашит адрес.
-2. **Bundle ID дефолтный** — `com.example.movexGo` (iOS) и `com.example.movex_go` (Android).
-   С таким в App Store и Google Play не пустят.
-3. **Firebase — мёртвая зависимость.** `firebase_core` и `firebase_auth` есть в `pubspec.yaml`,
-   но в `lib/` не используются ни разу, `Firebase.initializeApp()` не вызывается, конфигов
-   (`google-services.json`, `GoogleService-Info.plist`) в проекте нет. Приложение от этого не
-   падает, но нативные SDK тянутся в сборку и могут ломать `pod install` на iOS.
-   Либо выпилить, либо донастроить.
-4. **Токены и тела запросов текут в логи** — `dio_client.dart` печатает кусок JWT через `print`
-   и вешает `LogInterceptor` с `requestBody`/`responseBody`. В релизной сборке так нельзя.
-5. **`create_all` вместе с Alembic** — `backend/app/main.py` вызывает
-   `Base.metadata.create_all(bind=engine)` на старте, хотя миграции ведёт Alembic.
-   Схема может разъехаться с историей миграций.
-6. **Пароль от FTP лежал в репозитории** — `mobile/.vscode/sftp.json`. Файл добавлен
-   в `.gitignore`, но пароль скомпрометирован и его надо сменить на сервере.
-7. **`ADMIN_SECRET_KEY` захардкожен** в `admin/config.php` (`movex_go_admin_secret_2024`,
-   в комментарии рядом честно написано «O'zgartiring!»). Вынести в окружение.
+1. **Пароль от FTP скомпрометирован** — `mobile/.vscode/sftp.json` лежал в
+   архиве открытым текстом. В git не попадает, но пароль надо сменить на сервере.
+2. **Push-уведомления не отправляются.** Серверная часть готова, токены
+   устройств принимаются. Нужен проект Firebase — порядок в
+   `docs/backend/NOTIFICATIONS.md`.
+3. **Боевых мерчант-ключей нет.** Click и Payme написаны и проверены на
+   вымышленных ключах. Что вписать и куда — в `docs/backend/PAYMENTS.md`.
+4. **Rahmat не интегрирован** — публичного merchant API у сервиса нет.
+5. **Экран франшизы показывает выдуманные данные** — `franchise_service.dart`
+   лепит их из чужих эндпоинтов, на бэкенде франшизы нет вообще. Вход в
+   интерфейсе уже закомментирован, экран достижим только по прямому маршруту.
+6. **Ключ Яндекс-карт лежит в исходниках** — в `MainActivity.kt` и как запасное
+   значение в `AppDelegate.swift`. Для клиентского ключа это обычная практика,
+   но правильнее вынести в конфиг сборки.
+7. **`equipment.type_legacy`** — временная колонка с исходным текстом типа до
+   миграции. Когда данные проверят, удалить отдельной миграцией.
 
 ## Окружение этой машины
 
-- Flutter/Dart **не установлены** — мобилку локально собрать нечем
-- Python **3.9.6**, бэкенду нужен **3.11+**
-- PHP 7.4.33 ✅, PostgreSQL 16.13 ✅, Xcode ✅
+- Бэкенд работает на **Python 3.12** (venv в `backend/venv`), PostgreSQL 16 ✅, PHP 7.4 ✅
+- Flutter ставится через `brew install --cask flutter`
+- **Собрать мобилку нечем**: нет ни полного Xcode (только Command Line Tools),
+  ни Android SDK. Нужен хотя бы один из них — Android Studio быстрее
+  (~6 ГБ), Xcode обязателен для App Store (~17 ГБ)
+- Дартовый код **не компилировался** — проверить `flutter analyze`, когда
+  появится Flutter
 
 ## Правила
 
 - Секреты — только в `.env` и переменных окружения, никогда в код и никогда в git
 - Меняешь схему БД — миграция Alembic **и** проверка PHP-запросов в `admin/`
+- Трогаешь деньги или права доступа — прогони `bash backend/tests/run_all.sh`
+  и допиши проверку на то, что изменил
 - Языки в проекте смешаны: код и комментарии на узбекском, русском и английском.
   Не переписывай существующие комментарии ради единообразия
