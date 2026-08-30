@@ -51,6 +51,25 @@ $adminUser = getAdminUser();
                         </a>
                     </li>
                     <li>
+                        <a href="payouts.php" class="<?= ($currentPage ?? '') === 'payouts' ? 'active' : '' ?>">
+                            <span>💸</span>
+                            Pul Yechish
+                            <?php
+                            // Kutayotgan arizalar soni — ular ko'rib chiqilmasa,
+                            // texnika egasi pulini ololmaydi
+                            try {
+                                $pendingPayouts = getDbConnection()
+                                    ->query("SELECT COUNT(*) FROM payout_requests WHERE status = 'pending'")
+                                    ->fetchColumn();
+                            } catch (Throwable $e) {
+                                $pendingPayouts = 0;
+                            }
+                            if ($pendingPayouts > 0): ?>
+                                <span class="badge badge-warning" style="margin-left:auto;"><?= (int) $pendingPayouts ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                    <li>
                         <a href="backup.php" class="<?= ($currentPage ?? '') === 'backup' ? 'active' : '' ?>">
                             <span>💾</span>
                             Database Backup
