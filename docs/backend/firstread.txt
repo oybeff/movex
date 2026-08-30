@@ -1,0 +1,39 @@
+# 1. Serverni tayyorlash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y git python3.11 python3.11-venv postgresql apache2
+
+# 2. Loyihani klonlash
+cd /opt
+sudo git clone https://github.com/your-username/movex_go.git
+cd movex_go
+
+# 3. PostgreSQL sozlash
+sudo -u postgres createdb movex_go
+sudo -u postgres createuser movex_user
+
+# 4. Python va dependencies
+python3.11 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# 5. Environment sozlash
+cp .env.example .env
+nano .env  # Sozlamalarni to'ldiring
+
+# 6. Migration bajarish
+alembic upgrade head
+
+# 7. Systemd service
+sudo cp systemd/movex_go.service /etc/systemd/system/
+sudo systemctl start movex_go
+sudo systemctl enable movex_go
+
+# 8. Apache sozlash
+sudo cp apache/conf.d/movex_go.conf /etc/apache2/sites-available/
+sudo a2enmod proxy proxy_http headers ssl rewrite deflate expires
+sudo a2ensite movex_go.conf
+sudo systemctl restart apache2
+
+# 9. SSL sertifikat
+sudo apt install -y certbot python3-certbot-apache
+sudo certbot --apache -d your-domain.com

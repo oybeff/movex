@@ -1,0 +1,122 @@
+# ============================================================
+# СЕКРЕТЫ — никогда не коммитить
+# ============================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# SFTP/FTP конфиги редакторов — содержат пароли в открытом виде
+.vscode/sftp.json
+**/.vscode/sftp.json
+sftp.json
+
+# ============================================================
+# Python / FastAPI (backend)
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+.venv/
+env/
+ENV/
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+backend/uploads/
+backend/logs/
+backend/backups/
+*.log
+
+# ============================================================
+# Flutter / Dart (mobile)
+# ============================================================
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+mobile/build/
+mobile/.dart_tool/
+**/doc/api/
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Android
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/key.properties
+mobile/android/app/*.jks
+mobile/android/app/*.keystore
+mobile/android/captures/
+**/gradle-wrapper.jar
+.gradle/
+local.properties
+
+# iOS / macOS
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
+mobile/ios/Flutter/App.framework
+mobile/ios/Flutter/ephemeral/
+mobile/ios/Flutter/flutter_export_environment.sh
+mobile/macos/Pods/
+mobile/macos/Flutter/ephemeral/
+**/*.xcuserstate
+**/xcuserdata/
+*.mobileprovision
+*.ipa
+
+# ============================================================
+# PHP (admin)
+# ============================================================
+vendor/
+composer.lock
+admin/backups/
+admin/uploads/
+
+# ============================================================
+# ОС и редакторы
+# ============================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# ============================================================
+# Дампы БД и бэкапы
+# ============================================================
+*.sql.gz
+*.dump
+*.bak

@@ -1,0 +1,260 @@
+-- ==============================
+-- Таблица пользователей
+-- ==============================
+CREATE TABLE users (
+    -- Уникальный идентификатор пользователя
+    id SERIAL PRIMARY KEY,
+
+    -- Полное имя пользователя
+    full_name VARCHAR(100) NOT NULL,
+
+    -- Электронная почта (уникальная)
+    email VARCHAR(100) UNIQUE,
+
+    -- Номер телефона (уникальный)
+    phone VARCHAR(20) UNIQUE,
+
+    -- Хэш пароля для безопасного хранения
+    password_hash TEXT NOT NULL,
+
+    -- Роль пользователя: client - клиент, owner - владелец техники, admin - администратор
+    role VARCHAR(20) NOT NULL CHECK (role IN ('client','owner','admin')),
+
+    -- Дата и время создания записи
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    -- Дата и время последнего обновления записи
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+SELECT * FROM users;
+
+COMMENT ON COLUMN users.role IS 'Роль пользователя: client, owner или admin';
+
+
+-- ==============================
+-- Таблица компаний владельцев техники
+-- ==============================
+CREATE TABLE companies (
+    -- Уникальный идентификатор компании
+    id SERIAL PRIMARY KEY,
+
+    -- Название компании
+    name VARCHAR(100) NOT NULL,
+
+    -- Идентификатор владельца компании (пользователь с ролью owner)
+    owner_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    -- Описание компании
+    description TEXT,
+
+    -- Дата и время создания записи
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    -- Дата и время последнего обновления записи
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+
+-- ==============================
+-- Таблица техники
+-- ==============================
+CREATE TABLE equipment (
+    -- Уникальный идентификатор техники
+    id SERIAL PRIMARY KEY,
+
+    -- Идентификатор владельца техники
+    owner_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    -- Идентификатор компании, если техника принадлежит компании
+    company_id INT REFERENCES companies(id) ON DELETE SET NULL,
+
+    -- Тип техники (экскаватор, кран, бульдозер и т.д.)
+    type VARCHAR(50) NOT NULL,
+
+    -- Модель техники
+    model VARCHAR(100) NOT NULL,
+
+    -- Год выпуска техники (проверка на разумный диапазон)
+    year INT CHECK (year > 1900 AND year <= EXTRACT(YEAR FROM CURRENT_DATE)),
+
+    -- Мощность в лошадиных силах
+    power_hp INT,
+
+    -- Цена аренды за день
+    price_per_day NUMERIC(10,2) NOT NULL CHECK (price_per_day > 0),
+
+    -- Местоположение техники (адрес или координаты)
+    location VARCHAR(200),
+
+    -- Дополнительное описание техники
+    description TEXT,
+
+    -- Ссылка на фото техники
+    photo_url TEXT,
+
+    -- Доступность для аренды
+    available BOOLEAN DEFAULT TRUE,
+
+    -- Дата и время создания записи
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    -- Дата и время последнего обновления записи
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+
+-- ==============================
+-- Таблица заказов
+-- ==============================
+CREATE TABLE orders (
+    -- Уникальный идентификатор заказа
+    id SERIAL PRIMARY KEY,
+
+    -- Идентификатор клиента, который сделал заказ
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    -- Идентификатор арендуемой техники
+    equipment_id INT NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
+
+    -- Дата начала аренды
+    start_date DATE NOT NULL,
+
+    -- Дата окончания аренды
+    end_date DATE NOT NULL,
+
+    -- Статус заказа: pending - ожидает подтверждения, confirmed - подтверждён, completed - завершён, cancelled - отменён
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending','confirmed','completed','cancelled')),
+
+    -- Общая сумма заказа
+    total_amount NUMERIC(10,2) NOT NULL,
+
+    -- Комиссия платформы за заказ
+    commission NUMERIC(10,2) NOT NULL,
+
+    -- Дата и время создания записи
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    -- Дата и время последнего обновления записи
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+
+-- ==============================
+-- Таблица чатов
+-- ==============================
+CREATE TABLE chats (
+    -- Уникальный идентификатор чата
+    id SERIAL PRIMARY KEY,
+    -- Идентификатор заказа, к которому привязан чат
+    order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+
+    -- Дата и время создания чата
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+
+-- ==============================
+-- Таблица сообщений в чате
+-- ==============================
+CREATE TABLE messages (
+    -- Уникальный идентификатор сообщения
+    id SERIAL PRIMARY KEY,
+
+    -- Идентификатор чата
+    chat_id INT NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+
+    -- Идентификатор отправителя сообщения
+    sender_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    -- Текст сообщения
+    message_text TEXT NOT NULL,
+
+    -- Дата и время отправки сообщения
+    sent_at TIMESTAMP DEFAULT NOW()
+);
+
+
+-- ==============================
+-- Таблица отзывов
+-- ==============================
+CREATE TABLE reviews (
+    -- Уникальный идентификатор отзыва
+    id SERIAL PRIMARY KEY,
+
+    -- Идентификатор техники, на которую оставлен отзыв
+    equipment_id INT REFERENCES equipment(id) ON DELETE CASCADE,
+
+    -- Идентификатор пользователя, который оставил отзыв
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    -- Оценка от 1 до 5
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+
+    -- Текстовый комментарий к отзыву
+    comment TEXT,
+
+    -- Дата и время создания отзыва
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+
+-- ==============================
+-- Таблица платежей
+-- ==============================
+CREATE TABLE payments (
+    -- Уникальный идентификатор платежа
+    id SERIAL PRIMARY KEY,
+
+    -- Идентификатор заказа
+    order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+
+    -- Сумма платежа
+    amount NUMERIC(10,2) NOT NULL CHECK (amount > 0),
+
+    -- Комиссия платформы
+    commission NUMERIC(10,2) NOT NULL,
+
+    -- Метод оплаты: Payme, Click или банковская карта
+    payment_method VARCHAR(50) CHECK (payment_method IN ('Payme','Click','Card')),
+
+    -- Статус платежа: pending - ожидает, completed - завершён, failed - неудачный
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending','completed','failed')),
+
+    -- Дата и время оплаты
+    paid_at TIMESTAMP
+);  
+
+-- 1) Более структурированная геолокация
+ALTER TABLE equipment RENAME COLUMN location TO address;
+ALTER TABLE equipment ADD COLUMN latitude NUMERIC(9,6);
+ALTER TABLE equipment ADD COLUMN longitude NUMERIC(9,6);
+
+-- 2) Дополнительные цены
+ALTER TABLE equipment ADD COLUMN price_per_hour NUMERIC(10,2) CHECK (price_per_hour > 0);
+ALTER TABLE equipment ADD COLUMN price_per_shift NUMERIC(10,2) CHECK (price_per_shift > 0);
+
+-- 3) Характеристики
+ALTER TABLE equipment ADD COLUMN payload_kg INTEGER CHECK (payload_kg >= 0);
+ALTER TABLE equipment ADD COLUMN dimensions VARCHAR(100);
+
+-- 4) Статус техники
+ALTER TABLE equipment ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'available'
+    CHECK (status IN ('available','busy','maintenance'));
+
+-- 5) Мягкое удаление (опционально, удобно для прод)
+ALTER TABLE equipment ADD COLUMN deleted_at TIMESTAMP NULL;
+
+-- 6) Таблица фотографий техники (поддержка нескольких фото, можно отметить основное)
+CREATE TABLE equipment_photos (
+    id SERIAL PRIMARY KEY,
+    equipment_id INT NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
+    url TEXT NOT NULL,
+    is_primary BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 7) Индексы для масштабируемости
+CREATE INDEX idx_equipment_owner ON equipment(owner_id);
+CREATE INDEX idx_equipment_type ON equipment(type);
+CREATE INDEX idx_equipment_status ON equipment(status);
+CREATE INDEX idx_equipment_lat_lng ON equipment(latitude, longitude);
