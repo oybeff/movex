@@ -5,8 +5,14 @@ import '../models/message_model.dart';
 class MessageService {
   final Dio _dio = DioClient.create();
 
-  /// Barcha xabarlarni olish
-  Future<List<MessageModel>> getMessages({
+  /// Chat xabarlarini olish.
+  ///
+  /// chatId MAJBURIY. Ilgari bu metod butun tizimdagi 1000 ta xabarni
+  /// yuklab, keraklisini telefonda ajratib olardi — ya'ni begona
+  /// yozishmalar ham qurilmaga tushardi. Endi server faqat shu chatning
+  /// xabarlarini beradi va faqat ishtirokchiga.
+  Future<List<MessageModel>> getChatMessages(
+    int chatId, {
     int skip = 0,
     int limit = 100,
   }) async {
@@ -14,6 +20,7 @@ class MessageService {
       final response = await _dio.get(
         '/messages/',
         queryParameters: {
+          'chat_id': chatId,
           'skip': skip,
           'limit': limit,
         },
@@ -21,17 +28,6 @@ class MessageService {
 
       final List<dynamic> data = response.data as List<dynamic>;
       return data.map((e) => MessageModel.fromJson(e as Map<String, dynamic>)).toList();
-    } catch (e) {
-      print('Get messages error: $e');
-      rethrow;
-    }
-  }
-
-  /// Chat bo'yicha xabarlarni olish
-  Future<List<MessageModel>> getChatMessages(int chatId) async {
-    try {
-      final allMessages = await getMessages(limit: 1000);
-      return allMessages.where((msg) => msg.chatId == chatId).toList();
     } catch (e) {
       print('Get chat messages error: $e');
       rethrow;

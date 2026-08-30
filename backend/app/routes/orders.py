@@ -6,6 +6,8 @@ from app.schemas import order as order_schema
 from app.models import order as order_model
 from app.services import order_service
 from app.dependencies import get_db, get_current_user
+from app.core.access import assert_order_access
+from app.core.roles import role_checker
 
 router = APIRouter()
 
@@ -15,13 +17,21 @@ def create_order(order: order_schema.OrderCreate, db: Session = Depends(get_db),
 
 @router.get("/", response_model=list[order_schema.OrderRead])
 def get_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    return order_service.get_orders(db, skip, limit)
+    """
+    Faqat O'ZIGA tegishli buyurtmalar: mijoz sifatida bergan yoki
+    o'z texnikasiga kelgan. Admin hammasini ko'radi.
+
+    Ilgari bu yerda butun tizimdagi barcha buyurtmalar qaytarilardi —
+    summalari va yetkazib berish manzillari bilan birga.
+    """
+    return order_service.get_orders(db, skip, limit, current_user)
 
 @router.get("/{order_id}", response_model=order_schema.OrderRead)
 def get_order(order_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     db_order = order_service.get_order(db, order_id)
     if not db_order:
         raise HTTPException(status_code=404, detail="Order not found")
+    assert_order_access(db, db_order, current_user)
     return db_order
 
 @router.put("/{order_id}", response_model=order_schema.OrderRead)
@@ -38,8 +48,17 @@ def update_order(order_id: int, order: order_schema.OrderUpdate, db: Session = D
 
 
 @router.delete("/{order_id}", response_model=dict)
-def delete_order(order_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    order_service.delete_order(db, order_id)
+def delete_order(order_id: int, db: Session = Depends(get_db), current_user=Depends(role_checker(["admin"]))):
+    """
+    Buyurtmani o'chirish — faqat admin.
+
+    Ilgari buni har qanday foydalanuvchi qila olardi, hatto begona
+    buyurtmani ham. Bundan tashqari muzlatilgan pul hisobda abadiy
+    qolib ketardi — endi o'chirishdan oldin qaytariladi.
+    """
+    deleted = order_service.delete_order(db, order_id)
+    if deleted is None:
+        raise HTTPException(status_code=404, detail="Order not found")
     return {"message": "Order deleted successfully"}
 
 

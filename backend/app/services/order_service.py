@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, select
 from app.models.order import Order
 from app.models.balance import Balance, BalanceTransaction
 from app.models.budget_reserve import BudgetReserve
@@ -130,9 +130,29 @@ def get_order(db: Session, order_id: int):
     return db.query(Order).filter(Order.id == order_id).first()
 
 
-def get_orders(db: Session, skip: int = 0, limit: int = 100):
-    """Barcha buyurtmalarni olish"""
-    return db.query(Order).offset(skip).limit(limit).all()
+def get_orders(db: Session, skip: int = 0, limit: int = 100, current_user=None):
+    """
+    Foydalanuvchiga tegishli buyurtmalar: o'zi bergan yoki o'z texnikasiga
+    kelgan. Admin uchun — hammasi.
+
+    current_user berilmasa ham hamma narsa qaytmaydi: bu funksiya ilgari
+    butun jadvalni qaytarardi va aynan shu tufayli begona buyurtmalar
+    ochiq edi.
+    """
+    query = db.query(Order)
+
+    if current_user is not None and getattr(current_user, "role", None) != "admin":
+        own_equipment = (
+            db.query(Equipment.id)
+            .filter(Equipment.owner_id == current_user.id)
+            .subquery()
+        )
+        query = query.filter(
+            (Order.user_id == current_user.id)
+            | (Order.equipment_id.in_(select(own_equipment.c.id)))
+        )
+
+    return query.order_by(Order.created_at.desc()).offset(skip).limit(limit).all()
 
 
 def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id: int):
@@ -394,11 +414,32 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
 
 
 def delete_order(db: Session, order_id: int):
-    """Buyurtmani o'chirish"""
+    """
+    Buyurtmani o'chirish.
+
+    Muzlatilgan pul avval mijozga qaytariladi: aks holda buyurtma bilan
+    birga uning izi ham yo'qolar va pul hisobda abadiy muzlab qolardi.
+    """
     db_order = db.query(Order).filter(Order.id == order_id).first()
-    if db_order:
-        db.delete(db_order)
-        db.commit()
+    if not db_order:
+        return None
+
+    frozen = Decimal(str(db_order.frozen_amount or 0))
+    if frozen > 0:
+        balance = (
+            db.query(Balance)
+            .filter(Balance.user_id == db_order.user_id)
+            .with_for_update()
+            .first()
+        )
+        if balance is not None:
+            current_frozen = Decimal(str(balance.frozen_balance))
+            balance.frozen_balance = (
+                current_frozen - frozen if current_frozen >= frozen else Decimal("0")
+            )
+
+    db.delete(db_order)
+    db.commit()
     return db_order
 
 

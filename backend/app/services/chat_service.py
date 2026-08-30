@@ -1,5 +1,8 @@
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.models.chat import Chat
+from app.models.equipment import Equipment
+from app.models.order import Order
 from app.schemas.chat import ChatCreate, ChatUpdate
 
 
@@ -22,9 +25,30 @@ def get_chat(db: Session, chat_id: int):
     return db.query(Chat).filter(Chat.id == chat_id).first()
 
 
-def get_chats(db: Session, skip: int = 0, limit: int = 100):
-    """Barcha chatlarni olish"""
-    return db.query(Chat).offset(skip).limit(limit).all()
+def get_chats(db: Session, skip: int = 0, limit: int = 100, current_user=None):
+    """
+    Foydalanuvchi ishtirok etayotgan chatlar: o'z buyurtmalari va o'z
+    texnikasiga kelgan buyurtmalar bo'yicha. Admin uchun — hammasi.
+    """
+    query = db.query(Chat)
+
+    if current_user is not None and getattr(current_user, "role", None) != "admin":
+        own_equipment = (
+            db.query(Equipment.id)
+            .filter(Equipment.owner_id == current_user.id)
+            .subquery()
+        )
+        visible_orders = (
+            db.query(Order.id)
+            .filter(
+                (Order.user_id == current_user.id)
+                | (Order.equipment_id.in_(select(own_equipment.c.id)))
+            )
+            .subquery()
+        )
+        query = query.filter(Chat.order_id.in_(select(visible_orders.c.id)))
+
+    return query.order_by(Chat.created_at.desc()).offset(skip).limit(limit).all()
 
 
 def update_chat(db: Session, chat_id: int, chat: ChatUpdate):

@@ -3,18 +3,33 @@ from sqlalchemy.orm import Session
 from app.schemas import chat as chat_schema
 from app.services import chat_service
 from app.dependencies import get_db, get_current_user
+from app.core.access import assert_chat_access, assert_order_access
+from app.core.roles import role_checker
+from app.models.order import Order
 
 router = APIRouter()
+
 
 # POST создаём
 @router.post("/", response_model=chat_schema.ChatRead)
 def create_chat(chat: chat_schema.ChatCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """Chat faqat o'zi ishtirok etayotgan buyurtma uchun ochiladi."""
+    order = db.query(Order).filter(Order.id == chat.order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    assert_order_access(db, order, current_user)
     return chat_service.create_chat(db, chat, current_user.id)
 
-# GET все чаты
+
+# GET свои чаты
 @router.get("/", response_model=list[chat_schema.ChatRead])
 def get_chats(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    return chat_service.get_chats(db, skip, limit)
+    """
+    Faqat o'zi ishtirok etayotgan chatlar.
+    Ilgari bu yerda tizimdagi BARCHA chatlar qaytarilardi.
+    """
+    return chat_service.get_chats(db, skip, limit, current_user)
+
 
 # GET один чат
 @router.get("/{chat_id}", response_model=chat_schema.ChatRead)
@@ -22,14 +37,23 @@ def get_chat(chat_id: int, db: Session = Depends(get_db), current_user=Depends(g
     db_chat = chat_service.get_chat(db, chat_id)
     if not db_chat:
         raise HTTPException(status_code=404, detail="Chat not found")
+    assert_chat_access(db, db_chat, current_user)
     return db_chat
+
 
 # PUT обновление
 @router.put("/{chat_id}", response_model=chat_schema.ChatRead)
 def update_chat(chat_id: int, chat: chat_schema.ChatUpdate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    db_chat = chat_service.get_chat(db, chat_id)
+    if not db_chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    assert_chat_access(db, db_chat, current_user)
     return chat_service.update_chat(db, chat_id, chat)
 
+
 @router.delete("/{chat_id}", response_model=dict)
-def delete_chat(chat_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    chat_service.delete_chat(db, chat_id)
+def delete_chat(chat_id: int, db: Session = Depends(get_db), current_user=Depends(role_checker(["admin"]))):
+    """Yozishmani o'chirish — faqat admin: bu buyurtma bo'yicha dalilni yo'q qiladi."""
+    if chat_service.delete_chat(db, chat_id) is None:
+        raise HTTPException(status_code=404, detail="Chat not found")
     return {"message": "Chat deleted successfully"}
