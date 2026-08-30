@@ -5,7 +5,6 @@
   "uzbek": "O'zbek",
   "russian": "Русский",
   "continue": "Davom etish",
-  
   "role_select": {
     "title": "Rolingizni tanlang",
     "client": "Mijoz",
@@ -13,7 +12,6 @@
     "client_desc": "Texnika ijaraga olish",
     "owner_desc": "Texnikani ijaraga berish"
   },
-  
   "auth": {
     "login": "Kirish",
     "register": "Ro'yxatdan o'tish",
@@ -42,7 +40,6 @@
     "fill_information": "Ma'lumotlarni to'ldiring",
     "complete_registration": "Ro'yxatdan o'tishni yakunlash uchun"
   },
-  
   "home": {
     "main": "Asosiy",
     "payments": "To'lovlar",
@@ -51,7 +48,6 @@
     "chat": "Chat",
     "profile": "Profil"
   },
-  
   "client": {
     "home": "Asosiy",
     "catalog": "Katalog",
@@ -74,7 +70,6 @@
     "reviews": "Sharhlar",
     "book_now": "Buyurtma berish"
   },
-  
   "owner": {
     "dashboard": "Bosh menyu",
     "my_equipment": "Texnikalar",
@@ -99,7 +94,6 @@
     "income": "Daromad",
     "franchisee_stats": "Franchayzi statistikasi"
   },
-  
   "settings": {
     "title": "Sozlamalar",
     "general": "Umumiy",
@@ -136,7 +130,6 @@
     "select_language": "Tilni tanlang",
     "language_changed": "Til muvaffaqiyatli o'zgartirildi"
   },
-
   "profile": {
     "title": "Profil",
     "edit": "Tahrirlash",
@@ -163,7 +156,6 @@
     "logout": "Chiqish",
     "logout_account": "Akkauntdan chiqish"
   },
-
   "contact": {
     "title": "Biz bilan bog'lanish",
     "subtitle": "Quyidagi usullardan birini tanlang",
@@ -177,7 +169,6 @@
     "no_app": "Ilova o'rnatilmagan",
     "loading": "Yuklanmoqda..."
   },
-  
   "payments": {
     "title": "To'lovlar",
     "history": "To'lov tarixi",
@@ -202,7 +193,6 @@
     "details": "Tafsilotlar",
     "client": "Mijoz"
   },
-
   "balance": {
     "title": "Hisob",
     "topup": "Hisob to'ldirish",
@@ -234,7 +224,6 @@
     "payment_method": "To'lov usuli",
     "phone_auto_used": "Tizimda ro'yxatdan o'tgan telefon raqamingiz avtomatik ishlatiladi"
   },
-
   "transactions": {
     "title": "Tranzaksiyalar",
     "topup": "Hisob to'ldirish",
@@ -246,7 +235,6 @@
     "total_payments": "Jami to'lovlar",
     "no_transactions": "Tranzaksiyalar yo'q"
   },
-  
   "orders": {
     "title": "Buyurtmalar",
     "active": "Faol",
@@ -295,7 +283,6 @@
     "accept_success": "Buyurtma qabul qilindi",
     "reject_success": "Buyurtma rad etildi"
   },
-
   "order": {
     "id": "Buyurtma ID",
     "details": "Buyurtma tafsilotlari",
@@ -310,7 +297,6 @@
       "completed": "Bajarilgan"
     }
   },
-  
   "common": {
     "save": "Saqlash",
     "cancel": "Bekor qilish",
@@ -365,7 +351,6 @@
     "enable": "Yoqish",
     "filters": "Filterlar"
   },
-  
   "franchise": {
     "title": "Franchayzing boshqaruvi",
     "equipment": "Texnika",
@@ -378,7 +363,6 @@
     "no_orders": "Buyurtmalar yo'q",
     "no_stats": "Statistika mavjud emas"
   },
-
   "equipment": {
     "title": "Texnika",
     "my_equipment": "Mening texnikam",
@@ -433,11 +417,10 @@
     "hourly": "Soatlik narx",
     "shift": "Smenali narx",
     "daily": "Kunlik narx",
-    "hour" : "soat",
+    "hour": "soat",
     "shift_unit": "smena",
     "day": "kun"
   },
-
   "rent": {
     "title": "Ijaraga olish",
     "select_dates": "Sanalarni tanlang",
@@ -457,7 +440,6 @@
     "select_valid_dates": "Iltimos, to'g'ri sanalarni tanlang",
     "end_date_error": "Tugash sanasi boshlanish sanasidan kechroq bo'lishi kerak"
   },
-
   "chat": {
     "title": "Xabarlar",
     "no_chats": "Hozircha xabarlar yo'q",
@@ -477,7 +459,6 @@
     "active": "Faol",
     "archive": "Arxiv"
   },
-
   "errors": {
     "location_service_disabled": "Joylashuv xizmati o'chirilgan. Iltimos, sozlamalardan yoqing",
     "location_permission_denied": "Joylashuv ruxsati berilmadi",
@@ -501,7 +482,6 @@
     "invalid_phone": "Noto'g'ri telefon raqam",
     "cannot_open_click": "Click ilovasini ochib bo'lmadi"
   },
-
   "messages": {
     "otp_sent": "Tasdiqlash kodi yuborildi",
     "order_confirmed": "Buyurtma tasdiqlandi!",
@@ -599,7 +579,6 @@
     "order_confirm_deduction": "Buyurtma tasdiqlangach summa hisobingizdan ayiriladi",
     "no_data": "Ma'lumot yo'q"
   },
-
   "statistics": {
     "title": "Statistika",
     "equipment_count": "Texnikalar soni",
@@ -610,6 +589,24 @@
     "total_royalty": "Umumiy royalti",
     "monthly_revenue": "Oylik daromad",
     "monthly_royalty": "Oylik royalti"
+  },
+  "equipment_types": {
+    "excavator": "Ekskavator",
+    "backhoe_loader": "Ekskavator-yuklagich",
+    "mini_excavator": "Mini ekskavator",
+    "bulldozer": "Buldozer",
+    "front_loader": "Frontal yuklagich",
+    "truck_crane": "Avtokran",
+    "manipulator": "Manipulyator",
+    "aerial_platform": "Avtovishka",
+    "dump_truck": "Samosval",
+    "concrete_mixer": "Beton aralashtirgich",
+    "concrete_pump": "Betonnasos",
+    "grader": "Greyder",
+    "roller": "Katok",
+    "auger_drill": "Yamobur",
+    "tow_truck": "Tral / Evakuator",
+    "compressor": "Kompressor",
+    "other": "Boshqa texnika"
   }
 }
-

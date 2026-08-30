@@ -21,6 +21,7 @@ import '../../../../core/utils/number_formatter.dart';
 
 // Import Owner ChatDetailPage
 import '../../../owner_home/presentation/pages/chat_page.dart' show ChatDetailPage;
+import '../../../../core/constants/equipment_types.dart';
 
 class ClientChatPage extends StatefulWidget {
   const ClientChatPage({super.key});
@@ -654,7 +655,7 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${equipment.type} ${equipment.model}',
+                        '${EquipmentTypes.label(equipment.type)} ${equipment.model}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

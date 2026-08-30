@@ -18,6 +18,7 @@ import '../../../../core/models/chat_model.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../../../../core/utils/number_formatter.dart';
 import 'chat_page.dart';
+import '../../../../core/constants/equipment_types.dart';
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
@@ -761,7 +762,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                               children: [
                                                 Text(
                                                   equipment != null
-                                                      ? '#${order.id} | ${equipment.type} ${equipment.model}'
+                                                      ? '#${order.id} | ${EquipmentTypes.label(equipment.type)} ${equipment.model}'
                                                       : '${'orders.equipment'.tr()} #${order.equipmentId}',
                                                   style: const TextStyle(
                                                     fontWeight: FontWeight.bold,
@@ -1013,7 +1014,7 @@ class _OrdersPageState extends State<OrdersPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${equipment.type} ${equipment.model}',
+                        '${EquipmentTypes.label(equipment.type)} ${equipment.model}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

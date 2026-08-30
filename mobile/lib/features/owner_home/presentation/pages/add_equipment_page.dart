@@ -9,7 +9,9 @@ import 'package:toastification/toastification.dart';
 import '../../../../core/services/equipment_service.dart';
 import '../../../../core/models/equipment_model.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/services/permission_service.dart';
+import '../../../../core/widgets/equipment_type_icon.dart';
 
 class AddEquipmentPage extends StatefulWidget {
   const AddEquipmentPage({super.key});
@@ -22,8 +24,10 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
   final _formKey = GlobalKey<FormState>();
   final EquipmentService _equipmentService = EquipmentService();
 
+  // Tur ma'lumotnomadan tanlanadi, shuning uchun controller emas — oddiy holat
+  String? _selectedType;
+
   // Controllers
-  final _typeController = TextEditingController();
   final _modelController = TextEditingController();
   final _yearController = TextEditingController();
   final _powerController = TextEditingController();
@@ -74,7 +78,6 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
 
   @override
   void dispose() {
-    _typeController.dispose();
     _modelController.dispose();
     _yearController.dispose();
     _powerController.dispose();
@@ -109,7 +112,7 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
     }
 
     // Bo'sh stringlarni tekshirish
-    if (_typeController.text.trim().isEmpty || _modelController.text.trim().isEmpty) {
+    if (_selectedType == null || _modelController.text.trim().isEmpty) {
       toastification.show(
         context: context,
         type: ToastificationType.error,
@@ -125,7 +128,7 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
 
     try {
       final equipment = EquipmentCreateModel(
-        type: _typeController.text.trim(),
+        type: _selectedType!,
         model: _modelController.text.trim(),
         year: int.tryParse(_yearController.text),
         powerHp: int.tryParse(_powerController.text),
@@ -236,21 +239,34 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
               //   ),
               // ),
               
+              // Tur endi erkin matn emas — ma'lumotnomadan tanlanadi.
+              // Shu tufayli katalogdagi filtr va turga mos ikonka ishlaydi.
               _buildSection(
                 title: 'equipment.type'.tr(),
-                child: TextFormField(
-                  controller: _typeController,
+                child: DropdownButtonFormField<String>(
+                  initialValue: _selectedType,
+                  isExpanded: true,
                   decoration: _inputDecoration('equipment.type'.tr()),
-                  maxLength: 50,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Bu maydon to\'ldirilishi shart';
-                    }
-                    if (value.length > 50) {
-                      return 'Maksimal 50 ta belgi';
-                    }
-                    return null;
-                  },
+                  items: EquipmentTypes.codes.map((code) {
+                    return DropdownMenuItem<String>(
+                      value: code,
+                      child: Row(
+                        children: [
+                          EquipmentTypeIcon(code, size: 22),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              EquipmentTypes.label(code),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) => setState(() => _selectedType = value),
+                  validator: (value) =>
+                      value == null ? 'Bu maydon to\'ldirilishi shart' : null,
                 ),
               ),
               const SizedBox(height: 16),

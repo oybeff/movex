@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:movex_go/core/constants/app_colors.dart';
 import '../../../../core/services/equipment_service.dart';
 import '../../../../core/models/equipment_model.dart';
+import '../../../../core/constants/equipment_types.dart';
 
 class MyEquipmentPage extends StatefulWidget {
   const MyEquipmentPage({super.key});
@@ -138,7 +139,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '${equipment.type} ${equipment.model}',
+                '${EquipmentTypes.label(equipment.type)} ${equipment.model}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
@@ -460,7 +461,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            '${eq.type ?? ''} ${eq.model ?? ''}',
+                                            '${EquipmentTypes.label(eq.type)} ${eq.model ?? ''}',
                                             style: const TextStyle(
                                               fontSize: 18,
                                               fontWeight: FontWeight.bold,

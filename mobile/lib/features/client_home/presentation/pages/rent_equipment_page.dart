@@ -20,6 +20,7 @@ import '../../../../core/utils/error_handler.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/services/permission_service.dart';
 import '../../../../core/widgets/date_range_calendar.dart';
+import '../../../../core/constants/equipment_types.dart';
 
 class RentEquipmentPage extends StatefulWidget {
   final EquipmentModel equipment;
@@ -824,7 +825,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                                 children: [
                                   // Texnika nomi
                                   Text(
-                                    '${widget.equipment.type} ${widget.equipment.model}',
+                                    '${EquipmentTypes.label(widget.equipment.type)} ${widget.equipment.model}',
                                     style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,

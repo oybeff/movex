@@ -17,6 +17,7 @@ import '../../../../core/models/chat_model.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/number_formatter.dart';
 import 'client_chat_page.dart';
+import '../../../../core/constants/equipment_types.dart';
 
 class ClientHistoryPage extends StatefulWidget {
   const ClientHistoryPage({super.key});
@@ -574,7 +575,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text( 
-                        equipment != null ? ' #${order.id} | ${equipment.type} ${equipment.model}' : 'orders.equipment'.tr(),
+                        equipment != null ? ' #${order.id} | ${EquipmentTypes.label(equipment.type)} ${equipment.model}' : 'orders.equipment'.tr(),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -748,7 +749,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${equipment.type} ${equipment.model}',
+                        '${EquipmentTypes.label(equipment.type)} ${equipment.model}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

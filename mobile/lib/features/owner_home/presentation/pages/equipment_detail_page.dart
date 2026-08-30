@@ -6,6 +6,7 @@ import 'package:yandex_mapkit/yandex_mapkit.dart';
 import '../../../../core/models/equipment_model.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/constants/equipment_types.dart';
 
 class EquipmentDetailPage extends StatefulWidget {
   final EquipmentModel equipment;
@@ -318,7 +319,7 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
             backgroundColor: AppColors.primaryGreen,
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
-                '${widget.equipment.type} ${widget.equipment.model}',
+                '${EquipmentTypes.label(widget.equipment.type)} ${widget.equipment.model}',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -410,7 +411,7 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                       [
                         _buildInfoRow(
                           'equipment.type'.tr(),
-                          widget.equipment.type,
+                          EquipmentTypes.label(widget.equipment.type),
                           icon: Icons.category,
                         ),
                         _buildInfoRow(

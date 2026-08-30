@@ -18,6 +18,7 @@ import '../../../../core/models/equipment_model.dart';
 import '../../../../core/services/user_service.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/constants/equipment_types.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -659,7 +660,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${equipment.type} ${equipment.model}',
+                        '${EquipmentTypes.label(equipment.type)} ${equipment.model}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

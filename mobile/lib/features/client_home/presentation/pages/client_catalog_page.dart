@@ -7,7 +7,9 @@ import 'dart:math';
 import '../../../../core/services/equipment_service.dart';
 import '../../../../core/models/equipment_model.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/widgets/equipment_type_icon.dart';
 
 class ClientCatalogPage extends StatefulWidget {
   const ClientCatalogPage({super.key});
@@ -97,9 +99,14 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
     setState(() {
       _filteredList = _equipmentList.where((eq) {
         // Search filter
-        final searchMatch = _searchController.text.isEmpty ||
-            (eq.type?.toLowerCase().contains(_searchController.text.toLowerCase()) ?? false) ||
-            (eq.model?.toLowerCase().contains(_searchController.text.toLowerCase()) ?? false);
+        // Qidiruv tur KODI bo'yicha emas, foydalanuvchi ko'rayotgan NOM
+        // bo'yicha ishlashi kerak: "ekskavator" deb yozganda 'excavator'
+        // kodli texnika topilsin
+        final query = _searchController.text.toLowerCase();
+        final searchMatch = query.isEmpty ||
+            EquipmentTypes.label(eq.type).toLowerCase().contains(query) ||
+            (eq.type?.toLowerCase().contains(query) ?? false) ||
+            (eq.model?.toLowerCase().contains(query) ?? false);
 
         // Type filter
         final typeMatch = _selectedType == 'all' || eq.type == _selectedType;
@@ -188,7 +195,16 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                 children: _equipmentTypes.map((type) {
                   final isSelected = _selectedType == type;
                   return FilterChip(
-                    label: Text(type == 'all' ? 'common.all'.tr() : type),
+                    // Bazada tur KODI turadi ('excavator'), foydalanuvchiga esa
+                    // uning tilidagi nomi ko'rsatilishi kerak
+                    label: Text(
+                      type == 'all'
+                          ? 'common.all'.tr()
+                          : EquipmentTypes.label(type),
+                    ),
+                    avatar: type == 'all'
+                        ? null
+                        : EquipmentTypeIcon(type, size: 18, color: AppColors.grey),
                     selected: isSelected,
                     onSelected: (selected) {
                       setModalState(() {
@@ -538,10 +554,18 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                             equipment.photos!.first.url,
                             fit: BoxFit.cover,
                             width: double.infinity,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.construction, size: 48),
+                            // Rasm bo'lmasa — umumiy belgi emas, aynan shu
+                            // texnika turining ikonkasi
+                            errorBuilder: (_, __, ___) => Center(
+                              child: EquipmentTypeIcon(equipment.type,
+                                  size: 48, color: AppColors.grey),
+                            ),
                           ),
                         )
-                      : const Center(child: Icon(Icons.construction, size: 48, color: Colors.grey)),
+                      : Center(
+                          child: EquipmentTypeIcon(equipment.type,
+                              size: 48, color: AppColors.grey),
+                        ),
                 ),
                 // Info
                 Expanded(
@@ -550,15 +574,14 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          equipment.type ?? '',
-                          style: TextStyle(
+                        EquipmentTypeChip(
+                          equipment.type,
+                          iconSize: 14,
+                          textStyle: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[600],
                             fontWeight: FontWeight.w500,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -732,7 +755,10 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                         errorBuilder: (_, __, ___) => Container(
                           height: 200,
                           color: Colors.grey[300],
-                          child: const Icon(Icons.construction, size: 60, color: Colors.grey),
+                          child: Center(
+                            child: EquipmentTypeIcon(equipment.type,
+                                size: 60, color: AppColors.grey),
+                          ),
                         ),
                       ),
                     ),
@@ -745,7 +771,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          '${equipment.type} ${equipment.model}',
+                          '${EquipmentTypes.label(equipment.type)} ${equipment.model}',
                           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                         ),
                       ),

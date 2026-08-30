@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:movex_go/core/constants/app_colors.dart';
+import 'package:movex_go/core/constants/equipment_types.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -254,13 +255,18 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
           final lng = double.parse(tech.longitude!);
           final isAvailable = tech.status == 'available' && (tech.available ?? false);
 
-          final icon = BitmapDescriptor.fromAssetImage('assets/excavator.png');
+          // Har bir tur o'z markeriga ega — ilgari butun texnika bitta
+          // ekskavator belgisi bilan ko'rsatilardi.
+          final icon = BitmapDescriptor.fromAssetImage(
+            EquipmentTypes.markerAsset(tech.type),
+          );
           _mapObjects.add(
             PlacemarkMapObject(
               mapId: MapObjectId('tech_${tech.id}'),
               point: Point(latitude: lat, longitude: lng),
               icon: PlacemarkIcon.single(
-                PlacemarkIconStyle(image: icon, scale: 0.15),
+                // 256 px * 0.45 ≈ 115 px — generate_equipment_icons.py ga qarang
+                PlacemarkIconStyle(image: icon, scale: 0.45),
               ),
               opacity: isAvailable ? 1.0 : 0.5,
               onTap: (mapObject, point) {

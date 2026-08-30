@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:movex_go/core/constants/app_colors.dart';
 import '../../../../core/services/franchise_service.dart';
 import '../../../../core/models/franchise_model.dart';
+import '../../../../core/constants/equipment_types.dart';
 
 class FranchiseManagePage extends StatefulWidget {
   const FranchiseManagePage({super.key});
@@ -244,7 +245,7 @@ class _FranchiseEquipmentPageState extends State<FranchiseEquipmentPage> {
             child: ListTile(
               leading: Icon(Icons.agriculture, color: statusColor, size: 32),
               title: Text(
-                '${equipment.type} ${equipment.model}',
+                '${EquipmentTypes.label(equipment.type)} ${equipment.model}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Column(

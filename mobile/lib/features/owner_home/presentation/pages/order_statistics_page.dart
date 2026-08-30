@@ -8,6 +8,7 @@ import '../../../../core/services/equipment_service.dart';
 import '../../../../core/models/order_statistics_model.dart';
 import '../../../../core/models/equipment_model.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/constants/equipment_types.dart';
 
 class OrderStatisticsPage extends StatefulWidget {
   const OrderStatisticsPage({super.key});
@@ -502,7 +503,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                   ..._equipmentList.map((equipment) {
                     return DropdownMenuItem<int>(
                       value: equipment.id,
-                      child: Text('${equipment.type} ${equipment.model}'),
+                      child: Text('${EquipmentTypes.label(equipment.type)} ${equipment.model}'),
                     );
                   }),
                 ],
