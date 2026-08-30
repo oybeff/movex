@@ -1,4 +1,3 @@
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -49,20 +48,43 @@ from app.models.balance import Balance, BalanceTransaction
 #   первая установка:  python scripts/init_db.py
 #   обновление:        alembic upgrade head
 
+# Настройки берутся из settings, а не из os.getenv: .env читает
+# pydantic-settings и в os.environ его значения НЕ попадают. Через os.getenv
+# всё это работало только при запуске из systemd с EnvironmentFile —
+# на этом уже обжигались с ключами Click.
+IS_PRODUCTION = (settings.APP_ENV or "development") == "production"
+
 app = FastAPI(
     title="Movex GO API",
     description="Backend для Movex GO - платформа для аренды строительной техники",
     version="1.0.0",
-    docs_url="/docs" if os.getenv("APP_ENV", "development") != "production" else None,
-    redoc_url="/redoc" if os.getenv("APP_ENV", "development") != "production" else None,
+    docs_url=None if IS_PRODUCTION else "/docs",
+    redoc_url=None if IS_PRODUCTION else "/redoc",
 )
 
-# CORS middleware - настройка для production
-allowed_origins = os.getenv("CORS_ORIGINS", "*").split(",")
+# CORS.
+# allow_origins=["*"] вместе с allow_credentials=True — плохое сочетание:
+# Starlette в этом случае отражает Origin запроса, то есть разрешает
+# кому угодно. Раньше именно так и было по умолчанию.
+allowed_origins = [
+    origin.strip()
+    for origin in (settings.CORS_ORIGINS or "*").split(",")
+    if origin.strip()
+]
+allow_any_origin = "*" in allowed_origins
+
+if IS_PRODUCTION and allow_any_origin:
+    raise RuntimeError(
+        "CORS_ORIGINS='*' в production. Укажите домены через запятую, "
+        "например: https://movex.004.uz,https://bluepos.uz"
+    )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
+    # Авторизация идёт Bearer-токеном, cookie не используются, поэтому
+    # credentials нужны только если список доменов задан явно.
+    allow_credentials=not allow_any_origin,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"],
@@ -72,9 +94,16 @@ app.add_middleware(
 # GZip compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Trusted host middleware (для production)
-if os.getenv("APP_ENV") == "production":
-    allowed_hosts = os.getenv("ALLOWED_HOSTS", "").split(",")
+# Trusted host — защита от подмены заголовка Host.
+# Здесь тоже был os.getenv: ALLOWED_HOSTS из .env не читался, а
+# "".split(",") даёт [""] — список непустой, поэтому middleware
+# включался со списком из одной пустой строки и отбивал ВСЕ запросы.
+if IS_PRODUCTION:
+    allowed_hosts = [
+        host.strip()
+        for host in (settings.ALLOWED_HOSTS or "").split(",")
+        if host.strip()
+    ]
     if allowed_hosts:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
@@ -111,5 +140,5 @@ def root():
     return {
         "message": "Welcome to Movex GO API",
         "version": "1.0.0",
-        "docs": "/docs" if os.getenv("APP_ENV", "development") != "production" else "disabled"
+        "docs": "disabled" if IS_PRODUCTION else "/docs"
     }

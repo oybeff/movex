@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     APP_ENV: str | None = None
     DEBUG: bool | None = None
     CORS_ORIGINS: str | None = None
+    # Домены, с которых принимаются запросы в production (заголовок Host).
+    # Пусто — проверка не включается.
+    ALLOWED_HOSTS: str | None = None
 
     # pydantic 2.x uchun to‘g‘ri sozlama
     model_config = SettingsConfigDict(
