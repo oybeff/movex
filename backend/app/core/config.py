@@ -32,6 +32,39 @@ class Settings(BaseSettings):
         """Click bilan ishlash uchun barcha kerakli kalitlar bormi."""
         return bool(self.CLICK_SERVICE_ID and self.CLICK_SECRET_KEY and self.CLICK_MERCHANT_ID)
 
+    # Payme (Paycom) Merchant API.
+    # PAYME_KEY — kassa kaliti, Payme kabinetidan olinadi. Payme bizga
+    # murojaat qilganda "Authorization: Basic base64('Paycom:' + PAYME_KEY)"
+    # sarlavhasini yuboradi.
+    PAYME_MERCHANT_ID: str = ""
+    PAYME_KEY: str = ""
+    # Payme test rejimida boshqa kalit ishlatiladi
+    PAYME_TEST_KEY: str = ""
+    PAYME_TEST_MODE: bool = False
+    # Payme kabinetida sozlangan hisob maydonining nomi
+    PAYME_ACCOUNT_FIELD: str = "transaction_id"
+    PAYME_CHECKOUT_URL: str = "https://checkout.paycom.uz"
+    PAYME_RETURN_URL: str = "movexgo://payment/success"
+
+    @property
+    def payme_active_key(self) -> str:
+        """Test rejimida test kaliti, aks holda asosiy kalit."""
+        if self.PAYME_TEST_MODE and self.PAYME_TEST_KEY:
+            return self.PAYME_TEST_KEY
+        return self.PAYME_KEY
+
+    @property
+    def payme_configured(self) -> bool:
+        return bool(self.PAYME_MERCHANT_ID and self.payme_active_key)
+
+    # To'lovni bo'lish (split).
+    #   escrow     — pul to'liq platformaga tushadi, buyurtma yakunlangach
+    #                texnika egasiga o'tkaziladi. Mijoz uchun xavfsizroq.
+    #   on_payment — Payme to'lovni darhol bo'ladi: egasiga 90%, platformaga 10%.
+    #                Pul platformada turmaydi, lekin escrow himoyasi yo'qoladi.
+    # Batafsil: docs/backend/PAYMENTS.md
+    SPLIT_MODE: str = "escrow"
+
     # OTP Settings
     OTP_EXPIRY_MINUTES: int = 5
     OTP_MAX_ATTEMPTS: int = 5

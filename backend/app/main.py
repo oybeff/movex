@@ -13,6 +13,7 @@ from app.routes import (
     messages,
     reviews,
     payments,
+    payme,
     balance,
     admin,
 )
@@ -77,6 +78,8 @@ app.include_router(chats.router, prefix="/chats", tags=["Chats"])
 app.include_router(messages.router, prefix="/messages", tags=["Messages"])
 app.include_router(reviews.router, prefix="/reviews", tags=["Reviews"])
 app.include_router(payments.router, prefix="/payments", tags=["Payments"])
+# Payme Merchant API — Payme kabinetida ko'rsatiladigan manzil: /payments/payme
+app.include_router(payme.router, prefix="/payments", tags=["Payme"])
 app.include_router(balance.router, prefix="/balance", tags=["Balance"])
 app.include_router(settings_routes.router, prefix="/settings", tags=["Settings"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])

@@ -3,13 +3,14 @@ from app.core.config import settings
 from app.models.balance import Balance, BalanceTransaction
 from app.schemas.balance import BalanceTransactionCreate, BalanceTransactionUpdate
 from app.services.click_service import ClickService
+from app.services.payme_service import PaymeService
 from fastapi import HTTPException
 from decimal import Decimal
 
 # Foydalanuvchi o'zi tanlab, ilova orqali to'ldira oladigan usullar.
 # Bu yerga faqat to'lovni TASDIQLAB beradigan integratsiya qo'shiladi:
 # callback kelmaydigan usul (naqd pul, oddiy karta) balansni to'ldira olmaydi.
-SELF_SERVICE_PAYMENT_METHODS = {"click"}
+SELF_SERVICE_PAYMENT_METHODS = {"click", "payme"}
 
 
 def get_or_create_balance(db: Session, user_id: int):
@@ -129,23 +130,38 @@ def top_up_balance(
     return transaction
 
 
-def generate_click_payment_url(transaction_id: int, amount: float) -> str:
+def generate_payment_url(payment_method: str, transaction_id: int, amount: float) -> str:
     """
-    Click to'lov havolasini yaratish.
-
-    URL'ni ClickService yasaydi — ilgari bu yerda ikkinchi, mustaqil nusxasi bor
-    edi va u kalitlarni os.getenv orqali olardi, ya'ni .env dan kelmasdi.
+    Tanlangan to'lov tizimining to'lov sahifasiga havola.
 
     Kalitlar sozlanmagan bo'lsa, ishlamaydigan havola qaytarish o'rniga aniq
-    xato beramiz: aks holda mijoz Click'ning bo'sh sahifasiga tushib qolardi.
+    xato beramiz: aks holda mijoz to'lov tizimining bo'sh sahifasiga tushardi.
     """
-    if not settings.click_configured:
-        raise HTTPException(
-            status_code=503,
-            detail="Click to'lov tizimi sozlanmagan. Administratorga murojaat qiling."
-        )
+    if payment_method == "click":
+        if not settings.click_configured:
+            raise HTTPException(
+                status_code=503,
+                detail="Click to'lov tizimi sozlanmagan. Administratorga murojaat qiling."
+            )
+        return ClickService.generate_payment_url(transaction_id=transaction_id, amount=amount)
 
-    return ClickService.generate_payment_url(transaction_id=transaction_id, amount=amount)
+    if payment_method == "payme":
+        if not settings.payme_configured:
+            raise HTTPException(
+                status_code=503,
+                detail="Payme to'lov tizimi sozlanmagan. Administratorga murojaat qiling."
+            )
+        return PaymeService.build_checkout_url(transaction_id=transaction_id, amount_sum=amount)
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"Noma'lum to'lov usuli: {payment_method}"
+    )
+
+
+def generate_click_payment_url(transaction_id: int, amount: float) -> str:
+    """Eski nom — mos kelishi uchun qoldirilgan."""
+    return generate_payment_url("click", transaction_id, amount)
 
 
 def get_transaction(db: Session, transaction_id: int, user_id: int):

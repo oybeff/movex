@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Numeric, String, DateTime, ForeignKey
+from sqlalchemy import BigInteger, Column, Integer, Numeric, String, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy import CheckConstraint
 from app.db.base import Base
@@ -36,6 +36,18 @@ class BalanceTransaction(Base):
     click_trans_id = Column(Integer, nullable=True)  # Click transaction ID
     click_prepare_id = Column(Integer, nullable=True)  # Click prepare ID
     phone_number = Column(String(20), nullable=True)  # Telefon raqam (Click uchun)
+
+    # Payme (Paycom) Merchant API uchun.
+    # Payme protokoli tranzaksiyaning o'z holatini talab qiladi:
+    #   1 — yaratilgan, 2 — o'tkazilgan, -1 — bekor qilingan,
+    #   -2 — o'tkazilgandan keyin bekor qilingan
+    # Vaqtlar Payme talabi bo'yicha millisekundlarda saqlanadi.
+    payme_transaction_id = Column(String(50), nullable=True, index=True)
+    payme_state = Column(Integer, nullable=True)
+    payme_create_time = Column(BigInteger, nullable=True)
+    payme_perform_time = Column(BigInteger, nullable=True)
+    payme_cancel_time = Column(BigInteger, nullable=True)
+    payme_reason = Column(Integer, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

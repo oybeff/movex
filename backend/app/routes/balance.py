@@ -42,13 +42,12 @@ def top_up_balance(
         "payment_url": None
     }
 
-    # Agar Click to'lov bo'lsa, to'lov URL'ini qo'shamiz
-    if transaction.payment_method == "click":
-        payment_url = balance_service.generate_click_payment_url(
-            transaction_id=transaction.id,
-            amount=float(transaction.amount)
-        )
-        response["payment_url"] = payment_url
+    # Har qanday tashqi to'lov tizimi uchun to'lov havolasi
+    response["payment_url"] = balance_service.generate_payment_url(
+        payment_method=transaction.payment_method,
+        transaction_id=transaction.id,
+        amount=float(transaction.amount),
+    )
 
     return response
 

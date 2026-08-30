@@ -95,10 +95,13 @@ print(f"стартовые балансы — клиент {money(client_start)}
 
 head("1. ПОПОЛНЕНИЕ ТРЕБУЕТ ПОДТВЕРЖДЁННОЙ ОПЛАТЫ")
 
-r = requests.post(f"{API}/balance/topup", headers=client,
-                  json={"amount": TOPUP, "payment_method": "payme"})
-check("способ без подтверждения оплаты отклонён", r.status_code == 400,
-      f"вернулось {r.status_code}")
+# 'card' va 'cash' uchun to'lovni tasdiqlaydigan integratsiya yo'q, shuning
+# uchun ular balansni to'ldira olmaydi. Click va Payme esa ruxsat etilgan.
+for method in ("card", "cash"):
+    r = requests.post(f"{API}/balance/topup", headers=client,
+                      json={"amount": TOPUP, "payment_method": method})
+    check(f"'{method}' без подтверждения оплаты отклонён", r.status_code == 400,
+          f"вернулось {r.status_code}")
 
 r = requests.post(f"{API}/balance/topup", headers=client,
                   json={"amount": TOPUP, "payment_method": "click"})
