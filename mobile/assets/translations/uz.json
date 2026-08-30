@@ -375,6 +375,8 @@
     "no_franchise": "Franchayzing topilmadi",
     "no_orders": "Buyurtmalar yo'q",
     "no_stats": "Statistika mavjud emas",
+    "not_available": "Franchayzing hozircha ulanmagan",
+    "not_available_hint": "Bo'lim ishlab chiqilmoqda. Tayyor bo'lgach, bu yerda franchayzing bo'yicha statistika ko'rinadi.",
     "orders": "Buyurtmalar",
     "stats": "Statistika",
     "title": "Franchayzing boshqaruvi"

@@ -6,6 +6,19 @@ import '../../../../core/models/franchise_model.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/utils/number_formatter.dart';
 
+/// Franchayzing ekrani.
+///
+/// DIQQAT: bu ekran ISHLAMAYDI va shu holatda qoldirilgan ataylab.
+///
+/// Backend'da franchayzing umuman yo'q: /franchises/ endpoint'i, modeli va
+/// jadvali mavjud emas. Quyidagi kod raqamlarni boshqa endpointlardan
+/// yig'ib, franchayzing statistikasi sifatida ko'rsatardi — ya'ni
+/// foydalanuvchi o'ylab topilgan raqamlarni ko'rardi.
+///
+/// Shuning uchun ekran ochilganda ochiq ogohlantirish chiqadi. Qolgan kod
+/// o'chirilmadi: backend paydo bo'lganda [_backendReady] ni true qilish
+/// kifoya. Kodni butunlay o'chirish yoki backend yozish — mahsulot bo'yicha
+/// qaror, uni loyiha egasi qabul qiladi.
 class FranchiseManagePage extends StatefulWidget {
   const FranchiseManagePage({super.key});
 
@@ -14,6 +27,9 @@ class FranchiseManagePage extends StatefulWidget {
 }
 
 class _FranchiseManagePageState extends State<FranchiseManagePage> {
+  /// Backend'da franchayzing paydo bo'lgach — true.
+  static const bool _backendReady = false;
+
   final FranchiseService _franchiseService = FranchiseService();
   FranchiseModel? _franchise;
   bool _isLoading = true;
@@ -22,7 +38,53 @@ class _FranchiseManagePageState extends State<FranchiseManagePage> {
   @override
   void initState() {
     super.initState();
-    _loadFranchise();
+    if (_backendReady) {
+      _loadFranchise();
+    } else {
+      _isLoading = false;
+    }
+  }
+
+  /// Backend yo'qligini ochiq aytadigan ekran. O'ylab topilgan raqamlarni
+  /// ko'rsatishdan ko'ra shu to'g'riroq.
+  Widget _notAvailable() {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: Text('franchise.title'.tr()),
+        centerTitle: true,
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.black),
+        titleTextStyle: const TextStyle(
+            color: AppColors.black, fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.construction_outlined,
+                  size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'franchise.not_available'.tr(),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 17, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'franchise.not_available_hint'.tr(),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _loadFranchise() async {
@@ -63,6 +125,8 @@ class _FranchiseManagePageState extends State<FranchiseManagePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_backendReady) return _notAvailable();
+
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(

@@ -45,7 +45,8 @@ define('ADMIN_SESSION_LIFETIME', 3600 * 8); // 8 soat
 define('ITEMS_PER_PAGE', 20);
 
 // Backup Configuration
-define('BACKUP_DIR', dirname(__DIR__) . '/movex_go_backend/database/backups');
+// Zaxira nusxalar backend/scripts/backup.sh yozadigan joyda yotadi.
+define('BACKUP_DIR', dirname(__DIR__) . '/backend/database/backups');
 define('BACKUP_RETENTION_DAYS', 30);
 
 // ADMIN_SECRET_KEY olib tashlandi: u shu yerda ochiq yozilgan edi, lekin

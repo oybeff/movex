@@ -15,7 +15,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($action === 'create_backup') {
         $backupType = $_POST['backup_type'] ?? 'full';
         
-        $scriptPath = dirname(__DIR__) . '/movex_go_backend/scripts/backup.sh';
+        // Yo'l monorepo tuzilishiga ko'ra. Ilgari bu yerda
+        // 'movex_go_backend/scripts/backup.sh' turardi — repozitoriylar
+        // birlashtirilgandan keyin bunday katalog yo'q va zaxira nusxa
+        // tugmasi ishlamay qolgan edi.
+        $scriptPath = dirname(__DIR__) . '/backend/scripts/backup.sh';
         $command = escapeshellcmd($scriptPath) . ' --' . escapeshellarg($backupType);
         
         exec($command . ' 2>&1', $output, $returnCode);
@@ -36,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $backupFile = BACKUP_DIR . '/' . basename($filename);
             
             if (file_exists($backupFile)) {
-                $scriptPath = dirname(__DIR__) . '/movex_go_backend/scripts/restore.sh';
+                $scriptPath = dirname(__DIR__) . '/backend/scripts/restore.sh';
                 $command = escapeshellcmd($scriptPath) . ' ' . escapeshellarg($backupFile);
                 
                 // Auto-confirm with 'yes'

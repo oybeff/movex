@@ -39,6 +39,31 @@ $adminUser = getAdminUser();
                         </a>
                     </li>
                     <li>
+                        <a href="requests.php" class="<?= ($currentPage ?? '') === 'requests' ? 'active' : '' ?>">
+                            <span>📣</span>
+                            Zayavkalar
+                            <?php
+                            // Javob kelmagan ochiq zayavkalar soni. Ular
+                            // ko'p bo'lsa — yo egalar yetishmaydi, yo
+                            // radius juda tor: buni darhol ko'rish kerak.
+                            try {
+                                $openNoOffers = getDbConnection()->query("
+                                    SELECT COUNT(*) FROM equipment_requests r
+                                     WHERE r.status = 'open'
+                                       AND NOT EXISTS (SELECT 1 FROM request_offers o
+                                                        WHERE o.request_id = r.id
+                                                          AND o.status = 'pending')
+                                ")->fetchColumn();
+                            } catch (Throwable $e) {
+                                $openNoOffers = 0;
+                            }
+                            if ($openNoOffers > 0):
+                            ?>
+                                <span class="badge badge-warning" style="margin-left:auto;"><?= $openNoOffers ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                    <li>
                         <a href="balance.php" class="<?= ($currentPage ?? '') === 'balance' ? 'active' : '' ?>">
                             <span>💰</span>
                             Balans

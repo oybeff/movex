@@ -27,11 +27,54 @@ if [ -f "$PROJECT_ROOT/.env" ]; then
 fi
 
 # Database configuration
-DB_NAME="${POSTGRES_DB:-movex_go}"
-DB_USER="${POSTGRES_USER:-shohruxbek}"
-DB_PASSWORD="${POSTGRES_PASSWORD:-}"
-DB_HOST="${POSTGRES_HOST:-localhost}"
-DB_PORT="${POSTGRES_PORT:-5432}"
+# Ulanish sozlamalari DATABASE_URL dan olinadi — ilova aynan shundan
+# foydalanadi, ya'ni ikkinchi manba bo'lmaydi.
+#
+# Ilgari bu yerda faqat POSTGRES_* o'zgaruvchilari o'qilardi. Ular .env da
+# yo'q, shuning uchun skript standart qiymatlarga tushardi (foydalanuvchi
+# "shohruxbek" — boshqa mashinadan qolgan) va zaxira nusxa har safar
+# xato bilan tugardi.
+#
+# Format: postgresql://user[:password]@host[:port]/dbname
+parse_database_url() {
+    local url="${DATABASE_URL:-}"
+    [ -z "$url" ] && return 1
+
+    local rest="${url#*://}"
+    local creds="" hostpart=""
+    if [[ "$rest" == *"@"* ]]; then
+        creds="${rest%%@*}"
+        hostpart="${rest#*@}"
+    else
+        hostpart="$rest"
+    fi
+
+    if [ -n "$creds" ]; then
+        URL_USER="${creds%%:*}"
+        if [[ "$creds" == *":"* ]]; then
+            URL_PASSWORD="${creds#*:}"
+        fi
+    fi
+
+    URL_DB="${hostpart#*/}"
+    URL_DB="${URL_DB%%\?*}"
+
+    local hostport="${hostpart%%/*}"
+    URL_HOST="${hostport%%:*}"
+    if [[ "$hostport" == *":"* ]]; then
+        URL_PORT="${hostport#*:}"
+    fi
+    return 0
+}
+
+URL_USER=""; URL_PASSWORD=""; URL_HOST=""; URL_PORT=""; URL_DB=""
+parse_database_url || true
+
+DB_NAME="${POSTGRES_DB:-${URL_DB:-movex_go}}"
+DB_USER="${POSTGRES_USER:-${URL_USER:-$(whoami)}}"
+DB_PASSWORD="${POSTGRES_PASSWORD:-$URL_PASSWORD}"
+DB_HOST="${POSTGRES_HOST:-${URL_HOST:-localhost}}"
+DB_PORT="${POSTGRES_PORT:-${URL_PORT:-5432}}"
 
 # Colors for output
 RED='\033[0;31m'
