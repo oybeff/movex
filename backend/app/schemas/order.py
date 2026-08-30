@@ -18,6 +18,28 @@ class OrderCreate(OrderBase):
     """Order yaratish uchun schema (user_id token dan olinadi)"""
     pass
 
+class OrderPriceRequest(BaseModel):
+    """
+    Narxni oldindan hisoblash uchun. Summalar bu yerda YO'Q — ularni
+    server o'zi hisoblaydi, mijozdan qabul qilmaydi.
+    """
+    equipment_id: int
+    start_date: date
+    end_date: date
+    delivery_latitude: Optional[str] = None
+    delivery_longitude: Optional[str] = None
+
+
+class OrderPricePreview(BaseModel):
+    """Ilova ekranda aynan shu raqamlarni ko'rsatadi."""
+    days: int
+    subtotal: float          # ijara narxi
+    commission: float        # platforma ulushi
+    delivery_distance: Optional[float] = None  # km
+    delivery_fee: float
+    total: float
+
+
 class OrderUpdate(BaseModel):
     """Order yangilash uchun schema (faqat status o'zgartiriladi)"""
     status: Optional[str] = Field(None, description="Order status: pending, confirmed, rejected, cancelled, completed")

@@ -6,6 +6,40 @@ import '../models/order_statistics_model.dart';
 class OrderService {
   final Dio _dio = DioClient.create();
 
+  /// Buyurtma narxini serverdan olish — buyurtma yaratmasdan.
+  ///
+  /// Ekranda aynan shu raqamlar ko'rsatilishi kerak: hisobdan ham xuddi
+  /// shu summa yechiladi. Ilova o'zi hisoblab ko'rsatsa, formulalar
+  /// bir-biridan farq qilib qolishi mumkin.
+  ///
+  /// Xato bo'lsa null qaytadi — ekran o'zining taxminiy hisobiga qaytadi.
+  Future<Map<String, dynamic>?> previewPrice({
+    required int equipmentId,
+    required DateTime startDate,
+    required DateTime endDate,
+    double? deliveryLatitude,
+    double? deliveryLongitude,
+  }) async {
+    try {
+      String ymd(DateTime d) =>
+          '${d.year.toString().padLeft(4, '0')}-'
+          '${d.month.toString().padLeft(2, '0')}-'
+          '${d.day.toString().padLeft(2, '0')}';
+
+      final response = await _dio.post('/orders/price-preview', data: {
+        'equipment_id': equipmentId,
+        'start_date': ymd(startDate),
+        'end_date': ymd(endDate),
+        if (deliveryLatitude != null) 'delivery_latitude': '$deliveryLatitude',
+        if (deliveryLongitude != null) 'delivery_longitude': '$deliveryLongitude',
+      });
+      return Map<String, dynamic>.from(response.data as Map);
+    } catch (e) {
+      print('Price preview error: $e');
+      return null;
+    }
+  }
+
   /// Barcha buyurtmalarni olish
   Future<List<OrderModel>> getOrders({
     int skip = 0,

@@ -36,6 +36,11 @@ class RentEquipmentPage extends StatefulWidget {
 
 class _RentEquipmentPageState extends State<RentEquipmentPage> {
   final OrderService _orderService = OrderService();
+
+  /// Serverdan olingan narx. Ekranda AYNAN shu ko'rsatiladi, chunki
+  /// hisobdan ham xuddi shu summa yechiladi. Hali kelmagan bo'lsa,
+  /// ekran o'zining taxminiy hisobini ko'rsatib turadi.
+  Map<String, dynamic>? _serverPrice;
   final BalanceService _balanceService = BalanceService();
   final GeocodingService _geocodingService = GeocodingService();
   final EquipmentService _equipmentService = EquipmentService();
@@ -71,11 +76,15 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
   }
 
   int get _subtotal {
+    final server = _serverPrice;
+    if (server != null) return (server['subtotal'] as num).round();
     return _dailyRate * _totalDays;
   }
 
   int get _commission {
-    return (_subtotal * 0.1).round(); // 10% komissiya
+    final server = _serverPrice;
+    if (server != null) return (server['commission'] as num).round();
+    return (_subtotal * 0.1).round(); // taxminiy, server aniqrog'ini beradi
   }
 
   // Masofa hisoblash (km)
@@ -101,6 +110,8 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
 
   // Yetkazish narxi
   int get _deliveryFee {
+    final server = _serverPrice;
+    if (server != null) return ((server['delivery_fee'] as num?) ?? 0).round();
     if (_deliveryDistance == null ||
         widget.equipment.deliveryPricePerKm == null ||
         widget.equipment.deliveryPricePerKm!.isEmpty) {
@@ -112,7 +123,29 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
   }
 
   int get _total {
+    final server = _serverPrice;
+    if (server != null) return (server['total'] as num).round();
     return _subtotal + _commission + _deliveryFee;
+  }
+
+  /// Sanalar yoki yetkazib berish nuqtasi o'zgarganda narxni qayta so'raymiz.
+  Future<void> _refreshServerPrice() async {
+    final start = _startDate;
+    final end = _endDate;
+    if (start == null || end == null) {
+      setState(() => _serverPrice = null);
+      return;
+    }
+
+    final price = await _orderService.previewPrice(
+      equipmentId: widget.equipment.id,
+      startDate: start,
+      endDate: end,
+      deliveryLatitude: _selectedLocation?.latitude,
+      deliveryLongitude: _selectedLocation?.longitude,
+    );
+
+    if (mounted) setState(() => _serverPrice = price);
   }
 
   // Haversine formula - masofa hisoblash
@@ -394,6 +427,8 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                                 _endDate = tempEnd;
                               });
                               Navigator.pop(context);
+                              // Narxni serverdan qayta so'raymiz
+                              _refreshServerPrice();
                             }
                           : null,
                       style: ElevatedButton.styleFrom(
@@ -428,6 +463,9 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
         _selectedLocation = result;
         _deliveryAddress = null; // Reset address
       });
+
+      // Yetkazib berish nuqtasi o'zgardi — narx ham o'zgaradi
+      _refreshServerPrice();
 
       // Reverse geocoding - manzilni olish
       try {

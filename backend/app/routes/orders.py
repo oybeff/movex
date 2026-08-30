@@ -4,7 +4,8 @@ from typing import Optional
 from datetime import datetime, date
 from app.schemas import order as order_schema
 from app.models import order as order_model
-from app.services import order_service
+from app.services import order_service, pricing_service
+from app.models.equipment import Equipment
 from app.dependencies import get_db, get_current_user
 from app.core.access import assert_order_access
 from app.core.roles import role_checker
@@ -14,6 +15,52 @@ router = APIRouter()
 @router.post("/", response_model=order_schema.OrderRead)
 def create_order(order: order_schema.OrderCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     return order_service.create_order(db, order, current_user.id)
+
+
+# DIQQAT: "/{order_id}" dan OLDIN turishi shart
+@router.post("/price-preview", response_model=order_schema.OrderPricePreview)
+def preview_order_price(
+    request: order_schema.OrderPriceRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Buyurtma narxini oldindan hisoblab beradi — buyurtma yaratmasdan.
+
+    Ilgari narx IKKI joyda hisoblanardi: mobil ilova ekranda ko'rsatish
+    uchun, server esa yechib olish uchun. Formulalar bir-biridan biroz
+    farq qilsa (masalan, ilova kunlik narxni butun songa keltirsa),
+    foydalanuvchi ekranda bir summani ko'rib, hisobidan boshqasi yechilardi.
+
+    Endi ilova shu yerdan olingan raqamni ko'rsatadi — hisob bitta joyda.
+    """
+    equipment = db.query(Equipment).filter(
+        Equipment.id == request.equipment_id,
+        Equipment.deleted_at.is_(None),
+    ).first()
+    if not equipment:
+        raise HTTPException(status_code=404, detail="Texnika topilmadi")
+
+    try:
+        price = pricing_service.calculate_order_price(
+            db=db,
+            equipment=equipment,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            delivery_latitude=request.delivery_latitude,
+            delivery_longitude=request.delivery_longitude,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return order_schema.OrderPricePreview(
+        days=price.days,
+        subtotal=float(price.subtotal),
+        commission=float(price.commission),
+        delivery_distance=float(price.delivery_distance) if price.delivery_distance is not None else None,
+        delivery_fee=float(price.delivery_fee),
+        total=float(price.total),
+    )
 
 @router.get("/", response_model=list[order_schema.OrderRead])
 def get_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
