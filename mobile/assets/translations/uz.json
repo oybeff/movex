@@ -618,5 +618,25 @@
     "minutes_ago": "{} daqiqa oldin",
     "hours_ago": "{} soat oldin",
     "days_ago": "{} kun oldin"
+  },
+  "payout": {
+    "title": "Pul yechish",
+    "available": "Yechish mumkin bo'lgan mablag'",
+    "frozen": "Muzlatilgan",
+    "new_request": "Yangi ariza",
+    "amount": "Summa",
+    "card_number": "Karta raqami",
+    "card_holder": "Karta egasi",
+    "submit": "Ariza berish",
+    "hint": "Eng kam summa 50 000 so'm. Ariza ko'rib chiqilgunicha summa muzlatiladi.",
+    "created": "Ariza qabul qilindi",
+    "enter_amount": "Summani kiriting",
+    "not_enough": "Yetarli mablag' yo'q",
+    "card_invalid": "Karta raqami 16 ta raqamdan iborat bo'lishi kerak",
+    "history": "Arizalar tarixi",
+    "no_requests": "Hozircha arizalar yo'q",
+    "status_pending": "Ko'rib chiqilmoqda",
+    "status_paid": "To'langan",
+    "status_rejected": "Rad etilgan"
   }
 }

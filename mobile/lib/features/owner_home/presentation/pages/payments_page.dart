@@ -4,6 +4,7 @@ import 'package:movex_go/core/constants/app_colors.dart';
 import '../../../../core/services/payment_service.dart';
 import '../../../../core/models/payment_model.dart';
 import '../../../../core/utils/number_formatter.dart';
+import 'payout_page.dart';
 
 class PaymentsPage extends StatefulWidget {
   const PaymentsPage({super.key});
@@ -89,7 +90,20 @@ class _PaymentsPageState extends State<PaymentsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('payments.title'.tr())),
+      appBar: AppBar(
+        title: Text('payments.title'.tr()),
+        actions: [
+          // Pul yechish: ilgari egasi pulini olib chiqa olmasdi
+          IconButton(
+            tooltip: 'payout.title'.tr(),
+            icon: const Icon(Icons.account_balance_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PayoutPage()),
+            ),
+          ),
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen,))
           : SafeArea(

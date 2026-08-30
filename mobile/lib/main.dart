@@ -6,6 +6,7 @@ import 'package:toastification/toastification.dart';
 import 'package:movex_go/features/owner_home/presentation/pages/franchise_manage_page.dart';
 import 'package:movex_go/features/settings/presentation/pages/settings_page.dart';
 import 'package:movex_go/features/notifications/presentation/pages/notifications_page.dart';
+import 'package:movex_go/features/owner_home/presentation/pages/payout_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:movex_go/features/auth/presentation/pages/splash_screen_page.dart';
 import 'package:movex_go/features/auth/presentation/pages/language_select_page.dart';
@@ -85,6 +86,10 @@ void main() async {
       GoRoute(
         path: '/notifications',
         builder: (context, state) => const NotificationsPage(),
+      ),
+      GoRoute(
+        path: '/payout',
+        builder: (context, state) => const PayoutPage(),
       ),
       GoRoute(
         path: '/add-equipment',
