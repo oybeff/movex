@@ -122,6 +122,18 @@ class _PhoneNumberFormatter extends TextInputFormatter {
     // Get only the part after +998
     String phoneDigits = text.substring(5).replaceAll(RegExp(r'\D'), '');
 
+    // Odam to'liq raqamni yozishi yoki qo'yishi mumkin: 998901234567.
+    // Prefiks maydonda allaqachon bor, shuning uchun takrorlangan 998 ni
+    // olib tashlaymiz.
+    //
+    // Ilgari bunday raqam shunchaki 9 belgiga QIRQILARDI: 998901234567
+    // dan 998901234 qolar edi — bu boshqa, mavjud bo'lmagan raqam. Ilova
+    // hech narsa demasdan ro'yxatdan o'tish oynasiga olib borardi, va
+    // foydalanuvchi nega kira olmayotganini tushunmasdi.
+    if (phoneDigits.length > 9 && phoneDigits.startsWith('998')) {
+      phoneDigits = phoneDigits.substring(3);
+    }
+
     // Limit to 9 digits after +998
     if (phoneDigits.length > 9) {
       phoneDigits = phoneDigits.substring(0, 9);
