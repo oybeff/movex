@@ -10,6 +10,8 @@ Ishga tushirish (server ishlab turgan holda):
     venv/bin/python tests/verify_payouts.py
 """
 import hashlib
+import os
+import sys
 import re
 from datetime import datetime
 
@@ -47,11 +49,10 @@ def head(t):
     print(f"\n{'=' * 66}\n{t}\n{'=' * 66}")
 
 
-def token(phone):
-    r = requests.post(f"{API}/auth/send-otp", json={"phone": phone})
-    code = re.search(r"(\d{4})\s*$", r.json()["message"]).group(1)
-    r = requests.post(f"{API}/auth/verify-otp", json={"phone": phone, "otp_code": code})
-    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+# Kirish _auth.py da: admin kodi javobda kelmaydi va bazadan o'qiladi.
+# Sababi o'sha faylda yozilgan.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _auth import token  # noqa: E402
 
 
 def balance_of(hdr):

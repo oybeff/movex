@@ -118,6 +118,37 @@ class OTPService:
             # Send SMS (skip if test mode)
             if settings.OTP_TEST_MODE:
                 logger.info(f"TEST MODE: OTP code for {clean_phone}: {otp_code}")
+
+                # ADMIN uchun kod HECH QACHON javobda qaytmaydi.
+                #
+                # Test rejimi kodni javobga qo'yadi — ishlab chiqishda bu
+                # qulay. Lekin server tashqaridan ochilganda (tunnel, demo,
+                # sinov stendi) bu admin hisobini istalgan odamga topshirib
+                # qo'yadi: telefon raqami ma'lum, kodni so'rab olib, admin
+                # tokenini oladi va hamma foydalanuvchini telefonlari bilan
+                # ko'radi hamda o'chira oladi.
+                #
+                # Admin mobil ilovaga kirmaydi — u PHP paneldan parol bilan
+                # ishlaydi, shuning uchun bu hech narsani buzmaydi.
+                from app.models.user import User
+
+                is_admin_phone = (
+                    self.db.query(User.id)
+                    .filter(User.phone == clean_phone, User.role == "admin")
+                    .first()
+                    is not None
+                )
+                if is_admin_phone:
+                    logger.warning(
+                        "Test rejimida admin raqamiga kod so'raldi, javobda "
+                        "berilmadi: %s", clean_phone
+                    )
+                    return {
+                        "success": True,
+                        "message": "Kod yuborildi",
+                        "expires_in": settings.OTP_EXPIRY_MINUTES * 60,
+                    }
+
                 return {
                     "success": True,
                     "message": f"TEST MODE: Tasdiqlash kodi: {otp_code}",

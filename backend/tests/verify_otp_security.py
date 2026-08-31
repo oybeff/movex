@@ -111,5 +111,31 @@ _, resp = send_otp(phone)
 check("новый код на заблокированный номер не отправляется",
       "bloklangan" in text_of(resp), str(resp))
 
+head("4. КОД АДМИНА НЕ ОТДАЁТСЯ ДАЖЕ В ТЕСТОВОМ РЕЖИМЕ")
+
+# Тестовый режим кладёт код прямо в ответ — это удобно при разработке.
+# Но как только сервер доступен снаружи (туннель, демо-стенд), это отдаёт
+# админский аккаунт любому: номер известен, код спрашивается запросом.
+# Админ в мобильное приложение не заходит, он работает через PHP-панель.
+
+ADMIN_PHONE = "998900000000"
+
+r = requests.post(f"{API}/auth/send-otp", json={"phone": ADMIN_PHONE})
+check("запрос на админский номер принят", r.status_code == 200, f"{r.status_code}")
+
+body = r.text
+check("кода в ответе нет", "TEST MODE" not in body and "otp_code" not in body,
+      body[:120])
+check("четырёхзначного кода в тексте нет",
+      re.search(r"\b\d{4}\b", r.json().get("message", "")) is None,
+      r.json().get("message", ""))
+
+# Обычный пользователь должен продолжать получать код — иначе сломается
+# и разработка, и остальные тесты
+ordinary = f"99890{(int(time.time()) + 7) % 100000000:08d}"
+r = requests.post(f"{API}/auth/send-otp", json={"phone": ordinary})
+check("обычному пользователю код по-прежнему приходит",
+      "TEST MODE" in r.text, r.text[:120])
+
 head(f"ИТОГ: {ok_count} пройдено, {fail_count} провалено")
 raise SystemExit(1 if fail_count else 0)

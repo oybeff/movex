@@ -5,6 +5,8 @@
 кривой запрос, забытый импорт. 401/403/404/422 это нормальные ответы,
 их не считаем проблемой.
 """
+import os
+import sys
 import re
 from datetime import datetime
 
@@ -33,11 +35,10 @@ SAMPLES = {
 }
 
 
-def token(phone):
-    r = requests.post(f"{API}/auth/send-otp", json={"phone": phone})
-    code = re.search(r"(\d{4})\s*$", r.json()["message"]).group(1)
-    r = requests.post(f"{API}/auth/verify-otp", json={"phone": phone, "otp_code": code})
-    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+# Kirish _auth.py da: admin kodi javobda kelmaydi va bazadan o'qiladi.
+# Sababi o'sha faylda yozilgan.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _auth import token  # noqa: E402
 
 
 admin = token("998900000000")
