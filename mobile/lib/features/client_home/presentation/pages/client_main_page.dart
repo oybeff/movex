@@ -170,8 +170,7 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
       builder: (context) => AlertDialog(
         title: Text('messages.location_permission'.tr()),
         content: Text(
-          result.errorMessage ??
-          'messages.location_permission_required'.tr(),
+          result.message,
         ),
         actions: [
           TextButton(

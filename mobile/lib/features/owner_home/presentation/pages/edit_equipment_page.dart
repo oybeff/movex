@@ -790,7 +790,7 @@ class _LocationPickerBottomSheetState extends State<_LocationPickerBottomSheet> 
             context: context,
             type: ToastificationType.warning,
             style: ToastificationStyle.flatColored,
-            title: Text(permissionResult.errorMessage ?? 'messages.location_permission_not_granted_message'.tr()),
+            title: Text(permissionResult.message),
             autoCloseDuration: const Duration(seconds: 5),
             alignment: Alignment.topCenter,
           );

@@ -18,8 +18,11 @@ pluginManagement {
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-    id("com.android.application") version "8.7.3" apply false
-    id("org.jetbrains.kotlin.android") version "2.1.0" apply false
+    // Flutter 3.47 AGP 8.11.1 dan pastini qabul qilmaydi. Loyiha eskiroq
+    // Flutter uchun sozlangan edi. AGP 8.11 uchun Gradle 8.13+ kerak —
+    // gradle-wrapper.properties da 8.14.3 turibdi.
+    id("com.android.application") version "8.11.1" apply false
+    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
 }
 
 include(":app")

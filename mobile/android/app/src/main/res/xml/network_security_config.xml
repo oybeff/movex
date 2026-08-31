@@ -28,6 +28,7 @@
 
         <!-- Ishlab chiqish kompyuteri. Shu ro'yxatni tahrirlang. -->
         <domain includeSubdomains="false">192.168.1.128</domain>
+        <domain includeSubdomains="false">192.168.1.124</domain>
     </domain-config>
 
     <!-- Qolgan hamma narsa: HTTPS majburiy -->

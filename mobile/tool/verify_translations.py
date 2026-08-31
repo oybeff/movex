@@ -120,6 +120,69 @@ check("kodda .tr() dan o'tmagan o'zbekcha satr yo'q",
       not hardcoded,
       "\n         ".join(hardcoded[:8]))
 
+# Tarjima KALITI .tr() siz qolib ketmasin.
+#
+# Kalit o'zgaruvchiga yozilib, keyin shundayligicha ekranga chiqishi mumkin:
+#   errorMessage: 'messages.location_permission_not_granted_message'
+#   Text(result.errorMessage)      // ekranda kalitning o'zi ko'rinadi
+#
+# Yuqoridagi tekshiruv buni topmaydi — u o'zbekcha SO'ZLARNI qidiradi, kalit
+# esa lotincha va nuqtali.
+#
+# Ikki holat xato EMAS va o'tkazib yuboriladi:
+#   1) .tr() keyingi qatorga ko'chirilgan (formatlash tufayli);
+#   2) kalit nomi ...Key bilan tugaydigan maydonda yotibdi — bu ataylab,
+#      tarjima keyinroq, ko'rsatish paytida qilinadi.
+KEY_FIELD = re.compile(r"[A-Za-z_]*[Kk]ey\s*:\s*$")
+
+raw_keys = []
+for path in dart_files():
+    text = open(path, encoding="utf-8").read()
+    lines = text.splitlines()
+    offsets = []
+    pos = 0
+    for line in lines:
+        offsets.append(pos)
+        pos += len(line) + 1
+
+    for match in STRING_LITERAL.finditer(text):
+        literal = match.group(1) if match.group(1) is not None else match.group(2)
+        if not literal or literal not in ru:
+            continue
+
+        # .tr( yoki .plural( — bo'sh joy va qator ko'chishi bilan ham
+        tail = text[match.end():match.end() + 40].lstrip()
+        if tail.startswith(".tr(") or tail.startswith(".plural("):
+            continue
+
+        before = text[max(0, match.start() - 60):match.start()]
+        if KEY_FIELD.search(before):
+            continue
+
+        number = sum(1 for o in offsets if o <= match.start())
+        line = lines[number - 1].strip()
+        if line.startswith("//") or line.startswith("///"):
+            continue
+        # jadvaldagi qiymat: 'holat': (rang, 'kalit') — keyin .tr() qilinadi
+        if "':" in line or '":' in line or "=>" in line or line.endswith("),"):
+            continue
+        # Kalit o'zgaruvchiga yoki jadvalga tushmoqda, tarjima keyinroq:
+        #   final (color, key) = map[status] ?? (grey, 'requests.status_open');
+        #   final palette = { 'pending': (rang, 'payout.status_pending') }[...]
+        # Bir necha qatorga cho'zilgan bo'lishi mumkin, shuning uchun
+        # oldingi 300 belgiga qaraymiz.
+        context_before = text[max(0, match.start() - 300):match.start()]
+        if re.search(r"\b(?:final|var|const)\s+[^;]*\b[Kk]ey\b", context_before):
+            continue
+        if re.search(r"\b(?:final|var|const)\s+\w+\s*=\s*\{", context_before):
+            continue
+
+        raw_keys.append(f"{os.path.relpath(path, ROOT)}:{number}  {literal}")
+
+check("tarjima kaliti .tr() siz qolmagan",
+      not raw_keys,
+      "\n         ".join(raw_keys[:8]))
+
 print("=" * 66)
 print(f"ИТОГ: {ok} пройдено, {len(problems)} провалено")
 print("=" * 66)

@@ -8,7 +8,15 @@ plugins {
 android {
     namespace = "uz.movexgo.app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // ndkVersion ataylab ko'rsatilmagan.
+    //
+    // Uni yozib qo'yish AGP'ni NDK'ni (2.5 GB) yuklab olishga majbur qiladi,
+    // holbuki loyihadagi 10 ta android-plaginning birortasida ham native
+    // C/C++ kodi yo'q — hammasi tayyor .so yoki faqat Kotlin/Java.
+    //
+    // Agar kelajakda native kodli plagin qo'shilsa, yig'ilish "NDK not
+    // configured" deb aniq aytadi — o'shanda qatorni qaytaring:
+    //     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
