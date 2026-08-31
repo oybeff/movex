@@ -11,6 +11,7 @@ import '../../../../core/services/user_service.dart';
 import '../../../../core/models/contact_method_model.dart';
 import '../../../../core/models/user_model.dart';
 import '../../../owner_home/presentation/pages/payments_page.dart';
+import '../../../balance/presentation/pages/balance_topup_page.dart';
 import '../../../requests/presentation/pages/requests_feed_page.dart';
 import '../../../requests/presentation/pages/search_area_page.dart';
 import 'profile_page.dart';
@@ -538,6 +539,22 @@ class _SettingsPageState extends State<SettingsPage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const PaymentsPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, color: Colors.black12),
+                  // Ega ham hisobini to'ldira oladi — API bunga hech qachon
+                  // to'sqinlik qilmagan, faqat menyuda kirish joyi yo'q edi.
+                  _SettingsTile(
+                    icon: Icons.add_card_rounded,
+                    title: 'balance.topup'.tr(),
+                    subtitle: 'profile.topup_and_history'.tr(),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BalanceTopUpPage(),
                         ),
                       );
                     },

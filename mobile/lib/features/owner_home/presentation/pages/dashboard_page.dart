@@ -11,6 +11,7 @@ import '../../../../core/services/payment_service.dart';
 import '../../../../core/services/balance_service.dart';
 import '../../../../core/utils/number_formatter.dart';
 import 'franchise_manage_page.dart';
+import '../../../balance/presentation/pages/balance_topup_page.dart';
 
 class DashboardPage extends StatefulWidget {
   final Function(int)? onNavigate;
@@ -119,7 +120,9 @@ class _DashboardPageState extends State<DashboardPage> {
     const double cardRadius = 16;
 
     final stats = [
-      {'title': 'balance.current_balance'.tr(), 'value': '${NumberFormatter.formatCurrency(_currentBalance)} ${'common.currency'.tr()}', 'icon': Icons.account_balance_wallet},
+      // Balans kartochkasi bosiladigan bo'ldi: QA "bosilmaydi" deb yozgan,
+      // va hisobni to'ldirishni odam avvalo shu yerda qidiradi.
+      {'title': 'balance.current_balance'.tr(), 'value': '${NumberFormatter.formatCurrency(_currentBalance)} ${'common.currency'.tr()}', 'icon': Icons.account_balance_wallet, 'onTap': 'topup'},
       {'title': 'owner.active_equipment'.tr(), 'value': '$_activeEquipmentCount', 'icon': Icons.construction},
       {'title': 'owner.current_orders'.tr(), 'value': '$_currentOrdersCount', 'icon': Icons.assignment},
       {'title': 'owner.income_today'.tr(), 'value': '${_todayIncome.toStringAsFixed(0)} ${'common.currency'.tr()}', 'icon': Icons.attach_money},
@@ -228,7 +231,7 @@ class _DashboardPageState extends State<DashboardPage> {
               itemCount: stats.length,
               itemBuilder: (context, index) {
                 final stat = stats[index];
-                return Container(
+                final card = Container(
                   width: MediaQuery.of(context).size.width,
                   padding: const EdgeInsets.all(16),
                   margin: const EdgeInsets.only(bottom: 16),
@@ -255,6 +258,23 @@ class _DashboardPageState extends State<DashboardPage> {
                       
                     ],
                   ),
+                );
+
+                if (stat['onTap'] != 'topup') return card;
+                return InkWell(
+                  borderRadius: BorderRadius.circular(cardRadius),
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BalanceTopUpPage(),
+                      ),
+                    );
+                    // Qaytgach raqamlar yangilansin — pul qo'shilgan bo'lishi
+                    // mumkin
+                    if (mounted) _loadDashboardData();
+                  },
+                  child: card,
                 );
               },
             ),
