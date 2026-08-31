@@ -22,6 +22,7 @@ import '../../../../core/utils/number_formatter.dart';
 // Import Owner ChatDetailPage
 import '../../../owner_home/presentation/pages/chat_page.dart' show ChatDetailPage;
 import '../../../../core/constants/equipment_types.dart';
+import '../../../../core/widgets/map_or_placeholder.dart';
 
 class ClientChatPage extends StatefulWidget {
   const ClientChatPage({super.key});
@@ -795,7 +796,7 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
                       clipBehavior: Clip.antiAlias,
                       child: Stack(
                         children: [
-                          YandexMap(
+                          MapOrPlaceholder(mapBuilder: (_) => YandexMap(
                             onMapCreated: (controller) {
                               final deliveryLat = double.tryParse(order.deliveryLatitude);
                               final deliveryLng = double.tryParse(order.deliveryLongitude);
@@ -811,7 +812,7 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
                                 );
                               }
                             },
-                          ),
+                          )),
                           // Marker in center
                           Center(
                             child: Icon(

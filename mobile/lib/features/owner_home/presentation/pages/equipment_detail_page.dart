@@ -7,6 +7,7 @@ import '../../../../core/models/equipment_model.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/constants/equipment_types.dart';
+import '../../../../core/widgets/map_or_placeholder.dart';
 
 class EquipmentDetailPage extends StatefulWidget {
   final EquipmentModel equipment;
@@ -500,13 +501,13 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                           borderRadius: BorderRadius.circular(16),
                           child: Stack(
                             children: [
-                              YandexMap(
+                              MapOrPlaceholder(mapBuilder: (_) => YandexMap(
                                 onMapCreated: (controller) async {
                                   _mapController = controller;
                                   setState(() => _mapReady = true);
                                   await _moveToLocation(equipmentLocation!);
                                 },
-                              ),
+                              )),
                               // Marker in center
                               Center(
                                 child: Icon(

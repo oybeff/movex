@@ -20,6 +20,7 @@ import '../../../../core/utils/number_formatter.dart';
 import 'chat_page.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../../core/widgets/map_or_placeholder.dart';
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
@@ -1197,7 +1198,7 @@ class _OrdersPageState extends State<OrdersPage> {
                       clipBehavior: Clip.antiAlias,
                       child: Stack(
                         children: [
-                          YandexMap(
+                          MapOrPlaceholder(mapBuilder: (_) => YandexMap(
                             onMapCreated: (controller) {
                               final deliveryLat = double.tryParse(order.deliveryLatitude);
                               final deliveryLng = double.tryParse(order.deliveryLongitude);
@@ -1213,7 +1214,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                 );
                               }
                             },
-                          ),
+                          )),
                           // Marker in center
                           Center(
                             child: Icon(

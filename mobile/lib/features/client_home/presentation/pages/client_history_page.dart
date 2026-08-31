@@ -19,6 +19,7 @@ import '../../../../core/utils/number_formatter.dart';
 import 'client_chat_page.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../../core/widgets/map_or_placeholder.dart';
 
 class ClientHistoryPage extends StatefulWidget {
   const ClientHistoryPage({super.key});
@@ -889,7 +890,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                             border: Border.all(color: Colors.grey[300]!),
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: YandexMap(
+                          child: MapOrPlaceholder(mapBuilder: (_) => YandexMap(
                             onMapCreated: (controller) {
                               final deliveryLat = double.tryParse(order.deliveryLatitude);
                               final deliveryLng = double.tryParse(order.deliveryLongitude);
@@ -921,7 +922,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                                 ),
                               ),
                             ],
-                          ),
+                          )),
                         ),
                         Positioned(
                           bottom: 8,

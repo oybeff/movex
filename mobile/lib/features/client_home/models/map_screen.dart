@@ -4,6 +4,7 @@ import 'package:yandex_mapkit/yandex_mapkit.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'app_location.dart';
 import 'location_service.dart';
+import '../../../core/widgets/map_or_placeholder.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({Key? key}) : super(key: key);
@@ -56,9 +57,9 @@ class _MapScreenState extends State<MapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('messages.current_location'.tr())),
-      body: YandexMap(
+      body: MapOrPlaceholder(mapBuilder: (_) => YandexMap(
         onMapCreated: (controller) => mapControllerCompleter.complete(controller),
-      ),
+      )),
     );
   }
 }

@@ -12,6 +12,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/services/permission_service.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../../core/widgets/map_or_placeholder.dart';
 
 class AddEquipmentPage extends StatefulWidget {
   const AddEquipmentPage({super.key});
@@ -970,7 +971,7 @@ class _LocationPickerBottomSheetState extends State<_LocationPickerBottomSheet> 
                     )
                   : Stack(
                       children: [
-                        YandexMap(
+                        MapOrPlaceholder(mapBuilder: (_) => YandexMap(
                           onMapCreated: (controller) async {
                             _mapController = controller;
                             setState(() => _mapReady = true);
@@ -983,7 +984,7 @@ class _LocationPickerBottomSheetState extends State<_LocationPickerBottomSheet> 
                             }
                           },
                           onCameraPositionChanged: _onCameraPositionChanged,
-                        ),
+                        )),
 
                         // Markazda qotib turgan marker
                         Center(

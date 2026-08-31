@@ -22,6 +22,7 @@ import '../../../../core/services/permission_service.dart';
 import '../../../../core/widgets/date_range_calendar.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../../core/widgets/map_or_placeholder.dart';
 
 class RentEquipmentPage extends StatefulWidget {
   final EquipmentModel equipment;
@@ -1463,7 +1464,7 @@ class _LocationPickerBottomSheetState extends State<_LocationPickerBottomSheet> 
                     )
                   : Stack(
                       children: [
-                        YandexMap(
+                        MapOrPlaceholder(mapBuilder: (_) => YandexMap(
                           onMapCreated: (controller) async {
                             _mapController = controller;
                             setState(() => _mapReady = true);
@@ -1476,7 +1477,7 @@ class _LocationPickerBottomSheetState extends State<_LocationPickerBottomSheet> 
                             }
                           },
                           onCameraPositionChanged: _onCameraPositionChanged,
-                        ),
+                        )),
 
                         // Markazda qotib turgan marker
                         Center(

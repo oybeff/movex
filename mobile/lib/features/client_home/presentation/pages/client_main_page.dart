@@ -12,6 +12,7 @@ import '../../../../core/services/equipment_service.dart';
 import '../../../../core/models/equipment_model.dart';
 import '../../../../core/services/permission_service.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/widgets/map_or_placeholder.dart';
 
 class ClientMainPage extends StatefulWidget {
   const ClientMainPage({super.key});
@@ -29,7 +30,10 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
   Point? _currentLocation;
   final List<MapObject> _mapObjects = [];
   EquipmentModel? _selectedTech;
-  bool _showList = false;
+  // Brauzerda darhol ro'yxat ochiladi: xarita u yerda ishlamaydi
+  // (yandex_mapkit faqat Android va iOS uchun), va mijoz bo'sh ekranga
+  // tushib qolardi — ilovaning birinchi ko'rinishi shu.
+  bool _showList = MapOrPlaceholder.isWeb;
   bool _isRequestingPermission = false;
 
   // Xarita stili
@@ -747,7 +751,7 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
         children: [
           // Xarita yoki ro'yxat
           if (!_showList)
-            YandexMap(
+            MapOrPlaceholder(mapBuilder: (_) => YandexMap(
               mapType: _mapType,
               onMapCreated: (controller) {
                 _controller = controller;
@@ -763,7 +767,7 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
                 }
               },
               mapObjects: _mapObjects,
-            )
+            ))
           else
             _buildListView(),
 

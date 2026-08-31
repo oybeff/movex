@@ -19,6 +19,7 @@ import '../../../../core/services/user_service.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/constants/equipment_types.dart';
+import '../../../../core/widgets/map_or_placeholder.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -800,7 +801,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       clipBehavior: Clip.antiAlias,
                       child: Stack(
                         children: [
-                          YandexMap(
+                          MapOrPlaceholder(mapBuilder: (_) => YandexMap(
                             onMapCreated: (controller) {
                               final deliveryLat = double.tryParse(order.deliveryLatitude);
                               final deliveryLng = double.tryParse(order.deliveryLongitude);
@@ -816,7 +817,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                                 );
                               }
                             },
-                          ),
+                          )),
                           // Marker in center
                           Center(
                             child: Icon(
