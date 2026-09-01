@@ -17,6 +17,16 @@ $dateTo = $_GET['date_to'] ?? '';
 
 // Build query
 $db = getDbConnection();
+
+// Ulush qanday hisoblanayotgani — sozlamadan, qotirilgan matndan emas.
+//
+// Ilgari bu yerda "10% komissiya" deb yozilardi va jadval sarlavhasi ham
+// "Komissiya (10%)" edi. Ulush esa allaqachon qat'iy 5 000 so'm: ustunda
+// 5 000 turardi, sarlavhada 10% — admin qaysi biriga ishonishni bilmasdi.
+$commissionMode = appSettingValue($db, 'commission_mode', 'fixed');
+$commissionLabel = $commissionMode === 'percent'
+    ? 'ijara summasining ' . appSettingValue($db, 'commission_percent', '10') . '%i'
+    : 'har bir buyurtmadan qat\'iy ' . number_format((float)appSettingValue($db, 'commission_fixed', '5000'), 0, '.', ' ') . ' so\'m';
 $whereConditions = [];
 $params = [];
 
@@ -204,8 +214,10 @@ include 'includes/header.php';
         </div>
         <div class="card-body">
             <div class="alert alert-info mb-3">
-                <strong>ℹ️ Ma'lumot:</strong> Bu yerda har bir yakunlangan buyurtmadan olingan 10% komissiya ko'rsatilgan.
+                <strong>ℹ️ Ma'lumot:</strong> Bu yerda har bir yakunlangan buyurtmadan olingan ulush ko'rsatilgan —
+                hozir <strong><?= $commissionLabel ?></strong>. Ulushni texnika egasi to'laydi, mijoz emas.
                 Bu pul tizim budjetiga tegishli va marketing, texnik xizmat va boshqa xarajatlar uchun ishlatiladi.
+                Rejimni «Platforma ulushi» sahifasida almashtirish mumkin.
             </div>
 
             <div class="table-responsive">
@@ -218,7 +230,7 @@ include 'includes/header.php';
                             <th>Texnika</th>
                             <th>Owner</th>
                             <th>Buyurtma Summasi</th>
-                            <th>Komissiya (10%)</th>
+                            <th>Komissiya</th>
                             <th>Sana</th>
                         </tr>
                     </thead>

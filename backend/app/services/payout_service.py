@@ -12,12 +12,20 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.account_state import assert_not_frozen
+from app.core.messages import t
 from app.models.balance import Balance, BalanceTransaction
 from app.models.payout_request import PayoutRequest
 from app.schemas.payout import PayoutRequestCreate
 from app.services.balance_service import get_or_create_balance
 
 MIN_PAYOUT_SUM = Decimal("50000")
+
+
+def _user_language(db: Session, user_id: int):
+    """Izoh egasining tilida yoziladi — u "Amallar tarixi"da shundayligicha turadi."""
+    from app.models.user import User
+    user = db.query(User).filter(User.id == user_id).first()
+    return user.language if user else None
 
 
 def create_request(db: Session, user_id: int, data: PayoutRequestCreate) -> PayoutRequest:
@@ -127,7 +135,13 @@ def mark_paid(db: Session, request_id: int, admin_id: int, admin_comment: Option
             amount=amount,
             type="withdrawal",
             status="completed",
-            description=f"Pul yechish #{request.id} — karta {request.card_masked}",
+            # Izoh egasining "Amallar tarixi"ga tushadi — uning tilida.
+            description=t(
+                "tx.payout",
+                _user_language(db, request.user_id),
+                request_id=request.id,
+                card=request.card_masked,
+            ),
         )
     )
 

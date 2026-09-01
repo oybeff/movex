@@ -6,6 +6,7 @@ from app.models.budget_reserve import BudgetReserve
 from app.models.equipment import Equipment
 from app.core.account_state import assert_not_frozen
 from app.core.equipment_types import type_name
+from app.core.messages import normalize_language, t
 from app.schemas.order import OrderCreate, OrderUpdate
 from app.services import notification_service, pricing_service
 from fastapi import HTTPException
@@ -19,6 +20,31 @@ def _frozen_check_user(db: Session, user_id: int):
     """Muzlatish holatini tekshirish uchun foydalanuvchi."""
     from app.models.user import User
     return db.query(User).filter(User.id == user_id).first()
+
+
+def _lang(db: Session, user_id: int) -> str:
+    """
+    Tranzaksiya izohi kimga ko'rinsa — o'sha odamning tili.
+
+    Izoh bazaga tayyor matn bo'lib yoziladi va "Amallar tarixi"da shundayligicha
+    chiqadi. Ilgari u f-satr bilan faqat o'zbekcha yozilardi, va ruscha
+    interfeysdagi mijoz o'z hisobida "Buyurtma #362 yakunlandi" ko'rardi.
+    """
+    from app.models.user import User
+    user = db.query(User).filter(User.id == user_id).first()
+    return user.language if user else None
+
+
+def _what(equipment, lang=None) -> str:
+    """
+    Izohdagi texnika nomi: turi ma'lumotnomadan, keyin modeli.
+
+    Tur nomi ham izoh tilida bo'lishi kerak. type_name() sukut bo'yicha
+    o'zbekcha qaytaradi, va ruscha izohda "Заказ #408 завершён — Mini
+    ekskavator Kubota U17" chiqib qolgan edi: satr ruscha, ichidagi tur esa
+    o'zbekcha.
+    """
+    return f"{type_name(equipment.type, normalize_language(lang))} {equipment.model}"
 
 
 def create_order(
@@ -246,7 +272,8 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
             amount=db_order.frozen_amount,
             type='refund',
             status='completed',
-            description=f"Buyurtma #{db_order.id} rad etildi - {type_name(equipment.type)} {equipment.model}",
+            description=t("tx.order_rejected", _lang(db, db_order.user_id),
+                          order_id=db_order.id, what=_what(equipment, _lang(db, db_order.user_id))),
             order_id=db_order.id
         )
         db.add(refund_transaction)
@@ -273,7 +300,8 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
             amount=db_order.frozen_amount,
             type='refund',
             status='completed',
-            description=f"Buyurtma #{db_order.id} bekor qilindi - {type_name(equipment.type)} {equipment.model}",
+            description=t("tx.order_cancelled", _lang(db, db_order.user_id),
+                          order_id=db_order.id, what=_what(equipment, _lang(db, db_order.user_id))),
             order_id=db_order.id
         )
         db.add(refund_transaction)
@@ -312,7 +340,8 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
         commission_amount = Decimal(str(db_order.commission))
         owner_amount = db_order.frozen_amount - commission_amount
 
-        # Owner'ga qo'shish (faqat 90%)
+        # Owner'ga qo'shish — komissiya ayirilgandan keyin qolgani.
+        # Foiz emas: komissiya app_settings dan keladi va hozir qat'iy 5 000 so'm.
         owner_balance.balance += owner_amount
 
         # Budjetga komissiyani saqlash.
@@ -323,7 +352,10 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
             budget_reserve = BudgetReserve(
                 order_id=db_order.id,
                 amount=commission_amount,
-                description=f"Buyurtma #{db_order.id} dan komissiya - {type_name(equipment.type)} {equipment.model}"
+                # Budjet yozuvini admin panel o'qiydi, foydalanuvchi emas —
+                # shuning uchun bu yerda til sukut bo'yicha.
+                description=t("tx.order_commission", None,
+                              order_id=db_order.id, what=_what(equipment, None))
             )
             db.add(budget_reserve)
 
@@ -333,18 +365,20 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
             amount=db_order.frozen_amount,
             type='payment',
             status='completed',
-            description=f"Buyurtma #{db_order.id} yakunlandi - {type_name(equipment.type)} {equipment.model}",
+            description=t("tx.order_completed", _lang(db, db_order.user_id),
+                          order_id=db_order.id, what=_what(equipment, _lang(db, db_order.user_id))),
             order_id=db_order.id
         )
         db.add(client_transaction)
 
-        # Owner uchun 'income' transaksiyasi yaratish (faqat 90%)
+        # Owner uchun 'income' transaksiyasi — komissiyasiz summa
         owner_transaction = BalanceTransaction(
             user_id=equipment.owner_id,
             amount=owner_amount,
             type='income',
             status='completed',
-            description=f"Buyurtma #{db_order.id} dan daromad (90%) - {type_name(equipment.type)} {equipment.model}",
+            description=t("tx.order_income", _lang(db, equipment.owner_id),
+                          order_id=db_order.id, what=_what(equipment, _lang(db, equipment.owner_id))),
             order_id=db_order.id
         )
         db.add(owner_transaction)
@@ -389,7 +423,8 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
                 amount=db_order.total_amount,
                 type='payment',
                 status='completed',
-                description=f"Buyurtma #{db_order.id} bekor qilindi - {type_name(equipment.type)} {equipment.model} (qaytarildi)",
+                description=t("tx.order_cancelled_returned", _lang(db, equipment.owner_id),
+                              order_id=db_order.id, what=_what(equipment, _lang(db, equipment.owner_id))),
                 order_id=db_order.id
             )
             db.add(owner_refund_transaction)
@@ -400,7 +435,8 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
                 amount=db_order.total_amount,
                 type='refund',
                 status='completed',
-                description=f"Buyurtma #{db_order.id} bekor qilindi - {type_name(equipment.type)} {equipment.model}",
+                description=t("tx.order_cancelled", _lang(db, db_order.user_id),
+                              order_id=db_order.id, what=_what(equipment, _lang(db, db_order.user_id))),
                 order_id=db_order.id
             )
             db.add(client_refund_transaction)
@@ -416,7 +452,8 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
                 amount=db_order.frozen_amount,
                 type='refund',
                 status='completed',
-                description=f"Buyurtma #{db_order.id} bekor qilindi - {type_name(equipment.type)} {equipment.model}",
+                description=t("tx.order_cancelled", _lang(db, db_order.user_id),
+                              order_id=db_order.id, what=_what(equipment, _lang(db, db_order.user_id))),
                 order_id=db_order.id
             )
             db.add(refund_transaction)
@@ -528,7 +565,7 @@ def get_order_statistics(
 
     # Statistikalarni hisoblash
     total_orders = len(orders)
-    # Owner uchun faqat 90% (komissiyasiz) ko'rsatamiz
+    # Owner ko'radigan daromad — komissiya ayirilgandan keyin (foiz emas)
     total_income = sum(float(order.total_amount) - float(order.commission) for order in orders if order.status in ['confirmed', 'completed'])
 
     # Status bo'yicha
@@ -556,7 +593,7 @@ def get_order_statistics(
             key = order.equipment_id
             orders_by_equipment_dict[key]["count"] += 1
             if order.status in ['confirmed', 'completed']:
-                # Owner uchun faqat 90% (komissiyasiz)
+                # Komissiyasiz summa
                 owner_income = float(order.total_amount) - float(order.commission)
                 orders_by_equipment_dict[key]["income"] += owner_income
             orders_by_equipment_dict[key]["equipment_name"] = f"{type_name(equipment.type)} {equipment.model}"

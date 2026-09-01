@@ -232,6 +232,30 @@ function adminLogout() {
 }
 
 /**
+ * app_settings dan qiymat olish.
+ *
+ * Ustun JSON, PostgreSQL uni qo'shtirnoq bilan qaytaradi ("fixed") — shuning
+ * uchun json_decode kerak.
+ *
+ * commission.php da xuddi shunday settingValue() bor. Uni bu yerga
+ * ko'chirmadim ataylab: o'sha sahifa ulushni almashtiradi, ya'ni pulga
+ * tegadi, va uni tegmasdan qoldirish xavfsizroq. Ikkalasi bir xil ishlaydi.
+ */
+function appSettingValue(PDO $db, string $key, string $fallback): string {
+    $stmt = $db->prepare("SELECT value FROM app_settings WHERE key = ?");
+    $stmt->execute([$key]);
+    $row = $stmt->fetch();
+    if (!$row || $row['value'] === null) {
+        return $fallback;
+    }
+    $decoded = json_decode((string)$row['value'], true);
+    if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+        return (string)$row['value'];
+    }
+    return is_scalar($decoded) ? (string)$decoded : $fallback;
+}
+
+/**
  * Texnika turining o'qiladigan nomi.
  *
  * Bazada tur KOD bo'lib yotadi ('excavator'). Adminkada u to'g'ridan-to'g'ri

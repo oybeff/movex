@@ -127,7 +127,9 @@ class _DashboardPageState extends State<DashboardPage> {
       {'title': 'balance.current_balance'.tr(), 'value': '${NumberFormatter.formatCurrency(_currentBalance)} ${'common.currency'.tr()}', 'icon': Icons.account_balance_wallet, 'onTap': 'topup'},
       {'title': 'owner.active_equipment'.tr(), 'value': '$_activeEquipmentCount', 'icon': Icons.construction},
       {'title': 'owner.current_orders'.tr(), 'value': '$_currentOrdersCount', 'icon': Icons.assignment},
-      {'title': 'owner.income_today'.tr(), 'value': '${_todayIncome.toStringAsFixed(0)} ${'common.currency'.tr()}', 'icon': Icons.attach_money},
+      // Yuqoridagi balans kabi — razryadlar bilan. Ilgari toStringAsFixed(0)
+      // turardi va yonma-yon "1 902 400 сум" va "1902400 сум" chiqardi.
+      {'title': 'owner.income_today'.tr(), 'value': '${NumberFormatter.formatCurrency(_todayIncome)} ${'common.currency'.tr()}', 'icon': Icons.attach_money},
     ];
 
     // Vaqtinchalik region (profildan olinadi)

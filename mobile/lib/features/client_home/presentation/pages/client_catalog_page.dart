@@ -837,7 +837,10 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                     _buildPriceRow('equipment.price_per_shift'.tr(), equipment.pricePerShift!, 'common.shift'.tr()),
                   _buildPriceRow('equipment.price_per_day'.tr(), equipment.pricePerDay, 'common.day'.tr()),
                   if (equipment.deliveryPricePerKm != null && equipment.deliveryPricePerKm!.isNotEmpty)
-                    _buildPriceRow('equipment.delivery'.tr(), equipment.deliveryPricePerKm!, '${'common.currency'.tr()}/${'common.km'.tr()}'),
+                    // Faqat "km": _buildPriceRow o'zi "so'm/" ni qo'shadi.
+                    // Ilgari bu yerda "so'm/km" uzatilardi va kartochkada
+                    // "15 000 сум/сум/км" chiqardi.
+                    _buildPriceRow('equipment.delivery'.tr(), equipment.deliveryPricePerKm!, 'common.km'.tr()),
 
                   const SizedBox(height: 24),
 

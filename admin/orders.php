@@ -69,8 +69,16 @@ $stats = $db->query("
         COUNT(CASE WHEN status = 'confirmed' THEN 1 END) as confirmed,
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
         COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled,
-        COALESCE(SUM(total_amount), 0) as total_revenue,
-        COALESCE(SUM(commission), 0) as total_commission
+        -- FAQAT yakunlangan buyurtmalar bo'yicha.
+        --
+        -- Ilgari bu yerda butun jadval bo'yicha SUM turardi — bekor qilingan,
+        -- rad etilgan va hali tugamagan buyurtmalar ham qo'shilardi. Natijada
+        -- sahifa 149 635 300 deb ko'rsatardi, aslida
+        -- budjetga tushgani 27 230 000 edi: besh yarim barobar farq. Platforma
+        -- pulni faqat buyurtma yakunlanganda oladi, boshqa holatda hech narsa
+        -- olmaydi — demak sanoqqa ham faqat o'shalar kirishi kerak.
+        COALESCE(SUM(CASE WHEN status = 'completed' THEN total_amount END), 0) as total_revenue,
+        COALESCE(SUM(CASE WHEN status = 'completed' THEN commission END), 0) as total_commission
     FROM orders
 ")->fetch();
 
@@ -126,9 +134,9 @@ include 'includes/header.php';
         <div class="stat-card">
             <div class="stat-header">
                 <div>
-                    <div class="stat-title">Umumiy Daromad</div>
+                    <div class="stat-title">Yakunlangan buyurtmalar summasi</div>
                     <div class="stat-value"><?= number_format($stats['total_revenue'], 0) ?></div>
-                    <div class="stat-change">so'm</div>
+                    <div class="stat-change">so'm — faqat yakunlanganlar</div>
                 </div>
                 <div class="stat-icon success">💰</div>
             </div>
@@ -137,9 +145,9 @@ include 'includes/header.php';
         <div class="stat-card">
             <div class="stat-header">
                 <div>
-                    <div class="stat-title">Platforma Komissiyasi</div>
+                    <div class="stat-title">Platforma ulushi</div>
                     <div class="stat-value"><?= number_format($stats['total_commission'], 0) ?></div>
-                    <div class="stat-change">so'm</div>
+                    <div class="stat-change">so'm — faqat yakunlanganlardan</div>
                 </div>
                 <div class="stat-icon info">💵</div>
             </div>

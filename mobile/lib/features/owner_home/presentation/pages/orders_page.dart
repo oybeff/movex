@@ -138,10 +138,22 @@ class _OrdersPageState extends State<OrdersPage> {
           children: [
             Text('messages.confirm_order_question'.tr()),
             const SizedBox(height: 8),
-            Text('${'messages.amount'.tr()}: ${order.totalAmount.toStringAsFixed(0)} ${'common.currency'.tr()}'),
+            // Razryadlar bilan: ilgari "Сумма: 1907400 сум" chiqardi.
+            Text('${'messages.amount'.tr()}: ${NumberFormatter.formatCurrency(order.totalAmount)} ${'common.currency'.tr()}'),
             const SizedBox(height: 4),
+            // Tasdiqlashda pul HECH QAYERGA ketmaydi — u mijozda muzlatilgan
+            // qoladi va faqat yakunlanganda o'tadi. Ilgari bu yerda "pul
+            // hisobingizga o'tkaziladi" deb yozilardi, bu esa yolg'on edi.
             Text(
               'messages.frozen_money_transferred'.tr(),
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'orders.money_moves_on_complete'.tr(),
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,
@@ -284,7 +296,30 @@ class _OrdersPageState extends State<OrdersPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('messages.complete_order'.tr()),
-        content: Text('messages.complete_order_question'.tr()),
+        // Pul aynan shu yerda harakat qiladi, shuning uchun summalar aytiladi.
+        // Ilgari dialog faqat "texnika bo'sh holatga o'tadi" derdi — pul
+        // haqida bir og'iz so'z yo'q edi, ustiga-ustak texnikani kod
+        // ataylab bo'shatmaydi (order_service: holatni ega o'zi boshqaradi).
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('messages.complete_order_question'.tr()),
+            const SizedBox(height: 8),
+            Text(
+              'orders.payout_after_commission'.tr(args: [
+                NumberFormatter.formatCurrency(order.totalAmount - order.commission),
+                NumberFormatter.formatCurrency(order.commission),
+              ]),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'orders.equipment_status_manual'.tr(),
+              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),

@@ -304,13 +304,15 @@ def list_feed(
     """
     expire_stale(db)
 
+    # Taxtada — faqat begonalarning OCHIQ e'lonlari.
+    #
+    # Ilgari bu yerga o'zi olgan e'lonlar ham tushardi, va ijrochining javob
+    # bergan ishlari begonalarning e'lonlari orasida yo'qolib ketardi: ularni
+    # ro'yxat bo'lib ko'radigan joy umuman yo'q edi. Endi ular "Mening"
+    # ichida, shuning uchun taxtadan olib tashlandi — aks holda ikki joyda
+    # takrorlanardi.
     query = _with_photos(db.query(Listing)).filter(
-        or_(
-            Listing.status == "open",
-            # O'zi olgani — faqat javob kutayotgani yoki ishdagisi
-            (Listing.taken_by == viewer.id)
-            & Listing.status.in_(("taken", "confirmed")),
-        ),
+        Listing.status == "open",
         Listing.client_id != viewer.id,
     )
     if equipment_type:
@@ -322,10 +324,17 @@ def list_feed(
 
 
 def list_mine(db: Session, user: User, skip: int = 0, limit: int = 50) -> List[Listing]:
+    """
+    "Mening" — odamning O'Z ishlari: joylashtirgani ham, javob bergani ham.
+
+    E'lon ikki tomonlama, shuning uchun bitta odam bir e'londa muallif,
+    boshqasida ijrochi bo'ladi. Ilgari bu yerda faqat muallifligi qaytardi,
+    va javob berganini ro'yxat bo'lib ko'rish mumkin emas edi.
+    """
     expire_stale(db)
     return (
         _with_photos(db.query(Listing))
-        .filter(Listing.client_id == user.id)
+        .filter(or_(Listing.client_id == user.id, Listing.taken_by == user.id))
         .order_by(Listing.created_at.desc())
         .offset(skip)
         .limit(limit)

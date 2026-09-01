@@ -88,14 +88,29 @@ class EquipmentService {
   }
 
   /// Texnika rasmini yuklash
+  /// Texnika rasmini yuklash.
+  ///
+  /// Webda faylning yo'li yo'q — faqat mazmuni bor, shuning uchun `bytes`
+  /// ham qabul qilinadi (e'lonlardagi uploadPhoto shunday ishlaydi).
   Future<void> uploadEquipmentPhoto({
     required int equipmentId,
-    required String filePath,
+    String? filePath,
+    List<int>? bytes,
+    String fileName = 'photo.jpg',
     bool isPrimary = false,
   }) async {
     try {
+      final MultipartFile part;
+      if (bytes != null) {
+        part = MultipartFile.fromBytes(bytes, filename: fileName);
+      } else if (filePath != null) {
+        part = await MultipartFile.fromFile(filePath, filename: fileName);
+      } else {
+        throw ArgumentError('kerak: filePath yoki bytes');
+      }
+
       final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(filePath),
+        'file': part,
         'is_primary': isPrimary,
       });
 

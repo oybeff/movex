@@ -2,12 +2,26 @@ from sqlalchemy.orm import Session
 from app.models.balance import Balance, BalanceTransaction
 from app.schemas.balance import BalanceTransactionCreate, BalanceTransactionUpdate
 from app.services import payment_providers
+from app.core.messages import t
 from fastapi import HTTPException
 from decimal import Decimal
 
 # Ruxsat etilgan usullar ro'yxati payment_providers da turadi — yangi tizim
 # qo'shilganda faqat o'sha faylni tahrirlash kifoya.
 SELF_SERVICE_PAYMENT_METHODS = payment_providers.SELF_SERVICE_PAYMENT_METHODS
+
+
+def _user_language(db: Session, user_id: int):
+    """
+    Izoh kimga ko'rinsa — o'sha odamning tili.
+
+    "Amallar tarixi"dagi satr bazaga tayyor holda yoziladi, shuning uchun til
+    yozish paytida hal bo'ladi. Ilgari bu yerda f-satr turardi va ruscha
+    interfeysda "Hisob to'ldirish - click" chiqardi.
+    """
+    from app.models.user import User
+    user = db.query(User).filter(User.id == user_id).first()
+    return user.language if user else None
 
 
 def get_or_create_balance(db: Session, user_id: int):
@@ -116,7 +130,8 @@ def top_up_balance(
         amount=transaction_data.amount,
         transaction_type="topup",
         payment_method=transaction_data.payment_method,
-        description=f"Hisob to'ldirish - {transaction_data.payment_method}",
+        description=t("tx.topup", _user_language(db, user_id),
+                      method=transaction_data.payment_method),
         status="pending",
         phone_number=transaction_data.phone_number
     )

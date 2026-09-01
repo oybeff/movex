@@ -255,7 +255,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Haqiqatdan ham buyurtma berasizmi?',
+              'rent.confirm_question'.tr(),
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -279,13 +279,13 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                   const SizedBox(height: 8),
                   _buildConfirmationRow(
                     Icons.access_time,
-                    'Davomiyligi',
+                    'rent.duration'.tr(),
                     'rent.days_count'.plural(_totalDays),
                   ),
                   const SizedBox(height: 8),
                   _buildConfirmationRow(
                     Icons.location_on,
-                    'Manzil',
+                    'rent.address'.tr(),
                     _deliveryAddress ?? 'common.selected'.tr(),
                   ),
                   const Divider(height: 24),
@@ -300,7 +300,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              '💡 Pul hisobingizdan muzlatiladi va buyurtma tugagandan keyin egaga o\'tkaziladi.',
+              'rent.escrow_note'.tr(),
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
@@ -327,7 +327,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
               ),
             ),
             child: Text(
-              'Ha, buyurtma beraman',
+              'rent.confirm_yes'.tr(),
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -665,7 +665,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Muzlatilgan summa:',
+                        'rent.frozen_amount'.tr(),
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade700,
@@ -753,8 +753,11 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
             Text('${'messages.available_balance'.tr()}: ${NumberFormatter.formatCurrency(availableBalance)} ${'common.currency'.tr()}'),
             Text('${'messages.required_amount'.tr()}: ${NumberFormatter.formatCurrency(requiredAmount)} ${'common.currency'.tr()}'),
             const SizedBox(height: 8),
+            // Ilgari bu yerda 'messages.topup_balance_title' turardi — u ham,
+            // pastdagi tugma ham "Пополнение счета" deb tarjima qilinadi, va
+            // dialogda bir xil satr ikki marta chiqardi.
             Text(
-              'messages.topup_balance_title'.tr(),
+              'messages.topup_to_continue'.tr(),
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,
@@ -778,7 +781,7 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
               backgroundColor: AppColors.primaryGreen,
             ),
             child: Text(
-              'balance.topup'.tr(),
+              'balance.topup_button'.tr(),
               style: const TextStyle(color: Colors.white),
             ),
           ),
@@ -1486,47 +1489,53 @@ class _LocationPickerBottomSheetState extends State<_LocationPickerBottomSheet> 
                           onCameraPositionChanged: _onCameraPositionChanged,
                         )),
 
-                        // Markazda qotib turgan marker
-                        Center(
-                          child: Icon(
-                            Icons.location_on,
-                            size: 48,
-                            color: Colors.red,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withValues(alpha: 0.4),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                        // Marker va zoom tugmalari — faqat xarita bo'lganda.
+                        // Brauzerda xarita yo'q, uning o'rnida tushuntirish
+                        // turadi: uning ustidagi "+/−" hech narsa qilmasdi va
+                        // ilova buzilgandek ko'rinardi.
+                        if (!MapOrPlaceholder.isWeb) ...[
+                          // Markazda qotib turgan marker
+                          Center(
+                            child: Icon(
+                              Icons.location_on,
+                              size: 48,
+                              color: Colors.red,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
 
-                        // Zoom controls
-                        Positioned(
-                          right: 16,
-                          bottom: 100,
-                          child: Column(
-                            children: [
-                              FloatingActionButton.small(
-                                heroTag: 'zoom_in',
-                                onPressed: _zoomIn,
-                                backgroundColor: Colors.white,
-                                child: const Icon(Icons.add, color: Colors.black87),
-                              ),
-                              const SizedBox(height: 8),
-                              FloatingActionButton.small(
-                                heroTag: 'zoom_out',
-                                onPressed: _zoomOut,
-                                backgroundColor: Colors.white,
-                                child: const Icon(Icons.remove, color: Colors.black87),
-                              ),
-                            ],
+                          // Zoom controls
+                          Positioned(
+                            right: 16,
+                            bottom: 100,
+                            child: Column(
+                              children: [
+                                FloatingActionButton.small(
+                                  heroTag: 'zoom_in',
+                                  onPressed: _zoomIn,
+                                  backgroundColor: Colors.white,
+                                  child: const Icon(Icons.add, color: Colors.black87),
+                                ),
+                                const SizedBox(height: 8),
+                                FloatingActionButton.small(
+                                  heroTag: 'zoom_out',
+                                  onPressed: _zoomOut,
+                                  backgroundColor: Colors.white,
+                                  child: const Icon(Icons.remove, color: Colors.black87),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                        ],
 
                         // My location button
-                        if (_currentUserLocation != null)
+                        if (!MapOrPlaceholder.isWeb && _currentUserLocation != null)
                           Positioned(
                             right: 16,
                             bottom: 200,

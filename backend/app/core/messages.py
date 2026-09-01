@@ -149,6 +149,53 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "«{title}» yakunlangan deb belgilandi",
         "ru": "«{title}» отмечено как выполненное",
     },
+    # --- pul harakati izohlari ---
+    #
+    # Bu satrlar bazaga tayyor matn bo'lib yoziladi va ilovada "Amallar
+    # tarixi"da shundayligicha ko'rinadi. Shuning uchun ular OLUVCHINING
+    # tilida yoziladi: mijozning izohi — mijoz tilida, eganiki — ega tilida.
+    #
+    # Daromad izohida foiz YO'Q. Ilgari "(90%)" deb yozilardi, komissiya esa
+    # allaqachon qat'iy 5 000 so'm: 1 907 400 dan 1 902 400 qoldi, bu 90% emas.
+    # Foizni umuman yozmaymiz — u sozlamadan o'zgaradi, matn esa bazada qotib
+    # qoladi va yana yolg'on bo'lib qoladi.
+    "tx.order_completed": {
+        "uz": "Buyurtma #{order_id} yakunlandi — {what}",
+        "ru": "Заказ #{order_id} завершён — {what}",
+    },
+    "tx.order_income": {
+        "uz": "Buyurtma #{order_id} dan daromad — {what}",
+        "ru": "Доход с заказа #{order_id} — {what}",
+    },
+    "tx.order_commission": {
+        "uz": "Buyurtma #{order_id} dan komissiya — {what}",
+        "ru": "Комиссия с заказа #{order_id} — {what}",
+    },
+    "tx.order_rejected": {
+        "uz": "Buyurtma #{order_id} rad etildi — {what}",
+        "ru": "Заказ #{order_id} отклонён — {what}",
+    },
+    "tx.order_cancelled": {
+        "uz": "Buyurtma #{order_id} bekor qilindi — {what}",
+        "ru": "Заказ #{order_id} отменён — {what}",
+    },
+    "tx.order_cancelled_returned": {
+        "uz": "Buyurtma #{order_id} bekor qilindi, pul qaytarildi — {what}",
+        "ru": "Заказ #{order_id} отменён, деньги возвращены — {what}",
+    },
+    "tx.topup": {
+        "uz": "Hisobni to'ldirish — {method}",
+        "ru": "Пополнение счёта — {method}",
+    },
+    "tx.payout": {
+        "uz": "Pul yechish #{request_id} — karta {card}",
+        "ru": "Вывод средств #{request_id} — карта {card}",
+    },
+    # Faqat OTP_TEST_MODE da ko'rinadi, prodda hech qachon chiqmaydi.
+    "test_mode.code": {
+        "uz": "TEST REJIMI: tasdiqlash kodi {code}",
+        "ru": "ТЕСТОВЫЙ РЕЖИМ: код подтверждения {code}",
+    },
 }
 
 

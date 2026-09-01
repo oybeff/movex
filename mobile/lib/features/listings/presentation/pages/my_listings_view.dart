@@ -27,6 +27,8 @@ class MyListingsViewState extends State<MyListingsView> {
   final ListingService _service = ListingService();
 
   List<ListingModel> _items = [];
+  List<ListingModel> _posted = [];   // o'zi joylagani — muallif tomoni
+  List<ListingModel> _taken = [];    // o'zi javob bergani — ijrochi tomoni
   bool _isLoading = true;
   int? _busyId;
 
@@ -47,6 +49,12 @@ class MyListingsViewState extends State<MyListingsView> {
           if (byWaiting != 0) return byWaiting;
           return b.createdAt.compareTo(a.createdAt);
         });
+        // Ikki bo'lim: o'zi joylagani va o'zi javob bergani. Server endi
+        // ikkalasini ham qaytaradi — ilgari javob berganini ro'yxat bo'lib
+        // ko'radigan joy umuman yo'q edi, u faqat taxtada begonalar orasida
+        // ko'rinardi.
+        _posted = items.where((e) => !e.takenByMe).toList();
+        _taken = items.where((e) => e.takenByMe).toList();
         _items = items;
         _isLoading = false;
       });
@@ -122,12 +130,35 @@ class MyListingsViewState extends State<MyListingsView> {
             onRefresh: _load,
             child: _items.isEmpty
                 ? _empty()
-                : ListView.builder(
+                : ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-                    itemCount: _items.length,
-                    itemBuilder: (context, i) => _card(_items[i]),
+                    children: [
+                      // Sarlavhalar faqat ikkala bo'lim ham bo'lganda: bitta
+                      // ro'yxat ustida "Men joylashtirdim" ortiqcha shovqin.
+                      if (_taken.isNotEmpty && _posted.isNotEmpty)
+                        _sectionTitle('listings.section_posted'.tr()),
+                      for (final listing in _posted) _card(listing),
+                      if (_taken.isNotEmpty && _posted.isNotEmpty)
+                        _sectionTitle('listings.section_taken'.tr()),
+                      for (final listing in _taken) _card(listing),
+                    ],
                   ),
           );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 12),
+      child: Text(
+        text.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          letterSpacing: 0.8,
+          fontWeight: FontWeight.w700,
+          color: Colors.grey[600],
+        ),
+      ),
+    );
   }
 
   Widget _card(ListingModel listing) {
@@ -136,9 +167,10 @@ class MyListingsViewState extends State<MyListingsView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Kimdir olgan bo'lsa — bu mijoz uchun eng muhim xabar, uni
-        // kartochkadan yuqorida, alohida ko'rsatamiz.
-        if (listing.isTaken)
+        // Kimdir olgan bo'lsa — bu muallif uchun eng muhim xabar, uni
+        // kartochkadan yuqorida, alohida ko'rsatamiz. Ijrochiga esa aksincha:
+        // u kutayotgan tomon, unga "tasdiqlang" deyish noto'g'ri.
+        if (listing.isTaken && !listing.takenByMe)
           Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -183,6 +215,51 @@ class MyListingsViewState extends State<MyListingsView> {
   }
 
   List<Widget> _actionsFor(ListingModel listing) {
+    // --- ijrochi tomoni: e'lonni O'ZI olgan ---
+    if (listing.takenByMe) {
+      // Olindi, lekin muallif hali tasdiqlagani yo'q: telefon yopiq,
+      // qiladigan ish yo'q — shuni ochiq aytamiz.
+      if (listing.isTaken) {
+        return [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'listings.waiting_client_confirm'.tr(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.deepOrange,
+                  fontWeight: FontWeight.w600),
+            ),
+          ),
+        ];
+      }
+      if (listing.isConfirmed) {
+        return [
+          ElevatedButton(
+            onPressed: () => _act(listing, _service.finish, 'listings.finished',
+                confirmKey: 'listings.finish_confirm'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('listings.finish'.tr(),
+                style: const TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w600)),
+          ),
+        ];
+      }
+      return const [];
+    }
+
+    // --- muallif tomoni ---
     if (listing.isTaken) {
       return [
         OutlinedButton(

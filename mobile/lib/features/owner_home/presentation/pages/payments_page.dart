@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:movex_go/core/constants/app_colors.dart';
 import '../../../../core/services/payment_service.dart';
+import '../../../../core/services/balance_service.dart';
 import '../../../../core/models/payment_model.dart';
 import '../../../../core/utils/number_formatter.dart';
 import 'payout_page.dart';
@@ -15,6 +16,7 @@ class PaymentsPage extends StatefulWidget {
 
 class _PaymentsPageState extends State<PaymentsPage> {
   final PaymentService _paymentService = PaymentService();
+  final BalanceService _balanceService = BalanceService();
   List<PaymentModel> _payments = [];
   bool _isLoading = true;
 
@@ -33,37 +35,42 @@ class _PaymentsPageState extends State<PaymentsPage> {
     try {
       setState(() => _isLoading = true);
 
+      // Daromad `payments` jadvalida emas, balans tranzaksiyalarida yotadi:
+      // buyurtma yakunlanganda 'income' yozuvi yaratiladi. Ilgari bu ekran
+      // faqat `payments` ni sanardi va egada 1 902 400 bo'lgani holda hamma
+      // joyda "0 сум" ko'rsatardi — bu esa aynan pul yechiladigan ekran.
+      //
+      // "Joriy balans" endi umuman sanalmaydi: u balansdan olinadi, xuddi
+      // bosh sahifadagidek. Ikkita manba bir xil raqamni boshqacha ko'rsatsa,
+      // odam qaysi biriga ishonishni bilmaydi.
       final payments = await _paymentService.getPayments();
+      final transactions = await _balanceService.getTransactionHistory();
+      final balanceInfo = await _balanceService.getBalance();
 
-      // Statistikani hisoblash
       final now = DateTime.now();
       double todayTotal = 0.0;
       double monthTotal = 0.0;
       double yearTotal = 0.0;
-      double balance = 0.0;
 
-      for (var payment in payments) {
-        if (payment.status == 'paid' && payment.paidAt != null) {
-          final paidDate = payment.paidAt!;
-          final amount = payment.amount - payment.commission;
+      for (final transaction in transactions) {
+        if (transaction.type != 'income' || transaction.status != 'completed') {
+          continue;
+        }
+        final created = transaction.createdAt;
+        final amount = transaction.amount;
 
-          if (paidDate.year == now.year &&
-              paidDate.month == now.month &&
-              paidDate.day == now.day) {
-            todayTotal += amount;
-          }
-
-          if (paidDate.year == now.year && paidDate.month == now.month) {
+        if (created.year == now.year) {
+          yearTotal += amount;
+          if (created.month == now.month) {
             monthTotal += amount;
+            if (created.day == now.day) {
+              todayTotal += amount;
+            }
           }
-
-          if (paidDate.year == now.year) {
-            yearTotal += amount;
-          }
-
-          balance += amount;
         }
       }
+
+      final balance = balanceInfo.balance;
 
       setState(() {
         _payments = payments;

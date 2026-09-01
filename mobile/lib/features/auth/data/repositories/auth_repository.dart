@@ -51,6 +51,25 @@ class AuthRepository {
       await prefs.setString("role", role);
       await prefs.setInt("user_id", userId);
 
+      // Tanlangan tilni profilga yuboramiz.
+      //
+      // Til ilova ochilishida, KIRISHDAN OLDIN tanlanadi — o'sha paytda token
+      // yo'q, shuning uchun serverga aytib bo'lmaydi. Ilgari til faqat
+      // sozlamalardan almashtirilganda yuborilardi, va ruscha interfeysdagi
+      // odamning users.language da "uz" bo'lib qolaverardi. Server esa
+      // xabarnoma, push va pul harakati izohlarini shu maydonga qarab yozadi
+      // — natijada ruscha interfeysda o'zbekcha matn chiqardi.
+      //
+      // Xato bo'lsa jim o'tamiz: kirish shu sababli buzilmasligi kerak.
+      final selectedLanguage = prefs.getString("selected_language");
+      if (selectedLanguage != null) {
+        try {
+          await _dio.put("/users/me", data: {"language": selectedLanguage});
+        } catch (_) {
+          // til keyingi safar sinxronlanadi
+        }
+      }
+
       return {
         "success": true,
         "token": token,

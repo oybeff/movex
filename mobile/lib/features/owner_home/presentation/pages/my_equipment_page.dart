@@ -66,10 +66,16 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
   }
 
   List<EquipmentModel> get filteredList {
+    // Qidiruv kartochkada KO'RINADIGAN nom bo'yicha ham ishlashi kerak.
+    // Sarlavha "Ямобур Soilmec SR30" — turi + modeli, odam esa "ямо" deb
+    // qidiradi. Ilgari faqat modeli bo'yicha qidirilardi va "Texnika
+    // topilmadi" chiqardi. Mijoz katalogida bu allaqachon shunday.
+    final query = _searchController.text.trim().toLowerCase();
     return equipmentList.where((eq) {
-      final matchesSearch = (eq.model ?? '')
-          .toLowerCase()
-          .contains(_searchController.text.toLowerCase());
+      final matchesSearch = query.isEmpty ||
+          EquipmentTypes.label(eq.type).toLowerCase().contains(query) ||
+          eq.type.toLowerCase().contains(query) ||
+          (eq.model ?? '').toLowerCase().contains(query);
       final matchesFilter =
           _filterStatus == 'all' || eq.status == _filterStatus;
       return matchesSearch && matchesFilter;

@@ -222,11 +222,17 @@ include 'includes/header.php';
                             <td>
                                 <?php
                                 $isDeposit = in_array($transaction['type'], ['topup', 'income', 'refund']);
+                                // Ro'yxat TO'LIQ bo'lishi shart: yetishmagan turda pastdagi
+                                // `?? $transaction['type']` xom kodni chiqaradi. Aynan shunday
+                                // "withdrawal" jadvalda inglizcha bo'lib turardi — qolganlari
+                                // o'zbekcha bo'lgani holda. Bazada 5 tur bor: topup, refund,
+                                // income, payment, withdrawal.
                                 $typeLabel = [
                                     'topup' => '📥 To\'ldirish',
                                     'income' => '💰 Daromad',
                                     'payment' => '📤 To\'lov',
-                                    'refund' => '↩️ Qaytarish'
+                                    'refund' => '↩️ Qaytarish',
+                                    'withdrawal' => '🏧 Pul yechish'
                                 ];
                                 ?>
                                 <?php if ($isDeposit): ?>

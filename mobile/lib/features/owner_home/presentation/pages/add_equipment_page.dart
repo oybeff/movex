@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb, Uint8List;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -6,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:toastification/toastification.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/services/equipment_service.dart';
 import '../../../../core/models/equipment_model.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -45,6 +47,12 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
 
   String _status = 'available';
   bool _isLoading = false;
+  // Texnika hali yaratilmagan, id yo'q — shuning uchun rasmlar avval shu
+  // yerda saqlanadi va yaratilgandan keyin yuklanadi. Formada rasm maydoni
+  // umuman yo'q edi, garchi server tomoni tayyor bo'lsa ham.
+  final ImagePicker _picker = ImagePicker();
+  final List<_PendingPhoto> _pendingPhotos = [];
+  bool _isPickingPhoto = false;
   Point? _selectedLocation;
   AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
   bool _strictMode = true; // Barcha maydonlar majburiy bo'lishi uchun
@@ -146,7 +154,22 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
         status: _status,
       );
 
-      await _equipmentService.createEquipment(equipment);
+      final created = await _equipmentService.createEquipment(equipment);
+
+      // Rasmlar texnika yaratilgandan keyin yuklanadi: ularga id kerak.
+      // Rasm yuklanmasa ham texnika yaratilgan qoladi — buni yo'qotmaymiz.
+      for (int i = 0; i < _pendingPhotos.length; i++) {
+        try {
+          await _equipmentService.uploadEquipmentPhoto(
+            equipmentId: created.id,
+            bytes: _pendingPhotos[i].bytes,
+            fileName: _pendingPhotos[i].name,
+            isPrimary: i == 0,
+          );
+        } catch (_) {
+          // yuklanmadi — texnikani baribir saqlaymiz
+        }
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -267,7 +290,7 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                   }).toList(),
                   onChanged: (value) => setState(() => _selectedType = value),
                   validator: (value) =>
-                      value == null ? 'Bu maydon to\'ldirilishi shart' : null,
+                      value == null ? 'errors.required_field'.tr() : null,
                 ),
               ),
               const SizedBox(height: 16),
@@ -279,10 +302,10 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                   maxLength: 100,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Bu maydon to\'ldirilishi shart';
+                      return 'errors.required_field'.tr();
                     }
                     if (value.length > 100) {
-                      return 'Maksimal 100 ta belgi';
+                      return 'errors.max_length'.tr(args: ['100']);
                     }
                     return null;
                   },
@@ -303,13 +326,10 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                           LengthLimitingTextInputFormatter(4), // Maksimal 4 raqam
                         ],
                         validator: (value) {
-                          if (_strictMode && (value == null || value.isEmpty)) {
-                            return 'Bu maydon to\'ldirilishi shart';
-                          }
                           if (value != null && value.isNotEmpty) {
                             final year = int.tryParse(value);
                             if (year == null) {
-                              return 'Noto\'g\'ri yil';
+                              return 'errors.invalid_year'.tr();
                             }
                             final currentYear = DateTime.now().year;
                             if (year <= 1900 || year > currentYear) {
@@ -331,13 +351,10 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                         keyboardType: TextInputType.number,
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         validator: (value) {
-                          if (_strictMode && (value == null || value.isEmpty)) {
-                            return 'Bu maydon to\'ldirilishi shart';
-                          }
                           if (value != null && value.isNotEmpty) {
                             final power = int.tryParse(value);
                             if (power == null) {
-                              return 'Noto\'g\'ri qiymat';
+                              return 'errors.invalid_value'.tr();
                             }
                             if (power < 0) {
                               return 'errors.negative_not_allowed'.tr();
@@ -359,19 +376,16 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                   validator: (value) {
-                    if (_strictMode && (value == null || value.isEmpty)) {
-                      return 'Bu maydon to\'ldirilishi shart';
-                    }
                     if (value != null && value.isNotEmpty) {
                       final price = double.tryParse(value);
                       if (price == null) {
-                        return 'Noto\'g\'ri narx';
+                        return 'errors.invalid_price'.tr();
                       }
                       if (price <= 0) {
                         return 'errors.price_positive'.tr();
                       }
                       if (price > 99999999.99) {
-                        return 'Narx juda katta';
+                        return 'errors.price_too_large'.tr();
                       }
                     }
                     return null;
@@ -387,19 +401,16 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                   validator: (value) {
-                    if (_strictMode && (value == null || value.isEmpty)) {
-                      return 'Bu maydon to\'ldirilishi shart';
-                    }
                     if (value != null && value.isNotEmpty) {
                       final price = double.tryParse(value);
                       if (price == null) {
-                        return 'Noto\'g\'ri narx';
+                        return 'errors.invalid_price'.tr();
                       }
                       if (price <= 0) {
                         return 'errors.price_positive'.tr();
                       }
                       if (price > 99999999.99) {
-                        return 'Narx juda katta';
+                        return 'errors.price_too_large'.tr();
                       }
                     }
                     return null;
@@ -416,17 +427,17 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                   inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Bu maydon to\'ldirilishi shart';
+                      return 'errors.required_field'.tr();
                     }
                     final price = double.tryParse(value);
                     if (price == null) {
-                      return 'Noto\'g\'ri narx';
+                      return 'errors.invalid_price'.tr();
                     }
                     if (price <= 0) {
                       return 'errors.price_positive'.tr();
                     }
                     if (price > 99999999.99) {
-                      return 'Narx juda katta';
+                      return 'errors.price_too_large'.tr();
                     }
                     return null;
                   },
@@ -447,13 +458,13 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                     if (value != null && value.isNotEmpty) {
                       final price = double.tryParse(value);
                       if (price == null) {
-                        return 'Noto\'g\'ri narx';
+                        return 'errors.invalid_price'.tr();
                       }
                       if (price < 0) {
                         return 'errors.negative_not_allowed'.tr();
                       }
                       if (price > 99999999.99) {
-                        return 'Narx juda katta';
+                        return 'errors.price_too_large'.tr();
                       }
                     }
                     return null;
@@ -470,10 +481,10 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                   maxLength: 200,
                   validator: (value) {
                     if (_strictMode && (value == null || value.isEmpty)) {
-                      return 'Bu maydon to\'ldirilishi shart';
+                      return 'errors.required_field'.tr();
                     }
                     if (value != null && value.length > 200) {
-                      return 'Maksimal 200 ta belgi';
+                      return 'errors.max_length'.tr(args: ['200']);
                     }
                     return null;
                   },
@@ -497,7 +508,7 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                               if (value != null && value.isNotEmpty) {
                                 final lat = double.tryParse(value);
                                 if (lat == null) {
-                                  return 'Noto\'g\'ri qiymat';
+                                  return 'errors.invalid_value'.tr();
                                 }
                                 if (lat < -90 || lat > 90) {
                                   return 'errors.latitude_range'.tr();
@@ -519,7 +530,7 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                               if (value != null && value.isNotEmpty) {
                                 final lon = double.tryParse(value);
                                 if (lon == null) {
-                                  return 'Noto\'g\'ri qiymat';
+                                  return 'errors.invalid_value'.tr();
                                 }
                                 if (lon < -180 || lon > 180) {
                                   return 'errors.longitude_range'.tr();
@@ -555,13 +566,10 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: (value) {
-                    if (_strictMode && (value == null || value.isEmpty)) {
-                      return 'Bu maydon to\'ldirilishi shart';
-                    }
                     if (value != null && value.isNotEmpty) {
                       final payload = int.tryParse(value);
                       if (payload == null) {
-                        return 'Noto\'g\'ri qiymat';
+                        return 'errors.invalid_value'.tr();
                       }
                       if (payload < 0) {
                         return 'errors.negative_not_allowed'.tr();
@@ -579,11 +587,8 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                   decoration: _inputDecoration('equipment.dimensions'.tr()),
                   maxLength: 100,
                   validator: (value) {
-                    if (_strictMode && (value == null || value.isEmpty)) {
-                      return 'Bu maydon to\'ldirilishi shart';
-                    }
                     if (value != null && value.length > 100) {
-                      return 'Maksimal 100 ta belgi';
+                      return 'errors.max_length'.tr(args: ['100']);
                     }
                     return null;
                   },
@@ -598,15 +603,17 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                   maxLines: 4,
                   maxLength: 1000,
                   validator: (value) {
-                    if (_strictMode && (value == null || value.isEmpty)) {
-                      return 'Bu maydon to\'ldirilishi shart';
-                    }
                     if (value != null && value.length > 1000) {
-                      return 'Maksimal 1000 ta belgi';
+                      return 'errors.max_length'.tr(args: ['1000']);
                     }
                     return null;
                   },
                 ),
+              ),
+              const SizedBox(height: 16),
+              _buildSection(
+                title: 'equipment.photos'.tr(),
+                child: _photoRow(),
               ),
               const SizedBox(height: 16),
               _buildSection(
@@ -704,6 +711,135 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Tayyor MATN qabul qiladi, kalit emas: kalitni o'zgaruvchiga solib
+  /// keyin .tr() qilish — loyihada allaqachon bo'lgan xato (ekranda
+  /// kalitning o'zi chiqardi). verify_translations.py buni ushlaydi.
+  void _photoError(String message) {
+    if (!mounted) return;
+    toastification.show(
+      context: context,
+      type: ToastificationType.error,
+      style: ToastificationStyle.flatColored,
+      title: Text(message),
+      autoCloseDuration: const Duration(seconds: 3),
+      alignment: Alignment.topCenter,
+    );
+  }
+
+  /// Rasm tanlash. Texnika hali yo'q, shuning uchun faqat xotirada saqlaymiz —
+  /// yuklash saqlashdan keyin bo'ladi.
+  Future<void> _pickPhoto() async {
+    if (_pendingPhotos.length >= 6) {
+      _photoError('listings.photo_limit'.tr());
+      return;
+    }
+    final XFile? picked;
+    try {
+      picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1600,
+        imageQuality: 82,
+      );
+    } catch (_) {
+      _photoError('listings.photo_pick_failed'.tr());
+      return;
+    }
+    if (picked == null) return;
+
+    setState(() => _isPickingPhoto = true);
+    try {
+      // Baytlarni darhol o'qiymiz: webda ham, telefonda ham bir xil ishlaydi
+      // va ko'rinishni Image.memory bilan chizish mumkin.
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        _pendingPhotos.add(_PendingPhoto(name: picked!.name, bytes: bytes));
+        _isPickingPhoto = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isPickingPhoto = false);
+      _photoError('listings.photo_pick_failed'.tr());
+    }
+  }
+
+  Widget _photoRow() {
+    return SizedBox(
+      height: 88,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (int i = 0; i < _pendingPhotos.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(
+                      _pendingPhotos[i].bytes,
+                      width: 88,
+                      height: 88,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    top: 2,
+                    right: 2,
+                    child: InkWell(
+                      onTap: () => setState(() => _pendingPhotos.removeAt(i)),
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(Icons.close,
+                            size: 14, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          InkWell(
+            onTap: _isPickingPhoto ? null : _pickPhoto,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.black12),
+              ),
+              child: _isPickingPhoto
+                  ? const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: AppColors.primaryGreen),
+                      ),
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.add_a_photo_outlined,
+                            color: Colors.grey),
+                        const SizedBox(height: 4),
+                        Text('equipment.add_photo'.tr(),
+                            style: const TextStyle(
+                                fontSize: 10, color: Colors.grey)),
+                      ],
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1162,3 +1298,10 @@ class _LocationPickerBottomSheetState extends State<_LocationPickerBottomSheet> 
   }
 }
 
+/// Saqlashgacha xotirada turgan rasm.
+class _PendingPhoto {
+  final String name;
+  final Uint8List bytes;
+
+  const _PendingPhoto({required this.name, required this.bytes});
+}

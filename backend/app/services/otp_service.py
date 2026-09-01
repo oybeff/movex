@@ -149,9 +149,18 @@ class OTPService:
                         "expires_in": settings.OTP_EXPIRY_MINUTES * 60,
                     }
 
+                # Matn foydalanuvchi tilida. Hisob hali bo'lmasligi mumkin
+                # (ro'yxatdan o'tish), u holda til sukut bo'yicha.
+                from app.core.messages import t
+
+                lang = (
+                    self.db.query(User.language)
+                    .filter(User.phone == clean_phone)
+                    .scalar()
+                )
                 return {
                     "success": True,
-                    "message": f"TEST MODE: Tasdiqlash kodi: {otp_code}",
+                    "message": t("test_mode.code", lang, code=otp_code),
                     "expires_in": settings.OTP_EXPIRY_MINUTES * 60,
                     "otp_code": otp_code  # Only in test mode
                 }

@@ -30,13 +30,24 @@ KEY_IN_CODE = re.compile(r"'([a-z0-9_]+(?:\.[a-z0-9_]+)+)'\s*\.\s*(?:tr|plural)\
 
 # O'zbekcha ekanini bildiruvchi so'zlar. Ruscha yoki inglizcha matnda
 # uchramaydi, shuning uchun yolg'on ishorat bermaydi.
+#
+# DIQQAT: ro'yxat to'liq bo'lishi SHART. Tekshiruv aynan shu so'zlar bo'yicha
+# qidiradi, va ro'yxatda yo'q so'z jimgina o'tib ketadi. Aynan shu tarzda
+# texnika formalaridagi 40 ta satr yashirinib yotdi: "Bu maydon to'ldirilishi
+# shart", "Noto'g'ri qiymat", "Maksimal 100 ta belgi" — ularning birortasi
+# ham ro'yxatda yo'q edi, va tekshiruv "o'zbekcha satr yo'q" deb yashil
+# rapport berardi. Yangi validator matni qo'shsangiz — so'zini shu yerga ham
+# qo'shing.
 UZBEK_WORDS = re.compile(
     r"\b("
     r"Yetkaz\w*|Sana|Tanla\w*|Buyurtma\w*|Texnika\w*|Jami|Holat\w*|Komissiya|"
     r"Xarita\w*|Joylashuv\w*|Hisob\w*|Barcha\w*|Bekor|Summa\w*|Joriy|Masalan|"
     r"tahlili|daromad|ma'lumot\w*|Bo'sh|Band|Tanlangan|to'ldirish|"
     r"bo'yicha|xabarlar|egasi|narxi|oralig'\w*|tafsilotlari|kiriting|"
-    r"yo'q|Qo'sh\w*|Saqlash|O'chirish|Tahrirlash|Mijoz|so'm|Kutilmoqda"
+    r"yo'q|Qo'sh\w*|Saqlash|O'chirish|Tahrirlash|Mijoz|so'm|Kutilmoqda|"
+    # validator matnlari — 2026-09-01 da topilgan bo'shliq
+    r"maydon\w*|shart|qiymat\w*|Noto'g'ri|Maksimal|belgi|Iltimos|Kamida|"
+    r"Faqat|juda\s+katta|majburiy|to'ldirilishi|tasdiqla\w*|yuklan\w*"
     r")\b"
 )
 

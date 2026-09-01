@@ -159,7 +159,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                             ),
                             const SizedBox(height: 24),
                             Text(
-                              'Statistika yuklanmoqda...',
+                              'owner.statistics_loading'.tr(),
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 16,

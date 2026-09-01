@@ -94,7 +94,8 @@
     "equipment": "Texnika",
     "income": "Daromad",
     "franchisee_stats": "Franchayzi statistikasi",
-    "listings": "E'lonlar"
+    "listings": "E'lonlar",
+    "statistics_loading": "Statistika yuklanmoqda…"
   },
   "settings": {
     "title": "Sozlamalar",
@@ -291,7 +292,10 @@
     "title": "Buyurtmalar",
     "total": "Jami",
     "total_price": "Umumiy narx",
-    "user": "Foydalanuvchi"
+    "user": "Foydalanuvchi",
+    "payout_after_commission": "Sizga tushadi: {} so'm (platforma komissiyasi {} so'm)",
+    "equipment_status_manual": "Texnika holatini «Mening texnikam» bo'limida o'zingiz o'zgartirasiz.",
+    "money_moves_on_complete": "Pul buyurtmani yakunlaganingizda o'tkaziladi."
   },
   "order": {
     "id": "Buyurtma ID",
@@ -476,7 +480,13 @@
     "title": "Ijaraga olish",
     "total": "Jami",
     "total_days": "Jami kunlar",
-    "total_payment": "Jami to'lov"
+    "total_payment": "Jami to'lov",
+    "confirm_question": "Haqiqatdan ham buyurtma berasizmi?",
+    "duration": "Davomiyligi",
+    "address": "Manzil",
+    "escrow_note": "💡 Pul hisobingizda muzlatiladi va buyurtma tugagach egaga o'tkaziladi.",
+    "confirm_yes": "Ha, buyurtma beraman",
+    "frozen_amount": "Muzlatilgan summa:"
   },
   "chat": {
     "title": "Xabarlar",
@@ -529,7 +539,12 @@
     "something_went_wrong": "Xatolik yuz berdi",
     "unknown": "Noma'lum xatolik",
     "unknown_error": "Noma'lum xato yuz berdi",
-    "year_range": "Yil 1900 dan {} gacha bo'lishi kerak"
+    "year_range": "Yil 1900 dan {} gacha bo'lishi kerak",
+    "invalid_value": "Noto'g'ri qiymat",
+    "max_length": "Maksimal {} ta belgi",
+    "invalid_year": "Noto'g'ri yil",
+    "invalid_price": "Noto'g'ri narx",
+    "price_too_large": "Narx juda katta"
   },
   "messages": {
     "all": "Hammasi",
@@ -551,7 +566,7 @@
     "client_phone_not_found": "Mijoz telefon raqami topilmadi",
     "complete": "Yakunlash",
     "complete_order": "Buyurtmani yakunlash",
-    "complete_order_question": "Buyurtmani yakunlaysizmi? Texnika bo'sh holatga o'tadi.",
+    "complete_order_question": "Buyurtmani yakunlaysizmi? Pul komissiya ayirilgandan keyin hisobingizga tushadi.",
     "complete_payment_in_click": "Click ilovasida to'lovni amalga oshiring",
     "confirm": "Tasdiqlash",
     "confirm_order": "Buyurtmani tasdiqlash",
@@ -569,7 +584,7 @@
     "fill_all_fields": "Iltimos, barcha majburiy maydonlarni to'ldiring",
     "fill_required_fields": "Iltimos, barcha majburiy maydonlarni to'ldiring",
     "frozen_money_returned": "Muzlatilgan pul clientga qaytariladi",
-    "frozen_money_transferred": "Muzlatilgan pul hisobingizga o'tkaziladi",
+    "frozen_money_transferred": "Mijozning puli ish yakunlanguncha muzlatilgan qoladi",
     "insufficient_balance": "Hisobingizda yetarli mablag' yo'q",
     "invalid_amount": "Noto'g'ri summa",
     "invalid_phone": "Noto'g'ri telefon raqam. Iltimos, profilingizda telefon raqamni to'g'rilang.",
@@ -630,7 +645,9 @@
     "success": "Muvaffaqiyatli",
     "topup_balance": "Hisobni to'ldirish",
     "topup_balance_title": "Hisobni to'ldirish",
-    "type_model_required": "Type va Model majburiy maydonlar"
+    "type_model_required": "Type va Model majburiy maydonlar",
+    "test_mode_code": "TEST REJIMI: tasdiqlash kodi {}",
+    "topup_to_continue": "Buyurtma berish uchun hisobni to'ldiring"
   },
   "statistics": {
     "active_orders": "Faol buyurtmalar",
@@ -799,10 +816,10 @@
     "status_cancelled": "Bekor qilindi",
     "status_expired": "Muddati tugadi",
     "take": "Buyurtmani olish",
-    "taken_wait_confirm": "Siz javob berdingiz. Mijoz tasdiqlashini kutamiz",
+    "taken_wait_confirm": "Siz javob berdingiz. Muallif tasdiqlashini kutamiz",
     "taken_by": "Javob berdi",
     "waiting_your_confirm": "Kimdir javob berdi — ijrochini tasdiqlang",
-    "waiting_client_confirm": "Mijoz hali tasdiqlagani yo'q. Telefon tasdiqdan keyin ochiladi",
+    "waiting_client_confirm": "Muallif hali tasdiqlagani yo'q. Telefon tasdiqdan keyin ochiladi",
     "confirm": "Tasdiqlash",
     "confirmed": "Ijrochi tasdiqlandi",
     "reject": "Rad etish",
@@ -821,6 +838,8 @@
     "feed_hint_filtered": "Bu texnika turi bo'yicha e'lon yo'q. Hammasini ko'rish uchun filtrni oling.",
     "section_title": "E'lonlar",
     "tab_board": "Taxta",
-    "tab_mine": "Meniki"
+    "tab_mine": "Meniki",
+    "section_posted": "Men joylashtirdim",
+    "section_taken": "Men javob berdim"
   }
 }
