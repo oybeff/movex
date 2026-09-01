@@ -8,27 +8,118 @@ $currentPage = 'users';
 $message = '';
 $messageType = '';
 
-// Handle user deletion
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete') {
-    $userId = intval($_POST['user_id']);
-    
+/**
+ * Foydalanuvchini boshqarish.
+ *
+ * Admin hisobiga hech qanday amal qo'llanmaydi: o'zini yoki boshqa adminni
+ * bloklab qo'yish paneldan chiqib ketishning eng oson yo'li.
+ *
+ * Parolni KO'RSATIB bo'lmaydi — u bcrypt bilan shifrlangan va shunday
+ * bo'lishi kerak. Faqat yangisini o'rnatish mumkin.
+ */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
+    $action = $_POST['action'];
+    $userId = intval($_POST['user_id'] ?? 0);
     $db = getDbConnection();
-    $user = $db->prepare("SELECT role FROM users WHERE id = ?");
-    $user->execute([$userId]);
-    $userData = $user->fetch();
-    
-    if ($userData && $userData['role'] !== 'admin') {
-        $stmt = $db->prepare("DELETE FROM users WHERE id = ?");
-        if ($stmt->execute([$userId])) {
-            $message = 'Foydalanuvchi o\'chirildi!';
-            $messageType = 'success';
-        } else {
-            $message = 'Xatolik yuz berdi!';
-            $messageType = 'error';
-        }
-    } else {
-        $message = 'Admin foydalanuvchini o\'chirish mumkin emas!';
+
+    $target = $db->prepare("SELECT id, role, full_name FROM users WHERE id = ?");
+    $target->execute([$userId]);
+    $userData = $target->fetch();
+
+    if (!$userData) {
+        $message = 'Foydalanuvchi topilmadi';
         $messageType = 'error';
+    } elseif ($userData['role'] === 'admin') {
+        $message = 'Admin hisobiga bu amalni qo\'llab bo\'lmaydi';
+        $messageType = 'error';
+    } else {
+        switch ($action) {
+            case 'delete':
+                $db->prepare("DELETE FROM users WHERE id = ?")->execute([$userId]);
+                $message = 'Foydalanuvchi o\'chirildi';
+                $messageType = 'success';
+                break;
+
+            case 'block':
+                $reason = trim((string)($_POST['reason'] ?? ''));
+                $db->prepare("UPDATE users SET is_blocked = true, blocked_reason = ? WHERE id = ?")
+                   ->execute([$reason !== '' ? $reason : null, $userId]);
+                $message = 'Hisob bloklandi — endi kira olmaydi';
+                $messageType = 'success';
+                break;
+
+            case 'unblock':
+                $db->prepare("UPDATE users SET is_blocked = false, blocked_reason = NULL WHERE id = ?")
+                   ->execute([$userId]);
+                $message = 'Blok olib tashlandi';
+                $messageType = 'success';
+                break;
+
+            case 'freeze':
+                $db->prepare("UPDATE users SET is_frozen = true WHERE id = ?")->execute([$userId]);
+                $message = 'Hisob muzlatildi — ko\'radi, lekin yangi amal qila olmaydi';
+                $messageType = 'success';
+                break;
+
+            case 'unfreeze':
+                $db->prepare("UPDATE users SET is_frozen = false WHERE id = ?")->execute([$userId]);
+                $message = 'Muzlatish olib tashlandi';
+                $messageType = 'success';
+                break;
+
+            case 'set_role':
+                $role = $_POST['role'] ?? '';
+                if (!in_array($role, ['client', 'owner'], true)) {
+                    $message = 'Rol faqat mijoz yoki ega bo\'lishi mumkin';
+                    $messageType = 'error';
+                } else {
+                    $db->prepare("UPDATE users SET role = ? WHERE id = ?")->execute([$role, $userId]);
+                    $message = 'Rol o\'zgartirildi';
+                    $messageType = 'success';
+                }
+                break;
+
+            case 'set_phone':
+                $phone = preg_replace('/\D/', '', (string)($_POST['phone'] ?? ''));
+                if (strlen($phone) !== 12 || strpos($phone, '998') !== 0) {
+                    $message = 'Telefon 998 bilan boshlanib, 12 raqamdan iborat bo\'lsin';
+                    $messageType = 'error';
+                } else {
+                    // Raqam band bo'lmasin: unique cheklov 500 xato berardi
+                    $busy = $db->prepare("SELECT id FROM users WHERE phone = ? AND id <> ?");
+                    $busy->execute([$phone, $userId]);
+                    if ($busy->fetch()) {
+                        $message = 'Bu raqam boshqa hisobda band';
+                        $messageType = 'error';
+                    } else {
+                        $db->prepare("UPDATE users SET phone = ? WHERE id = ?")
+                           ->execute([$phone, $userId]);
+                        $message = 'Telefon raqam o\'zgartirildi';
+                        $messageType = 'success';
+                    }
+                }
+                break;
+
+            case 'set_password':
+                $newPassword = (string)($_POST['password'] ?? '');
+                if (strlen($newPassword) < 6) {
+                    $message = 'Parol kamida 6 belgidan iborat bo\'lsin';
+                    $messageType = 'error';
+                } else {
+                    // bcrypt — backend'dagi passlib bilan bir xil format
+                    $hash = password_hash($newPassword, PASSWORD_BCRYPT);
+                    $db->prepare("UPDATE users SET password_hash = ? WHERE id = ?")
+                       ->execute([$hash, $userId]);
+                    $message = 'Parol o\'rnatildi. Uni foydalanuvchiga o\'zingiz ayting — '
+                             . 'panel parolni saqlamaydi va keyin ko\'rsata olmaydi.';
+                    $messageType = 'success';
+                }
+                break;
+
+            default:
+                $message = 'Noma\'lum amal';
+                $messageType = 'error';
+        }
     }
 }
 
@@ -77,6 +168,10 @@ $query = "
         phone, 
         role, 
         created_at,
+        is_blocked,
+        is_frozen,
+        blocked_reason,
+        last_login_at,
         (SELECT COUNT(*) FROM orders WHERE user_id = users.id) as orders_count,
         (SELECT balance FROM balances WHERE user_id = users.id) as balance
     FROM users 
@@ -156,9 +251,10 @@ include 'includes/header.php';
                             <th>Telefon</th>
                             <th>Email</th>
                             <th>Rol</th>
+                            <th>Holat</th>
                             <th>Buyurtmalar</th>
                             <th>Balans</th>
-                            <th>Ro'yxatdan o'tgan</th>
+                            <th>Oxirgi kirish</th>
                             <th>Amallar</th>
                         </tr>
                     </thead>
@@ -187,22 +283,121 @@ include 'includes/header.php';
                                     <?= $roleLabel ?>
                                 </span>
                             </td>
+                            <td>
+                                <?php if ($user['is_blocked']): ?>
+                                    <span class="badge badge-danger">Bloklangan</span>
+                                    <?php if (!empty($user['blocked_reason'])): ?>
+                                        <br><small class="text-muted"><?= htmlspecialchars($user['blocked_reason']) ?></small>
+                                    <?php endif; ?>
+                                <?php elseif ($user['is_frozen']): ?>
+                                    <span class="badge badge-warning">Muzlatilgan</span>
+                                    <br><small class="text-muted">faqat ko'radi</small>
+                                <?php else: ?>
+                                    <span class="badge badge-success">Faol</span>
+                                <?php endif; ?>
+                            </td>
                             <td><?= number_format($user['orders_count']) ?></td>
                             <td><?= number_format($user['balance'] ?? 0, 0) ?> so'm</td>
-                            <td><?= formatDate($user['created_at'], 'd.m.Y') ?></td>
                             <td>
+                                <?php if (!empty($user['last_login_at'])): ?>
+                                    <?= formatDate($user['last_login_at'], 'd.m.Y H:i') ?>
+                                <?php else: ?>
+                                    <small class="text-muted">hech qachon</small>
+                                <?php endif; ?>
+                                <br><small class="text-muted">ro'yxat: <?= formatDate($user['created_at'], 'd.m.Y') ?></small>
+                            </td>
+                            <td style="white-space: nowrap;">
                                 <?php if ($user['role'] !== 'admin'): ?>
+                                    <button type="button" class="btn btn-sm btn-secondary"
+                                            onclick="document.getElementById('u<?= $user['id'] ?>').classList.toggle('hidden')">
+                                        ⚙️ Boshqarish
+                                    </button>
                                     <form method="POST" action="" style="display: inline;"
-                                          onsubmit="return confirm('Bu foydalanuvchini o\'chirmoqchimisiz?');">
+                                          onsubmit="return confirm('Bu foydalanuvchini butunlay o\'chirmoqchimisiz? Qaytarib bo\'lmaydi.');">
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                        <button type="submit" class="btn btn-sm btn-danger">
-                                            🗑️
-                                        </button>
+                                        <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
                                     </form>
+                                <?php else: ?>
+                                    <small class="text-muted">admin</small>
                                 <?php endif; ?>
                             </td>
                         </tr>
+                        <?php if ($user['role'] !== 'admin'): ?>
+                        <tr id="u<?= $user['id'] ?>" class="hidden">
+                            <td colspan="10" style="background: #fafafa;">
+                                <div style="display: flex; flex-wrap: wrap; gap: 22px; padding: 14px 6px;">
+
+                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
+                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                        <?php if ($user['is_blocked']): ?>
+                                            <input type="hidden" name="action" value="unblock">
+                                            <button class="btn btn-sm btn-success">🔓 Blokni ochish</button>
+                                        <?php else: ?>
+                                            <input type="hidden" name="action" value="block">
+                                            <div>
+                                                <label style="font-size:12px;">Blok sababi</label>
+                                                <input type="text" name="reason" placeholder="ixtiyoriy"
+                                                       style="max-width:190px;">
+                                            </div>
+                                            <button class="btn btn-sm btn-danger">🚫 Bloklash</button>
+                                        <?php endif; ?>
+                                    </form>
+
+                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
+                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                        <?php if ($user['is_frozen']): ?>
+                                            <input type="hidden" name="action" value="unfreeze">
+                                            <button class="btn btn-sm btn-success">▶️ Muzlatishni olish</button>
+                                        <?php else: ?>
+                                            <input type="hidden" name="action" value="freeze">
+                                            <button class="btn btn-sm btn-warning">❄️ Muzlatish</button>
+                                        <?php endif; ?>
+                                    </form>
+
+                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
+                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                        <input type="hidden" name="action" value="set_role">
+                                        <div>
+                                            <label style="font-size:12px;">Rol</label>
+                                            <select name="role">
+                                                <option value="client" <?= $user['role']==='client'?'selected':'' ?>>Mijoz</option>
+                                                <option value="owner" <?= $user['role']==='owner'?'selected':'' ?>>Egasi</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn btn-sm btn-primary">Saqlash</button>
+                                    </form>
+
+                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
+                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                        <input type="hidden" name="action" value="set_phone">
+                                        <div>
+                                            <label style="font-size:12px;">Telefon</label>
+                                            <input type="text" name="phone" value="<?= htmlspecialchars($user['phone']) ?>"
+                                                   style="max-width:160px;">
+                                        </div>
+                                        <button class="btn btn-sm btn-primary">Saqlash</button>
+                                    </form>
+
+                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
+                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                        <input type="hidden" name="action" value="set_password">
+                                        <div>
+                                            <label style="font-size:12px;">Yangi parol</label>
+                                            <input type="text" name="password" placeholder="kamida 6 belgi"
+                                                   style="max-width:170px;">
+                                        </div>
+                                        <button class="btn btn-sm btn-primary">O'rnatish</button>
+                                    </form>
+
+                                </div>
+                                <div style="padding: 0 6px 12px; font-size: 12px; color: #777;">
+                                    Parolni ko'rsatib bo'lmaydi — u shifrlangan holda saqlanadi.
+                                    Yangisini o'rnating va foydalanuvchiga o'zingiz ayting.
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
                         <?php endforeach; ?>
                     </tbody>
                 </table>

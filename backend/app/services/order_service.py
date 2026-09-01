@@ -4,6 +4,7 @@ from app.models.order import Order
 from app.models.balance import Balance, BalanceTransaction
 from app.models.budget_reserve import BudgetReserve
 from app.models.equipment import Equipment
+from app.core.account_state import assert_not_frozen
 from app.core.equipment_types import type_name
 from app.schemas.order import OrderCreate, OrderUpdate
 from app.services import notification_service, pricing_service
@@ -12,6 +13,12 @@ from decimal import Decimal
 from datetime import datetime, date
 from typing import Optional
 from collections import defaultdict
+
+
+def _frozen_check_user(db: Session, user_id: int):
+    """Muzlatish holatini tekshirish uchun foydalanuvchi."""
+    from app.models.user import User
+    return db.query(User).filter(User.id == user_id).first()
 
 
 def create_order(
@@ -37,6 +44,9 @@ def create_order(
     HTTP qatlamidan bu yerga tushishi mumkin emas: aks holda mijoz o'z
     narxini yuborib to'lovni nolga tushirardi.
     """
+    # Muzlatilgan hisob buyurtma bera olmaydi
+    assert_not_frozen(_frozen_check_user(db, user_id))
+
     # 1. Balansni olish yoki yaratish
     balance = db.query(Balance).filter(Balance.user_id == user_id).first()
     if not balance:

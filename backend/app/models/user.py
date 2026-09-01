@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Numeric, String, Text, DateTime
+from sqlalchemy import Boolean, Column, Integer, Numeric, String, Text, DateTime
 from sqlalchemy.sql import func
 from sqlalchemy import CheckConstraint
 from app.db.base import Base
@@ -37,6 +37,19 @@ class User(Base):
     # telefon ekranida uni qayta tarjima qilib bo'lmaydi. Shuning uchun til
     # bazada ham turishi kerak.
     language = Column(String(5), nullable=False, default="uz")
+
+    # Adminkadan boshqariladi.
+    #
+    # is_blocked — umuman kira olmaydi. Kirish paytida tekshiriladi.
+    # is_frozen  — kiradi va hammasini ko'radi, lekin buyurtma bera olmaydi,
+    #              taklif yubora olmaydi, e'lon qo'ya olmaydi va pul yecha
+    #              olmaydi. Nizoli holatlar uchun: odamni yo'qotmaymiz,
+    #              lekin pul harakatini to'xtatamiz.
+    is_blocked = Column(Boolean, nullable=False, default=False)
+    is_frozen = Column(Boolean, nullable=False, default=False)
+    blocked_reason = Column(Text, nullable=True)
+
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

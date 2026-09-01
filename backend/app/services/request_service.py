@@ -18,6 +18,7 @@ from typing import List, Optional
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.account_state import assert_not_frozen
 from app.core.equipment_types import is_valid_type, type_name
 from app.core.messages import normalize_language
 from app.models.equipment import Equipment
@@ -91,6 +92,7 @@ def expire_stale(db: Session) -> int:
 
 def create_request(db: Session, client: User, data) -> EquipmentRequest:
     """Mijoz zayavka beradi va radiusdagi egalarga xabar ketadi."""
+    assert_not_frozen(client)
     # Zayavkada tur QAT'IY tekshiriladi va normalize_type ishlatilmaydi.
     #
     # normalize_type notanish matnni jimgina 'other' ga aylantiradi. Katalog
@@ -288,6 +290,8 @@ def cancel_request(db: Session, request: EquipmentRequest, user: User) -> Equipm
 
 def create_offer(db: Session, request_id: int, owner: User, data) -> RequestOffer:
     """Egasi zayavkaga o'z narxi bilan javob beradi."""
+    assert_not_frozen(owner)
+
     request = db.query(EquipmentRequest).filter(EquipmentRequest.id == request_id).first()
     if request is None:
         raise HTTPException(404, "Zayavka topilmadi")

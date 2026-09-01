@@ -36,6 +36,18 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    # Bloklangan hisob TOKEN BILAN HAM ishlamaydi.
+    #
+    # Faqat kirish paytida tekshirish yetarli emas: token 30 kun yashaydi,
+    # ya'ni bloklashdan oldin kirgan odam yana bir oy ishlayverardi.
+    if getattr(user, "is_blocked", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(user.blocked_reason
+                    or "Hisobingiz bloklangan. Administrator bilan bog'laning."),
+        )
+
     return user
 
 # ========================
@@ -147,6 +159,24 @@ def verify_otp(request: OTPVerifyRequest, db: Session = Depends(get_db)):
             user_id=None,
             role=None
         )
+
+    # Bloklangan hisobga token berilmaydi. Sababi ko'rsatiladi — odam
+    # nima bo'lganini bilishi va administratorga murojaat qilishi kerak.
+    if getattr(user, "is_blocked", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(user.blocked_reason
+                    or "Hisobingiz bloklangan. Administrator bilan bog'laning."),
+        )
+
+    # Oxirgi kirish vaqti — adminkada "kim qachon kirgan" uchun.
+    # Xato bo'lsa kirishni buzmaymiz: bu shunchaki statistika.
+    try:
+        from datetime import datetime, timezone
+        user.last_login_at = datetime.now(timezone.utc)
+        db.commit()
+    except Exception:
+        db.rollback()
 
     # User exists - this is login flow
     # Create access token

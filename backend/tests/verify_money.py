@@ -9,6 +9,7 @@ Ishga tushirish (server ishlab turgan holda):
     venv/bin/python tests/verify_money.py
 """
 import hashlib
+import random
 import re
 from datetime import datetime, timedelta
 
@@ -80,10 +81,37 @@ def click_callback(path, click_trans_id, merchant_trans_id, amount, action, extr
     return requests.post(f"{API}/balance/{path}", data=payload).json()
 
 
-def free_dates(days=1):
-    """Band bo'lmagan sanalar — testni qayta ishga tushirganda to'qnashmasligi uchun."""
-    start = datetime.now() + timedelta(days=400 + datetime.now().microsecond % 2000)
-    return start.strftime("%Y-%m-%d"), (start + timedelta(days=days)).strftime("%Y-%m-%d")
+def free_dates(days=1, equipment_id=None, headers=None):
+    """
+    Band bo'lmagan sanalar.
+
+    Ilgari sana joriy vaqtdan tasodifiy siljish bilan olinardi. Testlar ko'p
+    marta ishlagach bazada yuzlab buyurtma to'planadi va siljish oralig'i
+    to'lib qoladi — "bu sanada texnika band" xatosi chiqadi. Bu mahsulot
+    xatosi emas, test o'zini o'zi bloklaydi.
+
+    Endi oraliq ancha keng va tasodifiy; band bo'lsa boshqa sana olinadi.
+    """
+    for _ in range(25):
+        offset = random.randint(500, 30000)
+        start = datetime.now() + timedelta(days=offset)
+        s = start.strftime("%Y-%m-%d")
+        e = (start + timedelta(days=days)).strftime("%Y-%m-%d")
+        if equipment_id is None or headers is None:
+            return s, e
+        busy = requests.get(
+            f"{API}/orders/", headers=headers, params={"limit": 100}
+        ).json()
+        clash = any(
+            o.get("equipment_id") == equipment_id
+            and o.get("status") in ("pending", "confirmed")
+            and o.get("start_date", "") <= e
+            and o.get("end_date", "") >= s
+            for o in (busy if isinstance(busy, list) else [])
+        )
+        if not clash:
+            return s, e
+    return s, e
 
 
 client = token(CLIENT_PHONE)

@@ -108,6 +108,47 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "Zayavka #{request_id} mijoz tomonidan bekor qilindi",
         "ru": "Заявка #{request_id} отменена клиентом",
     },
+    # --- e'lonlar ---
+    "listing_taken.title": {
+        "uz": "E'loningizni oldilar",
+        "ru": "На ваше объявление откликнулись",
+    },
+    "listing_taken.body": {
+        "uz": "{who} «{title}» e'loningizni olmoqchi. Tasdiqlaysizmi?",
+        "ru": "{who} готов взяться за «{title}». Подтвердите исполнителя.",
+    },
+    "listing_confirmed.title": {
+        "uz": "Sizni tasdiqladilar",
+        "ru": "Клиент подтвердил вас",
+    },
+    "listing_confirmed.body": {
+        "uz": "«{title}» bo'yicha ishni boshlashingiz mumkin. Telefon endi ochiq.",
+        "ru": "Можно приступать к «{title}». Телефон клиента теперь открыт.",
+    },
+    "listing_rejected.title": {
+        "uz": "Mijoz boshqasini tanladi",
+        "ru": "Клиент выбрал другого",
+    },
+    "listing_rejected.body": {
+        "uz": "«{title}» e'loni yana ochiq",
+        "ru": "Объявление «{title}» снова открыто",
+    },
+    "listing_cancelled.title": {
+        "uz": "E'lon bekor qilindi",
+        "ru": "Объявление отменено",
+    },
+    "listing_cancelled.body": {
+        "uz": "«{title}» e'loni mijoz tomonidan bekor qilindi",
+        "ru": "Клиент отменил объявление «{title}»",
+    },
+    "listing_done.title": {
+        "uz": "Ish yakunlandi",
+        "ru": "Работа завершена",
+    },
+    "listing_done.body": {
+        "uz": "«{title}» yakunlangan deb belgilandi",
+        "ru": "«{title}» отмечено как выполненное",
+    },
 }
 
 

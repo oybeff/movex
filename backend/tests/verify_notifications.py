@@ -10,6 +10,7 @@ Ishga tushirish (server ishlab turgan holda):
     venv/bin/python tests/verify_notifications.py
 """
 import hashlib
+import random
 import re
 from datetime import datetime, timedelta
 
@@ -73,9 +74,37 @@ def topup_via_click(hdr, amount, click_id):
     cb("click/complete", 1, {"merchant_prepare_id": prep.get("merchant_prepare_id", tx_id)})
 
 
-def free_dates(days=1):
-    start = datetime.now() + timedelta(days=700 + datetime.now().microsecond % 3000)
-    return start.strftime("%Y-%m-%d"), (start + timedelta(days=days)).strftime("%Y-%m-%d")
+def free_dates(days=1, equipment_id=None, headers=None):
+    """
+    Band bo'lmagan sanalar.
+
+    Ilgari sana joriy vaqtdan tasodifiy siljish bilan olinardi. Testlar ko'p
+    marta ishlagach bazada yuzlab buyurtma to'planadi va siljish oralig'i
+    to'lib qoladi — "bu sanada texnika band" xatosi chiqadi. Bu mahsulot
+    xatosi emas, test o'zini o'zi bloklaydi.
+
+    Endi oraliq ancha keng va tasodifiy; band bo'lsa boshqa sana olinadi.
+    """
+    for _ in range(25):
+        offset = random.randint(500, 30000)
+        start = datetime.now() + timedelta(days=offset)
+        s = start.strftime("%Y-%m-%d")
+        e = (start + timedelta(days=days)).strftime("%Y-%m-%d")
+        if equipment_id is None or headers is None:
+            return s, e
+        busy = requests.get(
+            f"{API}/orders/", headers=headers, params={"limit": 100}
+        ).json()
+        clash = any(
+            o.get("equipment_id") == equipment_id
+            and o.get("status") in ("pending", "confirmed")
+            and o.get("start_date", "") <= e
+            and o.get("end_date", "") >= s
+            for o in (busy if isinstance(busy, list) else [])
+        )
+        if not clash:
+            return s, e
+    return s, e
 
 
 client = token(CLIENT_PHONE)

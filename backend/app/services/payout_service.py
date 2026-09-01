@@ -11,6 +11,7 @@ from typing import List, Optional
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.account_state import assert_not_frozen
 from app.models.balance import Balance, BalanceTransaction
 from app.models.payout_request import PayoutRequest
 from app.schemas.payout import PayoutRequestCreate
@@ -20,6 +21,10 @@ MIN_PAYOUT_SUM = Decimal("50000")
 
 
 def create_request(db: Session, user_id: int, data: PayoutRequestCreate) -> PayoutRequest:
+    # Muzlatilgan hisob pul yecha olmaydi — nizoli holatlar aynan shuning
+    # uchun muzlatiladi.
+    from app.models.user import User
+    assert_not_frozen(db.query(User).filter(User.id == user_id).first())
     amount = Decimal(str(data.amount)).quantize(Decimal("0.01"))
 
     if amount < MIN_PAYOUT_SUM:

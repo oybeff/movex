@@ -9,6 +9,7 @@ from app.routes import (
     equipment,
     orders,
     requests as request_routes,
+    listings,
     chats,
     messages,
     reviews,
@@ -115,6 +116,7 @@ app.include_router(companies.router, prefix="/companies", tags=["Companies"])
 app.include_router(equipment.router, prefix="/equipment", tags=["Equipment"])
 app.include_router(orders.router, prefix="/orders", tags=["Orders"])
 app.include_router(request_routes.router, prefix="/requests", tags=["Requests"])
+app.include_router(listings.router, prefix="/listings", tags=["Listings"])
 app.include_router(chats.router, prefix="/chats", tags=["Chats"])
 app.include_router(messages.router, prefix="/messages", tags=["Messages"])
 app.include_router(reviews.router, prefix="/reviews", tags=["Reviews"])

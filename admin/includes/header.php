@@ -8,6 +8,10 @@ $adminUser = getAdminUser();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $pageTitle ?? 'Admin Panel' ?> - Movex GO</title>
     <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        /* Foydalanuvchini boshqarish paneli — bosilganda ochiladi */
+        tr.hidden { display: none; }
+    </style>
 </head>
 <body>
     <div class="dashboard">
