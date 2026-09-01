@@ -88,17 +88,49 @@ def main() -> int:
     import re
     from pathlib import Path
 
-    root = Path(__file__).resolve().parent.parent / "app"
+    backend_root = Path(__file__).resolve().parent.parent / "app"
     leaks = []
     raw_in_text = re.compile(r'f"[^"]*\{\s*equipment\.type\s*\}')
-    for path in root.rglob("*.py"):
+    for path in backend_root.rglob("*.py"):
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             if raw_in_text.search(line):
-                leaks.append(f"{path.relative_to(root)}:{number}")
+                leaks.append(f"backend/app/{path.relative_to(backend_root)}:{number}")
+
+    # ILOVA ham tekshiriladi.
+    #
+    # Ilgari bu tekshiruv faqat backend fayllariga qarardi, va aynan shuning
+    # uchun to'rtinchi holatni o'tkazib yubordi: mijozning asosiy ekranida
+    # texnika kartochkasi sarlavhasi "excavator", "mini_excavator" deb
+    # chiqardi — lotin harflarida, ma'lumotnoma kodi ko'rinishida. Brauzerda
+    # ko'rinib qoldi, tekshiruvda emas.
+    #
+    # Ikki naqsh qidiriladi:
+    #   '${tech.type}'  — satr ichida
+    #   Text(\n  tech.type,  — to'g'ridan-to'g'ri Text ga
+    # Faqat texnikaga tegishli o'zgaruvchilar: transaction.type yoki
+    # method.type — boshqa soha, ularni ushlash kerak emas.
+    mobile_root = Path(__file__).resolve().parent.parent.parent / "mobile" / "lib"
+    equipmentish = r"[A-Za-z_]*(?:[Tt]ech|[Ee]quipment|\beq)[A-Za-z0-9_]*!?"
+    interpolated = re.compile(r"\$\{?\s*" + equipmentish + r"\.type\s*\}?")
+    bare_arg = re.compile(r"^\s*" + equipmentish + r"\.type\s*,\s*$")
+
+    if mobile_root.is_dir():
+        for path in mobile_root.rglob("*.dart"):
+            lines = path.read_text(encoding="utf-8").splitlines()
+            for number, line in enumerate(lines, 1):
+                if "EquipmentTypes" in line or "//" in line.split(".type")[0]:
+                    continue
+                hit = interpolated.search(line)
+                if not hit and bare_arg.match(line):
+                    previous = lines[number - 2].rstrip() if number >= 2 else ""
+                    hit = previous.endswith("Text(") or previous.endswith("child: Text(")
+                if hit:
+                    leaks.append(f"mobile/lib/{path.relative_to(mobile_root)}:{number}")
+
     if leaks:
         failed += len(leaks)
         for place in leaks:
-            print(f"  [FAIL] kod matnga tushmoqda: {place}")
+            print(f"  [FAIL] kod foydalanuvchiga ko'rinmoqda: {place}")
 
     print(f"\n{len(CASES)} holat tekshirildi, {failed} ta xato")
     return 1 if failed else 0

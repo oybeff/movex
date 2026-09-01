@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session
 
 from app.core import media
 from app.core.account_state import assert_not_frozen
-from app.core.roles import role_checker
 from app.db.session import get_db
 from app.models.listing import Listing
 from app.models.user import User
@@ -131,9 +130,19 @@ def get_listing(
 def take(
     listing_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(role_checker(["owner", "admin"])),
+    current_user=Depends(get_current_user),
 ):
-    """Egasi e'lonni oladi. Kim birinchi bo'lsa — o'shaniki."""
+    """
+    E'lonni olish. Kim birinchi bo'lsa — o'shaniki.
+
+    ROL TEKSHIRILMAYDI, va bu ataylab. Ilgari bu yerda faqat "owner" turardi,
+    ya'ni e'longa javob berish faqat texnika egasiga ochiq edi. E'lonlar esa
+    ikki tomonlama: mijoz ham ("gruzchik kerak"), ega ham ("ertaga ekskavator
+    bo'sh") joylay oladi — demak javob beruvchi ham har ikkisi bo'lishi kerak,
+    aks holda eganing e'loniga hech kim javob bera olmasdi.
+
+    Cheklov bittasi va u xizmatda: o'z e'longni o'zing ololmaysan.
+    """
     listing = listing_service.take_listing(db, listing_id, current_user)
     return _to_read(db, listing, current_user)
 

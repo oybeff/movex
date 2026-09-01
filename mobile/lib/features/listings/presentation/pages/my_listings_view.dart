@@ -5,21 +5,25 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/models/listing_model.dart';
 import '../../../../core/services/listing_service.dart';
 import '../widgets/listing_card.dart';
-import 'create_listing_page.dart';
 
-/// Mijozga: o'z e'lonlari.
+/// O'z e'lonlari — muallif tomoni.
 ///
-/// Asosiy amal shu ekranda — kimdir e'lonni olganda mijoz uni TASDIQLASHI
+/// ROLGA BOG'LIQ EMAS: mijoz ham, ega ham e'lon joylay oladi, shuning uchun
+/// bu ro'yxat ikkalasida ham bor.
+///
+/// Asosiy amal shu yerda — kimdir e'lonni olganda muallif uni TASDIQLASHI
 /// kerak. Shuning uchun olingan e'lonlar tepaga chiqadi: aks holda o'nta
 /// eski e'lon orasida ko'rinmay qolardi va ijrochi javob kutib o'tirardi.
-class MyListingsPage extends StatefulWidget {
-  const MyListingsPage({super.key});
+///
+/// Bu Scaffold EMAS: ekranni ListingsPage tutadi, bu yerda faqat tanasi.
+class MyListingsView extends StatefulWidget {
+  const MyListingsView({super.key});
 
   @override
-  State<MyListingsPage> createState() => _MyListingsPageState();
+  State<MyListingsView> createState() => MyListingsViewState();
 }
 
-class _MyListingsPageState extends State<MyListingsPage> {
+class MyListingsViewState extends State<MyListingsView> {
   final ListingService _service = ListingService();
 
   List<ListingModel> _items = [];
@@ -49,17 +53,6 @@ class _MyListingsPageState extends State<MyListingsPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _create() async {
-    final created = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => const CreateListingPage()),
-    );
-    if (created == true) {
-      _snack('listings.created'.tr());
-      _load();
     }
   }
 
@@ -116,52 +109,25 @@ class _MyListingsPageState extends State<MyListingsPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
+  /// Tashqaridan yangilash — e'lon joylangandan keyin ListingsPage chaqiradi.
+  Future<void> reload() => _load();
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'listings.my_title'.tr(),
-          style: const TextStyle(
-              color: AppColors.black, fontWeight: FontWeight.bold),
-        ),
-      ),
-      // Tugma pastki menyudan YUQORIDA turishi kerak.
-      //
-      // Bo'lim menyu ichidagi sahifa, tashqi Scaffold da esa
-      // extendBody: true — ya'ni sahifa menyu ostidan ham davom etadi.
-      // Oddiy floatingActionButton o'sha menyu ostida qolib ketadi va
-      // "E'lon joylash" tugmasi umuman ko'rinmaydi: brauzerda tekshirganda
-      // aynan shunday bo'ldi.
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 72),
-        child: FloatingActionButton.extended(
-          onPressed: _create,
-          backgroundColor: AppColors.primaryGreen,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.add),
-          label: Text('listings.create'.tr()),
-        ),
-      ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryGreen))
-          : RefreshIndicator(
-              color: AppColors.primaryGreen,
-              onRefresh: _load,
-              child: _items.isEmpty
-                  ? _empty()
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-                      itemCount: _items.length,
-                      itemBuilder: (context, i) => _card(_items[i]),
-                    ),
-            ),
-    );
+    return _isLoading
+        ? const Center(
+            child: CircularProgressIndicator(color: AppColors.primaryGreen))
+        : RefreshIndicator(
+            color: AppColors.primaryGreen,
+            onRefresh: _load,
+            child: _items.isEmpty
+                ? _empty()
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                    itemCount: _items.length,
+                    itemBuilder: (context, i) => _card(_items[i]),
+                  ),
+          );
   }
 
   Widget _card(ListingModel listing) {

@@ -1,22 +1,26 @@
 """
-E'lonlar: mijoz yozadi, egasi oladi, mijoz tasdiqlaydi.
+E'lonlar: kimdir yozadi, boshqasi oladi, muallif tasdiqlaydi.
+
+E'lon IKKI TOMONLAMA va rolga bog'liq emas. Mijoz "yuk ortish uchun 3 kishi
+kerak" deb yozadi; ega "ertaga ekskavator bo'sh, arzonroq" deb yozadi.
+Shuning uchun bu faylda "mijoz"/"ega" emas, MUALLIF va IJROCHI deyiladi:
+bitta odam bir e'londa muallif, boshqasida ijrochi bo'lishi mumkin.
 
 Holatlar zanjiri:
 
-    open  --(egasi "olaman" dedi)-->  taken
-    taken --(mijoz tasdiqladi)------>  confirmed
-    taken --(mijoz rad etdi)-------->  open   (yana hammaga ko'rinadi)
-    confirmed --(ish tugadi)-------->  done
-    open/taken --(mijoz bekor qildi)-> cancelled
+    open  --(kimdir "olaman" dedi)---->  taken
+    taken --(muallif tasdiqladi)------>  confirmed
+    taken --(muallif rad etdi)-------->  open   (yana hammaga ko'rinadi)
+    confirmed --(ish tugadi)---------->  done
+    open/taken --(muallif bekor qildi)-> cancelled
 
 MUHIM: bu yerda PUL YO'Q. E'lon tanishtiradi, kelishuvdan keyin tomonlar
 bir-birining telefonini oladi. Eskrou buyurtmalarda ishlaydi va u aniq
-texnikaga bog'langan, e'londa esa texnika umuman bo'lmasligi mumkin
-(masalan "yuk ortish uchun 3 kishi kerak").
+texnikaga bog'langan, e'londa esa texnika umuman bo'lmasligi mumkin.
 
-Telefon raqami e'londa hammaga ko'rinmaydi: uni faqat e'lonni olgan ega va
-mijozning o'zi ko'radi. Aks holda taxta raqamlarni yig'ish uchun ochiq
-manba bo'lib qolardi.
+Telefon raqami e'londa hammaga ko'rinmaydi: uni faqat muallif va TASDIQLANGAN
+ijrochi ko'radi. Aks holda taxta raqamlarni yig'ish uchun ochiq manba bo'lib
+qolardi.
 """
 import logging
 from datetime import datetime, timedelta, timezone
@@ -132,27 +136,27 @@ def create_listing(db: Session, client: User, data) -> Listing:
     return listing
 
 
-def take_listing(db: Session, listing_id: int, owner: User) -> Listing:
+def take_listing(db: Session, listing_id: int, taker: User) -> Listing:
     """
-    Egasi e'lonni oladi.
+    E'lonni olish. Rol muhim emas — mijoz ham, ega ham javob bera oladi.
 
-    Qator BLOKLANADI: ikki ega bir vaqtda "olaman" bosishi mumkin, va
+    Qator BLOKLANADI: ikki kishi bir vaqtda "olaman" bosishi mumkin, va
     blokirovkasiz ikkalasi ham muvaffaqiyat javobini olardi.
     """
-    assert_not_frozen(owner)
+    assert_not_frozen(taker)
 
     listing = (
         db.query(Listing).filter(Listing.id == listing_id).with_for_update().first()
     )
     if listing is None:
         raise HTTPException(404, "E'lon topilmadi")
-    if listing.client_id == owner.id:
+    if listing.client_id == taker.id:
         raise HTTPException(400, "O'z e'loningizni ola olmaysiz")
     if listing.status != "open":
         raise HTTPException(400, "E'lon allaqachon olingan yoki yopilgan")
 
     listing.status = "taken"
-    listing.taken_by = owner.id
+    listing.taken_by = taker.id
     listing.taken_at = _now()
     db.commit()
     db.refresh(listing)
@@ -161,7 +165,7 @@ def take_listing(db: Session, listing_id: int, owner: User) -> Listing:
         db, listing.client_id, "listing_taken",
         "listing_taken.title", "listing_taken.body",
         None, listing.equipment_type, None,
-        title=listing.title, who=owner.full_name,
+        title=listing.title, who=taker.full_name,
     )
     return listing
 
@@ -286,9 +290,12 @@ def list_feed(
     limit: int = 50,
 ) -> List[Listing]:
     """
-    Egaga: ochiq e'lonlar va u olgan, hali TUGAMAGAN e'lonlar.
+    Taxta: begona ochiq e'lonlar va ko'ruvchi olgan, hali TUGAMAGAN e'lonlar.
 
-    O'z e'lonlari lentaga tushmaydi — ularni "Mening e'lonlarim" da ko'radi.
+    Rolga bog'liq emas — mijoz ham, ega ham bir xil taxtani ko'radi va
+    bir-birining e'loniga javob bera oladi.
+
+    O'z e'lonlari taxtaga tushmaydi — ularni "Mening e'lonlarim" da ko'radi.
 
     Tugagan va bekor qilinganlar ham chiqmaydi. Avval "u olgan hamma e'lon"
     qaytardi va taxta bajarilgan ishlar bilan to'lib borardi: brauzerda

@@ -417,7 +417,8 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
                     children: [
                       Expanded(
                         child: Text(
-                          '${_selectedTech!.type} ${_selectedTech!.model}',
+                          '${EquipmentTypes.label(_selectedTech!.type)} '
+                          '${_selectedTech!.model}',
                           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -526,7 +527,9 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
       context: context,
       builder: (context) => AlertDialog(
         title: Text('messages.rent_equipment'.tr()),
-        content: Text('${_selectedTech!.type} ${_selectedTech!.model} ${'messages.rent_equipment_confirm'.tr()}'),
+        content: Text('${EquipmentTypes.label(_selectedTech!.type)} '
+            '${_selectedTech!.model} '
+            '${'messages.rent_equipment_confirm'.tr()}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -938,7 +941,7 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      tech.type,
+                                      EquipmentTypes.label(tech.type),
                                       style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,

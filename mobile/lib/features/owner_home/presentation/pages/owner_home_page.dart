@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:movex_go/features/owner_home/presentation/widgets/bottom_nav_bar.dart';
 
-import 'package:movex_go/features/listings/presentation/pages/listings_feed_page.dart';
+import 'package:movex_go/features/listings/presentation/pages/listings_page.dart';
 
 import 'dashboard_page.dart';
 import 'my_equipment_page.dart';
@@ -39,7 +39,7 @@ class _OwnerHomePageState extends State<OwnerHomePage> {
   List<Widget> get _pages => [
     DashboardPage(onNavigate: _onTap),
     const MyEquipmentPage(),
-    const ListingsFeedPage(),
+    const ListingsPage(),
     const OrdersPage(),
     const ChatPage(),
     // const PaymentsPage(),

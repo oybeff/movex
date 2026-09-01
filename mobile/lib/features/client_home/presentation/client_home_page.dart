@@ -5,7 +5,7 @@ import 'package:movex_go/features/client_home/presentation/pages/client_main_pag
 import 'package:movex_go/features/client_home/presentation/pages/client_catalog_page.dart';
 import 'package:movex_go/features/client_home/presentation/pages/client_history_page.dart';
 import 'package:movex_go/features/client_home/presentation/pages/client_profile_page.dart';
-import 'package:movex_go/features/listings/presentation/pages/my_listings_page.dart';
+import 'package:movex_go/features/listings/presentation/pages/listings_page.dart';
 
 class ClientHomePage extends StatefulWidget {
   const ClientHomePage({super.key});
@@ -22,7 +22,7 @@ class _ClientHomePageState extends State<ClientHomePage> {
   final List<Widget> _pages = const [
     ClientMainPage(),
     ClientCatalogPage(),
-    MyListingsPage(),
+    ListingsPage(),
     ClientHistoryPage(),
     ClientProfilePage(),
   ];

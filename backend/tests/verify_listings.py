@@ -174,7 +174,59 @@ check("статус cancelled", r.json()["status"] == "cancelled")
 feed = requests.get(f"{API}/listings/feed", headers=owner).json()
 check("отменённое из ленты пропало", not any(x["id"] == lid2 for x in feed))
 
-head("8. СЧЁТЧИК ПРОСМОТРОВ")
+head("8. ОБЪЯВЛЕНИЕ ДВУСТОРОННЕЕ: ВЛАДЕЛЕЦ ТОЖЕ РАЗМЕЩАЕТ")
+
+# Раньше размещать мог кто угодно, а откликаться — только владелец. То есть
+# объявление владельца («завтра свободен экскаватор») висело мёртвым: взять
+# его не мог никто, потому что своё взять нельзя, а других владельцев в
+# радиусе может не быть вовсе.
+r = requests.post(f"{API}/listings/", headers=owner, json={
+    "title": "Завтра свободен экскаватор, недорого",
+    "description": "Простаивает, готов выехать по городу",
+    "equipment_type": "excavator",
+    "budget": 900000,
+})
+check("владелец разместил объявление", r.status_code == 200,
+      f"{r.status_code} {r.text[:120]}")
+owner_lid = r.json()["id"] if r.status_code == 200 else None
+
+check("оно у владельца в своих",
+      any(x["id"] == owner_lid
+          for x in requests.get(f"{API}/listings/mine", headers=owner).json()))
+check("в свою ленту не попало",
+      not any(x["id"] == owner_lid
+              for x in requests.get(f"{API}/listings/feed", headers=owner).json()))
+
+check("клиент видит его на доске",
+      any(x["id"] == owner_lid
+          for x in requests.get(f"{API}/listings/feed", headers=client).json()))
+
+r = requests.post(f"{API}/listings/{owner_lid}/take", headers=client)
+check("КЛИЕНТ может откликнуться", r.status_code == 200,
+      f"{r.status_code} {r.text[:120]}")
+check("статус taken", r.status_code == 200 and r.json()["status"] == "taken")
+
+before = requests.get(f"{API}/listings/{owner_lid}", headers=client).json()
+check("до подтверждения телефон владельца закрыт",
+      before.get("contact_phone") is None, str(before.get("contact_phone")))
+
+r = requests.post(f"{API}/listings/{owner_lid}/confirm", headers=client)
+check("откликнувшийся сам себя не подтверждает", r.status_code == 403,
+      f"{r.status_code}")
+
+r = requests.post(f"{API}/listings/{owner_lid}/confirm", headers=owner)
+check("автор (владелец) подтверждает", r.status_code == 200, f"{r.status_code}")
+
+after = requests.get(f"{API}/listings/{owner_lid}", headers=client).json()
+check("после подтверждения телефон открыт исполнителю-клиенту",
+      after.get("contact_phone") is not None)
+check("постороннему по-прежнему закрыт",
+      requests.get(f"{API}/listings/{owner_lid}", headers=other)
+      .json().get("contact_phone") is None)
+
+requests.post(f"{API}/listings/{owner_lid}/cancel", headers=owner)
+
+head("9. СЧЁТЧИК ПРОСМОТРОВ")
 
 lid3 = create(title="Нужен автокран на день").json()["id"]
 requests.get(f"{API}/listings/{lid3}", headers=owner)

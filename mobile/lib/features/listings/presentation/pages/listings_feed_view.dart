@@ -9,19 +9,25 @@ import '../../../../core/services/listing_service.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import '../widgets/listing_card.dart';
 
-/// Egaga: e'lonlar taxtasi.
+/// Taxta: begonalarning ochiq e'lonlari.
+///
+/// ROLGA BOG'LIQ EMAS. Mijoz ham, ega ham bir xil taxtani ko'radi va
+/// bir-birining e'loniga javob bera oladi: mijoz "gruzchik kerak" deb
+/// yozadi, ega "ertaga ekskavator bo'sh" deb yozadi.
 ///
 /// Zayavkalar lentasidan farqi — bu yerda savdo yo'q. "Olaman" bosiladi va
-/// mijoz tasdiqlashini kutiladi; kim birinchi bosgan bo'lsa, e'lon o'shanga
-/// biriktiriladi (buni server hal qiladi, ikkinchisiga xato qaytadi).
-class ListingsFeedPage extends StatefulWidget {
-  const ListingsFeedPage({super.key});
+/// muallif tasdiqlashini kutiladi; kim birinchi bosgan bo'lsa, e'lon
+/// o'shanga biriktiriladi (buni server hal qiladi, ikkinchisiga xato).
+///
+/// Bu Scaffold EMAS: ekranni ListingsPage tutadi, bu yerda faqat tanasi.
+class ListingsFeedView extends StatefulWidget {
+  const ListingsFeedView({super.key});
 
   @override
-  State<ListingsFeedPage> createState() => _ListingsFeedPageState();
+  State<ListingsFeedView> createState() => ListingsFeedViewState();
 }
 
-class _ListingsFeedPageState extends State<ListingsFeedPage> {
+class ListingsFeedViewState extends State<ListingsFeedView> {
   final ListingService _service = ListingService();
 
   List<ListingModel> _items = [];
@@ -122,42 +128,32 @@ class _ListingsFeedPageState extends State<ListingsFeedPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
+  /// Tashqaridan yangilash — e'lon joylangandan keyin ListingsPage chaqiradi.
+  Future<void> reload() => _load();
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'listings.feed_title'.tr(),
-          style: const TextStyle(
-              color: AppColors.black, fontWeight: FontWeight.bold),
+    return Column(
+      children: [
+        _filterBar(),
+        Expanded(
+          child: _isLoading
+              ? const Center(
+                  child:
+                      CircularProgressIndicator(color: AppColors.primaryGreen))
+              : RefreshIndicator(
+                  color: AppColors.primaryGreen,
+                  onRefresh: _load,
+                  child: _items.isEmpty
+                      ? _empty()
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                          itemCount: _items.length,
+                          itemBuilder: (context, i) => _card(_items[i]),
+                        ),
+                ),
         ),
-      ),
-      body: Column(
-        children: [
-          _filterBar(),
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child:
-                        CircularProgressIndicator(color: AppColors.primaryGreen))
-                : RefreshIndicator(
-                    color: AppColors.primaryGreen,
-                    onRefresh: _load,
-                    child: _items.isEmpty
-                        ? _empty()
-                        : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-                            itemCount: _items.length,
-                            itemBuilder: (context, i) => _card(_items[i]),
-                          ),
-                  ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
