@@ -156,12 +156,21 @@ print(f"  сервер: аренда {money(expected_subtotal)} + комисси
       f"+ доставка {money(delivery)} = {money(total)}")
 
 check("присланная клиентом сумма проигнорирована", total != 1000, f"total={total}")
-check("комиссия посчитана сервером", commission == expected_commission,
-      f"ожидалось {expected_commission}, получено {commission}")
+# Ulush endi MIJOZNING summasiga qo'shilmaydi: u qat'iy (5 000 so'm) va
+# buyurtma yakunlanganda EGASINING pulidan ushlanadi. Mijoz faqat ijara va
+# yetkazib berish uchun to'laydi.
+check("комиссия посчитана сервером, а не прислана клиентом",
+      commission > 0 and commission != 1, f"получено {commission}")
 check("доставка посчитана по координатам", delivery > 0)
-check("итог = аренда + комиссия + доставка",
-      total == expected_subtotal + commission + delivery)
+check("клиент платит только аренду и доставку, без комиссии",
+      total == expected_subtotal + delivery,
+      f"{total} != {expected_subtotal} + {delivery}")
+check("комиссия НЕ добавлена к сумме клиента",
+      total < expected_subtotal + commission + delivery or commission == 0,
+      f"total={total}, commission={commission}")
 check("заморожена именно серверная сумма", float(order["frozen_amount"]) == total)
+check("комиссия не превышает сумму заказа", commission <= total,
+      f"комиссия {commission} > заказ {total}")
 
 head("4. ПОСЛЕ ЗАВЕРШЕНИЯ СДЕЛКИ ДЕНЬГИ СХОДЯТСЯ")
 

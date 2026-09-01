@@ -194,12 +194,16 @@ commission = Decimal(str(order["commission"]))
 total = Decimal(str(order["total_amount"]))
 delivery = Decimal(str(order.get("delivery_fee") or 0))
 
-check("комиссия = 10% от аренды по СТАВКЕ ПРЕДЛОЖЕНИЯ",
-      commission == (expected_subtotal / 10).quantize(Decimal("1")),
-      f"комиссия {commission}, ожидали {(expected_subtotal / 10).quantize(Decimal('1'))}")
-check("итог = аренда + комиссия + доставка",
-      total == expected_subtotal + commission + delivery,
-      f"{total} != {expected_subtotal} + {commission} + {delivery}")
+# Ставка берётся из предложения, а ulush платит владелец и в сумму
+# клиента не входит
+check("аренда посчитана по СТАВКЕ ПРЕДЛОЖЕНИЯ",
+      total == expected_subtotal + delivery,
+      f"{total} != {expected_subtotal} + {delivery}")
+check("комиссия удержана с владельца, а не добавлена клиенту",
+      commission > 0 and total == expected_subtotal + delivery,
+      f"комиссия {commission}, итог {total}")
+check("комиссия не превышает сумму заказа", commission <= total,
+      f"{commission} > {total}")
 
 head("7. ДЕНЬГИ ЗАМОРОЖЕНЫ РОВНО НА СУММУ ЗАКАЗА")
 

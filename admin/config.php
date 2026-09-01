@@ -29,11 +29,41 @@ ini_set('session.cookie_samesite', 'Strict');
 date_default_timezone_set('Asia/Tashkent');
 
 // Database Configuration
-define('DB_HOST', getenv('POSTGRES_HOST') ?: 'localhost');
-define('DB_PORT', getenv('POSTGRES_PORT') ?: '5432');
-define('DB_NAME', getenv('POSTGRES_DB') ?: 'movex_go');
-define('DB_USER', getenv('POSTGRES_USER') ?: 'shohruxbek');
-define('DB_PASSWORD', getenv('POSTGRES_PASSWORD') ?: '');
+//
+// Ulanish sozlamalari backend'ning .env faylidagi DATABASE_URL dan olinadi —
+// ilova aynan shundan foydalanadi, ya'ni ikkinchi manba bo'lmaydi.
+//
+// Ilgari bu yerda faqat POSTGRES_* o'zgaruvchilari o'qilardi. Ular .env da
+// yo'q, shuning uchun adminka standart qiymatlarga tushardi — foydalanuvchi
+// "shohruxbek", boshqa mashinadan qolgan — va butun panel
+// "role does not exist" bilan yiqilardi.
+$movexDb = ['host' => 'localhost', 'port' => '5432',
+            'name' => 'movex_go', 'user' => get_current_user(), 'pass' => ''];
+
+$movexEnvFile = dirname(__DIR__) . '/backend/.env';
+if (is_readable($movexEnvFile)) {
+    foreach (file($movexEnvFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        if (strpos(ltrim($line), 'DATABASE_URL=') !== 0) {
+            continue;
+        }
+        $url = trim(substr(ltrim($line), strlen('DATABASE_URL=')), " \t\"'");
+        $parts = parse_url($url);
+        if ($parts !== false) {
+            if (!empty($parts['host'])) $movexDb['host'] = $parts['host'];
+            if (!empty($parts['port'])) $movexDb['port'] = (string)$parts['port'];
+            if (!empty($parts['user'])) $movexDb['user'] = urldecode($parts['user']);
+            if (isset($parts['pass'])) $movexDb['pass'] = urldecode($parts['pass']);
+            if (!empty($parts['path'])) $movexDb['name'] = ltrim($parts['path'], '/');
+        }
+        break;
+    }
+}
+
+define('DB_HOST', getenv('POSTGRES_HOST') ?: $movexDb['host']);
+define('DB_PORT', getenv('POSTGRES_PORT') ?: $movexDb['port']);
+define('DB_NAME', getenv('POSTGRES_DB') ?: $movexDb['name']);
+define('DB_USER', getenv('POSTGRES_USER') ?: $movexDb['user']);
+define('DB_PASSWORD', getenv('POSTGRES_PASSWORD') ?: $movexDb['pass']);
 
 // API Configuration
 define('API_BASE_URL', 'http://localhost:8000');

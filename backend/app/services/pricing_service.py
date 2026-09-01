@@ -21,9 +21,26 @@ from sqlalchemy.orm import Session
 from app.models.app_settings import AppSettings
 from app.models.equipment import Equipment
 
-# Komissiya foizi app_settings jadvalidan olinadi, u yerda bo'lmasa — shu qiymat.
+# ---------------------------------------------------------------- komissiya
+#
+# Platforma ulushini TEXNIKA EGASI to'laydi: mijoz ijara va yetkazib berish
+# narxini to'laydi, ulushi esa buyurtma yakunlanganda egasining pulidan
+# ushlab qolinadi.
+#
+# Ilgari ulush mijozning summasiga USTIGA qo'shilardi. Yangi ilova uchun 10%
+# ko'p, shuning uchun hozircha har qanday buyurtmadan qat'iy 5 000 so'm
+# olinadi. Rejim app_settings orqali almashtiriladi, kodni tahrirlash shart
+# emas.
 COMMISSION_SETTING_KEY = "commission_percent"
+COMMISSION_MODE_KEY = "commission_mode"
+COMMISSION_FIXED_KEY = "commission_fixed"
+
+MODE_PERCENT = "percent"
+MODE_FIXED = "fixed"
+
 DEFAULT_COMMISSION_PERCENT = Decimal("10")
+DEFAULT_COMMISSION_FIXED = Decimal("5000")
+DEFAULT_COMMISSION_MODE = MODE_FIXED
 
 EARTH_RADIUS_KM = Decimal("6371")
 
@@ -36,10 +53,15 @@ class OrderPrice:
     """Buyurtmaning hisoblangan narxi."""
     days: int
     subtotal: Decimal          # ijara narxi (kunlik narx * kunlar)
-    commission: Decimal        # platforma ulushi, faqat ijaradan
+    commission: Decimal        # platforma ulushi — EGASINING pulidan ushlanadi
     delivery_distance: Optional[Decimal]  # km
     delivery_fee: Decimal      # yetkazib berish narxi
-    total: Decimal             # mijoz to'laydigan umumiy summa
+    total: Decimal             # mijoz to'laydigan summa: ijara + yetkazish
+
+    @property
+    def owner_receives(self) -> Decimal:
+        """Buyurtma yakunlanganda egasiga tushadigan summa."""
+        return self.total - self.commission
 
 
 def _round_to_sum(value: Decimal) -> Decimal:
@@ -47,27 +69,59 @@ def _round_to_sum(value: Decimal) -> Decimal:
     return value.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
 
 
+def _setting(db: Session, key: str) -> Optional[str]:
+    row = db.query(AppSettings).filter(AppSettings.key == key).first()
+    return None if row is None or row.value is None else str(row.value)
+
+
 def get_commission_percent(db: Session) -> Decimal:
     """
     Komissiya foizi. Noto'g'ri yoki yo'q bo'lsa — standart 10%.
     Adminka app_settings orqali o'zgartirishi mumkin.
     """
-    row = (
-        db.query(AppSettings)
-        .filter(AppSettings.key == COMMISSION_SETTING_KEY)
-        .first()
-    )
-    if row is None or row.value is None:
+    raw = _setting(db, COMMISSION_SETTING_KEY)
+    if raw is None:
         return DEFAULT_COMMISSION_PERCENT
-
     try:
-        percent = Decimal(str(row.value))
+        percent = Decimal(raw)
     except (ArithmeticError, TypeError, ValueError):
         return DEFAULT_COMMISSION_PERCENT
+    return percent if 0 <= percent <= 100 else DEFAULT_COMMISSION_PERCENT
 
-    if percent < 0 or percent > 100:
-        return DEFAULT_COMMISSION_PERCENT
-    return percent
+
+def get_commission_fixed(db: Session) -> Decimal:
+    """Qat'iy ulush, so'mda. Manfiy yoki xato qiymat — standart 5 000."""
+    raw = _setting(db, COMMISSION_FIXED_KEY)
+    if raw is None:
+        return DEFAULT_COMMISSION_FIXED
+    try:
+        amount = Decimal(raw)
+    except (ArithmeticError, TypeError, ValueError):
+        return DEFAULT_COMMISSION_FIXED
+    return amount if amount >= 0 else DEFAULT_COMMISSION_FIXED
+
+
+def get_commission_mode(db: Session) -> str:
+    """'fixed' yoki 'percent'. Notanish qiymat — standart rejim."""
+    raw = (_setting(db, COMMISSION_MODE_KEY) or "").strip().lower()
+    return raw if raw in (MODE_FIXED, MODE_PERCENT) else DEFAULT_COMMISSION_MODE
+
+
+def calculate_commission(db: Session, subtotal: Decimal, total: Decimal) -> Decimal:
+    """
+    Platforma ulushi. Egasining pulidan ushlanadi.
+
+    Ulush hech qachon buyurtma summasidan OSHMAYDI: aks holda arzon
+    buyurtmada (masalan 3 000 so'mlik) egasining balansi minusga ketardi —
+    ya'ni u ishlagani uchun pul to'lab qolardi.
+    """
+    if get_commission_mode(db) == MODE_FIXED:
+        commission = get_commission_fixed(db)
+    else:
+        commission = subtotal * get_commission_percent(db) / Decimal("100")
+
+    commission = _round_to_sum(commission)
+    return min(commission, total) if total > 0 else Decimal("0")
 
 
 def rental_days(start_date: date, end_date: date) -> int:
@@ -135,9 +189,6 @@ def calculate_order_price(
 
     subtotal = _round_to_sum(Decimal(str(daily_rate)) * days)
 
-    percent = get_commission_percent(db)
-    commission = _round_to_sum(subtotal * percent / Decimal("100"))
-
     # Yetkazib berish: texnika joyidan mijoz ko'rsatgan nuqtagacha.
     # Masofani ham server hisoblaydi — mijozdan kelgan qiymatga ishonmaymiz.
     delivery_distance: Optional[Decimal] = None
@@ -157,7 +208,13 @@ def calculate_order_price(
                 delivery_distance * Decimal(str(equipment.delivery_price_per_km))
             )
 
-    total = subtotal + commission + delivery_fee
+    # Mijoz FAQAT ijara va yetkazib berish uchun to'laydi. Platforma ulushi
+    # bu summaga qo'shilmaydi — u buyurtma yakunlanganda egasining pulidan
+    # ushlab qolinadi.
+    total = subtotal + delivery_fee
+
+    # Ulush umumiy summadan oshmasligi uchun uni total bilan solishtiramiz
+    commission = calculate_commission(db, subtotal, total)
 
     return OrderPrice(
         days=days,

@@ -70,6 +70,12 @@ $adminUser = getAdminUser();
                         </a>
                     </li>
                     <li>
+                        <a href="commission.php" class="<?= ($currentPage ?? '') === 'commission' ? 'active' : '' ?>">
+                            <span>💰</span>
+                            Platforma ulushi
+                        </a>
+                    </li>
+                    <li>
                         <a href="budget.php" class="<?= ($currentPage ?? '') === 'budget' ? 'active' : '' ?>">
                             <span>🏦</span>
                             Budjet Jamg'armasi

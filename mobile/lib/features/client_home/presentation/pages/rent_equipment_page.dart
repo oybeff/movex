@@ -83,10 +83,16 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
     return _dailyRate * _totalDays;
   }
 
+  /// Platforma ulushi. MIJOZ UNI TO'LAMAYDI — u buyurtma yakunlanganda
+  /// texnika egasining pulidan ushlanadi. Shuning uchun ekranda
+  /// ko'rsatilmaydi va umumiy summaga kirmaydi.
+  ///
+  /// Maydon serverga yuboriladigan so'rovda qolgan (server uni baribir
+  /// e'tiborga olmaydi va o'zi hisoblaydi).
   int get _commission {
     final server = _serverPrice;
     if (server != null) return (server['commission'] as num).round();
-    return (_subtotal * 0.1).round(); // taxminiy, server aniqrog'ini beradi
+    return 0;
   }
 
   // Masofa hisoblash (km)
@@ -127,7 +133,8 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
   int get _total {
     final server = _serverPrice;
     if (server != null) return (server['total'] as num).round();
-    return _subtotal + _commission + _deliveryFee;
+    // Ijara + yetkazib berish. Ulush qo'shilmaydi — uni egasi to'laydi.
+    return _subtotal + _deliveryFee;
   }
 
   /// Sanalar yoki yetkazib berish nuqtasi o'zgarganda narxni qayta so'raymiz.
@@ -1106,11 +1113,9 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                               'rent.subtotal'.tr(),
                               '${NumberFormatter.formatCurrency(_subtotal)} ${'common.currency'.tr()}',
                             ),
-                            const SizedBox(height: 8),
-                            _buildPriceRow(
-                              'rent.commission'.tr() + ' (10%)',
-                              '${NumberFormatter.formatCurrency(_commission)} ${'common.currency'.tr()}',
-                            ),
+                            // Komissiya qatori olib tashlandi: mijoz uni
+                            // to'lamaydi, ulush egasining pulidan ushlanadi.
+                            // Uni ko'rsatish chalg'itardi — summaga kirmaydi.
                             // Yetkazish narxi
                             if (_deliveryFee > 0) ...[
                               const SizedBox(height: 8),
