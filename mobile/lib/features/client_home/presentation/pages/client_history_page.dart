@@ -14,6 +14,7 @@ import '../../../../core/models/order_model.dart';
 import '../../../../core/models/equipment_model.dart';
 import '../../../../core/models/user_model.dart';
 import '../../../../core/models/chat_model.dart';
+import '../../../../core/constants/app_config.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/number_formatter.dart';
 import 'client_chat_page.dart';
@@ -564,7 +565,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: Image.network(
-                            equipment.photos!.first.url,
+                            AppConfig.mediaUrl(equipment.photos!.first.url),
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) =>
                                 EquipmentTypeIcon(equipment.type, size: 34),

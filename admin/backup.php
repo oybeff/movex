@@ -1,6 +1,7 @@
 <?php
 require_once 'config.php';
 requireAdmin();
+requireCsrfToken();
 
 $pageTitle = 'Database Backup';
 $currentPage = 'backup';
@@ -147,6 +148,7 @@ include 'includes/header.php';
         </div>
         <div class="card-body">
             <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                 <input type="hidden" name="action" value="create_backup">
                 
                 <div class="form-group">
@@ -212,6 +214,7 @@ include 'includes/header.php';
                                         <!-- Restore Button -->
                                         <form method="POST" action="" style="display: inline;"
                                               onsubmit="return confirm('⚠️ DIQQAT! Bu amal hozirgi ma\'lumotlarni o\'chiradi va backup\'dan tiklaydi. Davom etasizmi?');">
+                                            <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                                             <input type="hidden" name="action" value="restore_backup">
                                             <input type="hidden" name="filename" value="<?= htmlspecialchars($backup['filename']) ?>">
                                             <button type="submit" class="btn btn-sm btn-success" title="Restore">
@@ -222,6 +225,7 @@ include 'includes/header.php';
                                         <!-- Delete Button -->
                                         <form method="POST" action="" style="display: inline;"
                                               onsubmit="return confirm('Bu backup\'ni o\'chirmoqchimisiz?');">
+                                            <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                                             <input type="hidden" name="action" value="delete_backup">
                                             <input type="hidden" name="filename" value="<?= htmlspecialchars($backup['filename']) ?>">
                                             <button type="submit" class="btn btn-sm btn-danger" title="O'chirish">

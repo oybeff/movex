@@ -14,8 +14,13 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone = sanitizeInput($_POST['phone'] ?? '');
     $password = $_POST['password'] ?? '';
-    
-    if (empty($phone) || empty($password)) {
+
+    // Kirish formasi ham tekshiriladi, lekin sahifani yopib qo'ymaydi:
+    // token eskirgan bo'lsa (forma uzoq ochiq turgan) odam shunchaki qayta
+    // urinadi. Bu yerda die() qilish — o'z panelidan quvib chiqarish.
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = 'Sahifa eskirgan, qaytadan kiriting';
+    } elseif (empty($phone) || empty($password)) {
         $error = 'Telefon raqam va parol kiritilishi shart';
     } else {
         if (adminLogin($phone, $password)) {
@@ -50,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
             
             <form method="POST" action="" class="login-form">
+                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                 <div class="form-group">
                     <label for="phone">Telefon Raqam</label>
                     <input 

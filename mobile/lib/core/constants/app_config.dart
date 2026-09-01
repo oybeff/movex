@@ -26,4 +26,21 @@ class AppConfig {
     'VERBOSE_NETWORK_LOG',
     defaultValue: false,
   );
+
+  /// Rasm manzilini to'liq ko'rinishga keltiradi.
+  ///
+  /// Server rasmlarni "/static/..." ko'rinishida qaytaradi — bu server
+  /// ildiziga nisbatan yo'l. Image.network unga tushunmaydi va rasm
+  /// ko'rinmaydi; texnika rasmlari bilan aynan shunday bo'lgan.
+  ///
+  /// To'liq havola kelsa (http…) o'zgarishsiz qaytadi: kelajakda rasmlar
+  /// bulutga ko'chsa, ilovani qayta yozish shart bo'lmaydi.
+  static String mediaUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    final base = apiBaseUrl.endsWith('/')
+        ? apiBaseUrl.substring(0, apiBaseUrl.length - 1)
+        : apiBaseUrl;
+    return path.startsWith('/') ? '$base$path' : '$base/$path';
+  }
 }

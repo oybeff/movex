@@ -1,6 +1,7 @@
 <?php
 require_once 'config.php';
 requireAdmin();
+requireCsrfToken();
 
 $pageTitle = 'Foydalanuvchilar';
 $currentPage = 'users';
@@ -314,6 +315,7 @@ include 'includes/header.php';
                                     </button>
                                     <form method="POST" action="" style="display: inline;"
                                           onsubmit="return confirm('Bu foydalanuvchini butunlay o\'chirmoqchimisiz? Qaytarib bo\'lmaydi.');">
+                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                                         <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
@@ -329,6 +331,7 @@ include 'includes/header.php';
                                 <div style="display: flex; flex-wrap: wrap; gap: 22px; padding: 14px 6px;">
 
                                     <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
+                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                                         <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                                         <?php if ($user['is_blocked']): ?>
                                             <input type="hidden" name="action" value="unblock">
@@ -345,6 +348,7 @@ include 'includes/header.php';
                                     </form>
 
                                     <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
+                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                                         <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                                         <?php if ($user['is_frozen']): ?>
                                             <input type="hidden" name="action" value="unfreeze">
@@ -356,6 +360,7 @@ include 'includes/header.php';
                                     </form>
 
                                     <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
+                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                                         <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                                         <input type="hidden" name="action" value="set_role">
                                         <div>
@@ -369,6 +374,7 @@ include 'includes/header.php';
                                     </form>
 
                                     <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
+                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                                         <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                                         <input type="hidden" name="action" value="set_phone">
                                         <div>
@@ -380,6 +386,7 @@ include 'includes/header.php';
                                     </form>
 
                                     <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
+                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                                         <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                                         <input type="hidden" name="action" value="set_password">
                                         <div>

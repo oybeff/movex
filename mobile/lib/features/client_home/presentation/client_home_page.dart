@@ -5,6 +5,7 @@ import 'package:movex_go/features/client_home/presentation/pages/client_main_pag
 import 'package:movex_go/features/client_home/presentation/pages/client_catalog_page.dart';
 import 'package:movex_go/features/client_home/presentation/pages/client_history_page.dart';
 import 'package:movex_go/features/client_home/presentation/pages/client_profile_page.dart';
+import 'package:movex_go/features/listings/presentation/pages/my_listings_page.dart';
 
 class ClientHomePage extends StatefulWidget {
   const ClientHomePage({super.key});
@@ -16,9 +17,12 @@ class ClientHomePage extends StatefulWidget {
 class _ClientHomePageState extends State<ClientHomePage> {
   int _currentIndex = 0;
 
+  // E'lonlar katalog bilan buyurtmalar orasida: katalogda topilmagan narsa
+  // shu yerda so'raladi, natijasi esa buyurtmalarga yaqin turadi.
   final List<Widget> _pages = const [
     ClientMainPage(),
     ClientCatalogPage(),
+    MyListingsPage(),
     ClientHistoryPage(),
     ClientProfilePage(),
   ];
@@ -74,6 +78,10 @@ class _ClientHomePageState extends State<ClientHomePage> {
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.search_rounded),
                   label: 'client.catalog'.tr(),
+                ),
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.campaign_rounded),
+                  label: 'client.listings'.tr(),
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.history_rounded),

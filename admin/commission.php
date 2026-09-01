@@ -16,6 +16,7 @@
  */
 require_once 'config.php';
 requireAdmin();
+requireCsrfToken();
 
 $pageTitle = 'Platforma ulushi';
 $currentPage = 'commission';
@@ -142,6 +143,7 @@ include 'includes/header.php';
             </div>
 
             <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                 <div class="form-group">
                     <label>
                         <input type="radio" name="mode" value="fixed"

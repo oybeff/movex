@@ -50,6 +50,10 @@ class OwnerBottomNavBar extends StatelessWidget {
               label: 'owner.my_equipment'.tr(),
             ),
             BottomNavigationBarItem(
+              icon: const Icon(Icons.campaign_rounded),
+              label: 'owner.listings'.tr(),
+            ),
+            BottomNavigationBarItem(
               icon: const Icon(Icons.receipt_long_rounded),
               label: 'owner.orders'.tr(),
             ),

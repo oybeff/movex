@@ -11,6 +11,7 @@
  */
 require_once 'config.php';
 requireAdmin();
+requireCsrfToken();
 
 $pageTitle = 'Pul Yechish Arizalari';
 $currentPage = 'payouts';
@@ -308,6 +309,7 @@ include 'includes/header.php';
                         <td>
                             <?php if ($r['status'] === 'pending'): ?>
                                 <form method="POST" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                                    <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                                     <input type="hidden" name="request_id" value="<?= (int) $r['id'] ?>">
                                     <input type="text" name="admin_comment" placeholder="Izoh"
                                            style="width:120px; padding:4px 8px; font-size:13px;">

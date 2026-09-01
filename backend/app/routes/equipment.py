@@ -9,14 +9,17 @@ from app.models.user import User
 from app.schemas.equipment import EquipmentCreate, EquipmentRead, EquipmentUpdate, EquipmentPhotoRead
 from app.routes.auth import get_current_user
 from app.core.roles import role_checker
+from app.core import media
 from app.core.equipment_types import EQUIPMENT_TYPES, normalize_type
 import os
 from datetime import date, datetime
 
 router = APIRouter()
 
-MEDIA_DIR = "media/equipment"
-os.makedirs(MEDIA_DIR, exist_ok=True)
+# Путь и правила загрузки — в app/core/media.py.
+# Здесь было "media/equipment" относительно текущего каталога: файлы падали
+# туда, откуда запустили сервер, а раздача их не находила.
+MEDIA_SECTION = "equipment"
 
 def paginate(query, page: int, limit: int) -> Tuple[List[Equipment], int]:
     total = query.count()
@@ -151,14 +154,9 @@ def upload_equipment_photo(
     if current_user.role == "owner" and eq.owner_id != current_user.id:
         raise HTTPException(403, "Forbidden")
 
-    # сохраняем файл локально (для прода лучше S3/YA Object Storage)
-    ext = os.path.splitext(file.filename)[1].lower()
-    fname = f"{equipment_id}_{datetime.utcnow().timestamp()}{ext}"
-    path = os.path.join(MEDIA_DIR, fname)
-    with open(path, "wb") as f:
-        f.write(file.file.read())
-
-    url = f"/static/equipment/{fname}"  # Настрой статику в FastAPI (StaticFiles)
+    # Сохраняем локально (для прода лучше S3 / Object Storage).
+    # Имя файла задаёт сервер: в присланном могло быть "../../.env".
+    url = media.save_upload(file, MEDIA_SECTION)
 
     photo = EquipmentPhoto(equipment_id=equipment_id, url=url, is_primary=is_primary)
     if is_primary:
@@ -267,11 +265,7 @@ def delete_equipment_photo(
         raise HTTPException(403, "Forbidden")
 
     # удалить файл с диска
-    if photo.url.startswith("/static/equipment/"):
-        fname = photo.url.replace("/static/equipment/", "")
-        path = os.path.join(MEDIA_DIR, fname)
-        if os.path.exists(path):
-            os.remove(path)
+    media.delete_by_url(photo.url)
 
     db.delete(photo)
     db.commit()

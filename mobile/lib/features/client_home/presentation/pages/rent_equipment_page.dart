@@ -15,6 +15,7 @@ import '../../../../core/services/equipment_service.dart';
 import '../../../../core/models/equipment_model.dart';
 import '../../../../core/models/order_model.dart';
 import '../../../../core/models/balance_model.dart';
+import '../../../../core/constants/app_config.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../../../../core/utils/number_formatter.dart';
@@ -857,7 +858,8 @@ class _RentEquipmentPageState extends State<RentEquipmentPage> {
                                   ? ClipRRect(
                                       borderRadius: BorderRadius.circular(14),
                                       child: Image.network(
-                                        widget.equipment.photos.first.url,
+                                        AppConfig.mediaUrl(
+                                            widget.equipment.photos.first.url),
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) =>
                                             EquipmentTypeIcon(widget.equipment.type, size: 42),

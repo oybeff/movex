@@ -79,6 +79,10 @@ dependencies:
   fl_chart: ^1.1.1
   toastification: ^3.0.3
 
+  # E'longa rasm biriktirish uchun. Web uchun alohida paket kerak emas —
+  # image_picker_for_web o'zi tortiladi.
+  image_picker: ^1.1.2
+
 
 dev_dependencies:
   flutter_test:

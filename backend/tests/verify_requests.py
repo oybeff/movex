@@ -13,6 +13,7 @@ Ishga tushirish (server ishlab turgan holda):
     venv/bin/python tests/verify_requests.py
 """
 import hashlib
+import random
 import re
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -74,9 +75,39 @@ def topup_via_click(hdr, amount, click_id):
     cb("click/complete", 1, {"merchant_prepare_id": prep.get("merchant_prepare_id", tx_id)})
 
 
-def free_dates(days=1):
-    start = datetime.now() + timedelta(days=800 + datetime.now().microsecond % 4000)
-    return start.strftime("%Y-%m-%d"), (start + timedelta(days=days)).strftime("%Y-%m-%d")
+def free_dates(days=1, equipment_id=None, headers=None):
+    """
+    Band bo'lmagan sanalar.
+
+    Sana joriy vaqtdan tasodifiy siljish bilan olinardi va oraliq tor edi
+    (800..4800 kun). Testlar ko'p marta ishlagach bazada yuzlab buyurtma
+    to'planadi, oraliq to'lib qoladi va "bu sanada texnika band" chiqadi.
+    Bu mahsulot xatosi emas — test o'zini o'zi bloklaydi.
+
+    verify_money.py va verify_notifications.py da bu allaqachon tuzatilgan;
+    shu fayl e'tibordan chetda qolgan va keyingi to'liq o'tkazishda aynan
+    shu yerda yiqildi.
+    """
+    for _ in range(25):
+        offset = random.randint(500, 30000)
+        start = datetime.now() + timedelta(days=offset)
+        s = start.strftime("%Y-%m-%d")
+        e = (start + timedelta(days=days)).strftime("%Y-%m-%d")
+        if equipment_id is None or headers is None:
+            return s, e
+        busy = requests.get(
+            f"{API}/orders/", headers=headers, params={"limit": 100}
+        ).json()
+        clash = any(
+            o.get("equipment_id") == equipment_id
+            and o.get("status") in ("pending", "confirmed")
+            and o.get("start_date", "") <= e
+            and o.get("end_date", "") >= s
+            for o in (busy if isinstance(busy, list) else [])
+        )
+        if not clash:
+            return s, e
+    return s, e
 
 
 def balance(hdr):
@@ -101,7 +132,8 @@ EQ_TYPE, EQ_ID = EQ["type"], EQ["id"]
 head("1. ЗАЯВКА СОЗДАЁТСЯ И НЕ ТРОГАЕТ ДЕНЬГИ")
 
 bal_before, frozen_before = balance(client)
-start, end = free_dates(2)
+# Bu zayavka oxirida buyurtmaga aylanadi — sana bo'sh bo'lishi shart.
+start, end = free_dates(2, EQ_ID, owner)
 
 r = requests.post(f"{API}/requests/", headers=client, json={
     "equipment_type": EQ_TYPE,

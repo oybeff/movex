@@ -137,6 +137,55 @@ function requireAdmin() {
     }
 }
 
+/**
+ * Zaprosning haqiqatan shu paneldan kelganini tekshirish (CSRF).
+ *
+ * Nega kerak. Panel faqat cookie bilan ishlaydi. Cookie esa brauzer
+ * tomonidan HAR QANDAY saytdan yuborilgan so'rovga ham qo'shiladi. Ya'ni
+ * admin panelga kirgan holda begona sahifani ochsa, o'sha sahifadagi
+ * yashirin forma o'zi jo'nab, admin nomidan amal bajarardi: foydalanuvchini
+ * o'chirish, parolini almashtirish, pul yechishni tasdiqlash.
+ *
+ * Tekshiruv yo'q edi — hech bir sahifada. Endi POST qabul qiladigan har
+ * bir forma token bilan yuboriladi va u sessiyadagisi bilan solishtiriladi:
+ * begona sayt sessiyadagi tokenni o'qiy olmaydi.
+ *
+ * Solishtirish hash_equals bilan — oddiy === javob vaqti bo'yicha tokenni
+ * belgima-belgi topishga imkon beradi.
+ */
+function generateCsrfToken() {
+    startAdminSession();
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function verifyCsrfToken($token) {
+    startAdminSession();
+    if (empty($_SESSION['csrf_token']) || !is_string($token) || $token === '') {
+        return false;
+    }
+    return hash_equals($_SESSION['csrf_token'], $token);
+}
+
+/**
+ * Tekshiruvdan o'tmagan POST ni to'xtatadi.
+ *
+ * Sahifa o'zi hal qilmasin: unutilgan bitta forma butun himoyani bekor
+ * qiladi. Shuning uchun bitta chaqiruv — va amal bajarilmaydi.
+ */
+function requireCsrfToken() {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        return;
+    }
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        http_response_code(403);
+        die('Sessiya eskirgan yoki so\'rov boshqa saytdan kelgan. '
+            . 'Sahifani yangilab, amalni qaytaring.');
+    }
+}
+
 function getAdminUser() {
     if (!isAdminLoggedIn()) {
         return null;

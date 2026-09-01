@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+
+import 'owner_home_page.dart' show OwnerTab;
 import 'package:go_router/go_router.dart';
 import 'package:movex_go/core/constants/app_colors.dart';
 import 'package:movex_go/core/widgets/notification_bell.dart';
@@ -302,8 +304,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     color: Colors.orange,
                     width: cardWidth,
                     onTap: () {
-                      // Index 2 - Orders sahifasi
-                      widget.onNavigate?.call(2);
+                      widget.onNavigate?.call(OwnerTab.orders);
                     },
                   ),
                   _ActionCard(
@@ -312,8 +313,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     color: Colors.blue,
                     width: cardWidth,
                     onTap: () {
-                      // Index 3 - Chat sahifasi
-                      widget.onNavigate?.call(3);
+                      widget.onNavigate?.call(OwnerTab.chat);
                     },
                   ),
                 ],

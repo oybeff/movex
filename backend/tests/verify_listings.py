@@ -141,6 +141,15 @@ r = requests.post(f"{API}/listings/{lid}/finish", headers=owner)
 check("исполнитель завершил", r.status_code == 200, f"{r.status_code}")
 check("статус done", r.json()["status"] == "done")
 
+# Завершённое из ленты уходит. Иначе доска исполнителя со временем
+# забивается сделанной работой — в браузере верх экрана оказался целиком
+# из карточек «Завершено», а новые объявления ушли под них.
+feed = requests.get(f"{API}/listings/feed", headers=owner).json()
+check("завершённое из ленты исполнителя пропало",
+      not any(x["id"] == lid for x in feed))
+check("но у клиента в своих осталось",
+      any(x["id"] == lid for x in requests.get(f"{API}/listings/mine", headers=client).json()))
+
 head("6. ОТКАЗ ОТ ИСПОЛНИТЕЛЯ ВОЗВРАЩАЕТ В ЛЕНТУ")
 
 lid2 = create(title="Нужны грузчики, 3 человека").json()["id"]

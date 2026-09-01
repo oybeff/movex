@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.routes import (
     auth,
     users,
@@ -23,6 +24,7 @@ from app.routes import (
 from app.routes import settings as settings_routes
 from app.db.base import Base
 from app.db.session import engine
+from app.core import media
 from app.core.config import settings
 # Import all models to register them with Base
 from app.models import (
@@ -128,6 +130,19 @@ app.include_router(notifications.router, prefix="/notifications", tags=["Notific
 app.include_router(balance.router, prefix="/balance", tags=["Balance"])
 app.include_router(settings_routes.router, prefix="/settings", tags=["Settings"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])
+
+# Раздача загруженных файлов.
+#
+# Загрузка фото техники писала файл в media/equipment/, а в базу клала ссылку
+# /static/equipment/<файл> — и рядом стоял комментарий «настрой статику».
+# Её так и не настроили: раздачи не было вообще, и КАЖДОЕ загруженное фото
+# было битой ссылкой. Заметно это не сразу — загрузка отвечает 200.
+#
+# Каталог один на всё, подпапки по разделам: equipment/, listings/.
+# Путь и правила задаются в app/core/media.py — там же, где файлы кладутся.
+media.folder("equipment")
+media.folder("listings")
+app.mount("/static", StaticFiles(directory=media.MEDIA_ROOT), name="static")
 
 # Health check endpoint
 @app.get("/health")

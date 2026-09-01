@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:movex_go/core/constants/app_config.dart';
 import 'package:movex_go/core/constants/app_colors.dart';
 import 'package:movex_go/core/constants/equipment_types.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
@@ -386,7 +387,7 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.network(
-                        imageUrl,
+                        AppConfig.mediaUrl(imageUrl),
                         height: 200,
                         width: double.infinity,
                         fit: BoxFit.cover,
@@ -904,7 +905,7 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
                             borderRadius: BorderRadius.circular(8),
                             child: imageUrl != null
                                 ? Image.network(
-                                    imageUrl,
+                                    AppConfig.mediaUrl(imageUrl),
                                     width: 100,
                                     height: 96,
                                     fit: BoxFit.cover,

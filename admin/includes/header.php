@@ -68,6 +68,27 @@ $adminUser = getAdminUser();
                         </a>
                     </li>
                     <li>
+                        <a href="listings.php" class="<?= ($currentPage ?? '') === 'listings' ? 'active' : '' ?>">
+                            <span>📢</span>
+                            E'lonlar
+                            <?php
+                            // Ega olgan, lekin mijoz hali tasdiqlamagan e'lonlar.
+                            // Bu holatda ijrochi javob kutib turadi va telefon
+                            // hali ochilmagan — uzoq turishi kerak emas.
+                            try {
+                                $waitingConfirm = getDbConnection()->query("
+                                    SELECT COUNT(*) FROM listings WHERE status = 'taken'
+                                ")->fetchColumn();
+                            } catch (Throwable $e) {
+                                $waitingConfirm = 0;
+                            }
+                            if ($waitingConfirm > 0):
+                            ?>
+                                <span class="badge badge-info" style="margin-left:auto;"><?= $waitingConfirm ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                    <li>
                         <a href="balance.php" class="<?= ($currentPage ?? '') === 'balance' ? 'active' : '' ?>">
                             <span>💰</span>
                             Balans

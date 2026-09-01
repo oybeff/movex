@@ -68,7 +68,8 @@
     "specifications": "Xususiyatlar",
     "owner_info": "Egasi haqida",
     "reviews": "Sharhlar",
-    "book_now": "Buyurtma berish"
+    "book_now": "Buyurtma berish",
+    "listings": "E'lonlar"
   },
   "owner": {
     "dashboard": "Bosh menyu",
@@ -92,7 +93,8 @@
     "chart_placeholder": "Bu yerda buyurtmalar grafigi bo'ladi",
     "equipment": "Texnika",
     "income": "Daromad",
-    "franchisee_stats": "Franchayzi statistikasi"
+    "franchisee_stats": "Franchayzi statistikasi",
+    "listings": "E'lonlar"
   },
   "settings": {
     "title": "Sozlamalar",
@@ -362,7 +364,8 @@
     "weekdays_short": "Du,Se,Ch,Pa,Ju,Sh,Ya",
     "year": "yil",
     "yes": "Ha",
-    "yesterday": "Kecha"
+    "yesterday": "Kecha",
+    "call": "Qo'ng'iroq"
   },
   "franchise": {
     "contact_admin": "Franchayzing olish uchun administrator bilan bog'laning",
@@ -761,5 +764,60 @@
     "saved": "Radius saqlandi",
     "title": "Qidiruv radiusi",
     "use_my_location": "Joriy joylashuvimni olish"
+  },
+  "listings": {
+    "my_title": "Mening e'lonlarim",
+    "feed_title": "E'lonlar",
+    "create": "E'lon joylash",
+    "publish": "E'lonni joylash",
+    "created": "E'lon joylandi",
+    "title_field": "Nima kerak",
+    "title_hint": "Masalan: uchastkadan qurilish chiqindisini olib chiqish",
+    "title_required": "Nima kerakligini yozing",
+    "description": "Tafsilotlar",
+    "description_hint": "Ish hajmi, aynan nima va qachon — o'z so'zlaringiz bilan",
+    "photos": "Rasmlar",
+    "add_photo": "Qo'shish",
+    "photo_limit": "{} tadan ko'p rasm bo'lmasin",
+    "photo_pick_failed": "Galereyani ochib bo'lmadi",
+    "photo_upload_failed": "Rasm yuklanmadi, yana urinib ko'ring",
+    "type_optional": "Texnika turi (bilsangiz)",
+    "budget": "Byudjet",
+    "budget_hint": "Qancha to'lashga tayyorsiz — majburiy emas",
+    "address": "Manzil",
+    "address_hint": "Qayerga kelish kerak",
+    "dates": "Qachon kerak",
+    "dates_hint": "Sanalarni tanlash",
+    "contact_phone": "Bog'lanish uchun telefon",
+    "contact_phone_hint": "Bo'sh qoldirsangiz — profildagisi olinadi",
+    "phone_privacy": "Telefoningizni faqat siz tasdiqlagan ijrochi ko'radi.",
+    "ttl_note": "E'lon {} kun turadi, keyin o'zi yopiladi.",
+    "status_open": "Ochiq",
+    "status_taken": "Javob berildi",
+    "status_confirmed": "Ishda",
+    "status_done": "Yakunlandi",
+    "status_cancelled": "Bekor qilindi",
+    "status_expired": "Muddati tugadi",
+    "take": "Buyurtmani olish",
+    "taken_wait_confirm": "Siz javob berdingiz. Mijoz tasdiqlashini kutamiz",
+    "taken_by": "Javob berdi",
+    "waiting_your_confirm": "Kimdir javob berdi — ijrochini tasdiqlang",
+    "waiting_client_confirm": "Mijoz hali tasdiqlagani yo'q. Telefon tasdiqdan keyin ochiladi",
+    "confirm": "Tasdiqlash",
+    "confirmed": "Ijrochi tasdiqlandi",
+    "reject": "Rad etish",
+    "reject_confirm": "Bu ijrochini rad etasizmi? E'lon yana ochiq bo'ladi.",
+    "rejected": "E'lon yana ochiq",
+    "finish": "Yakunlash",
+    "finish_confirm": "Ish bajarildimi? E'lon yopiladi.",
+    "finished": "E'lon yopildi",
+    "cancel": "Olib tashlash",
+    "cancel_confirm": "E'lonni olib tashlaysizmi?",
+    "cancelled": "E'lon olib tashlandi",
+    "my_empty": "Hozircha e'lon yo'q",
+    "my_empty_hint": "Katalogdan keraklisini topmadingizmi? Vazifani o'z so'zlaringiz bilan yozing — texnika egalari ko'radi va javob beradi.",
+    "feed_empty": "Hozircha e'lon yo'q",
+    "feed_hint": "Bu yerda mijozlar o'z so'zlari bilan yozgan buyurtmalar chiqadi. Kim birinchi «Olish» bossa — buyurtma o'shaniki.",
+    "feed_hint_filtered": "Bu texnika turi bo'yicha e'lon yo'q. Hammasini ko'rish uchun filtrni oling."
   }
 }

@@ -10,9 +10,11 @@ va /listings/feed — /listings/{listing_id} dan yuqorida, aks holda FastAPI
 """
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
+from app.core import media
+from app.core.account_state import assert_not_frozen
 from app.core.roles import role_checker
 from app.db.session import get_db
 from app.models.listing import Listing
@@ -85,6 +87,22 @@ def feed(
     """
     items = listing_service.list_feed(db, current_user, equipment_type, skip, limit)
     return [_to_read(db, item, current_user) for item in items]
+
+
+@router.post("/photos")
+def upload_photo(
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user),
+):
+    """
+    Rasmni yuklaydi va manzilini qaytaradi.
+
+    E'lon YARATILGUNCHA yuklanadi: mijoz avval rasm tanlaydi, keyin
+    "joylash" bosadi. Shuning uchun manzil e'longa emas, ilovaga qaytadi va
+    e'lon yaratishda photos ro'yxatida keladi.
+    """
+    assert_not_frozen(current_user)
+    return {"url": media.save_upload(file, "listings")}
 
 
 # ---------------------------------------------------------------- amallar

@@ -26,6 +26,7 @@ from fastapi import HTTPException
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, selectinload
 
+from app.core import media
 from app.core.account_state import assert_not_frozen
 from app.core.equipment_types import is_valid_type
 from app.models.listing import (
@@ -94,6 +95,15 @@ def create_listing(db: Session, client: User, data) -> Listing:
     photos = list(data.photos or [])
     if len(photos) > MAX_LISTING_PHOTOS:
         raise HTTPException(400, f"Rasmlar soni {MAX_LISTING_PHOTOS} tadan oshmasin")
+
+    # Rasm manzili faqat SHU serverdan bo'lishi mumkin: ro'yxat oddiy satrlar
+    # bo'lgani uchun u yerga istalgan havolani yozib yuborsa bo'lardi. Ikki
+    # oqibati bor edi — begona saytdagi rasm e'londa ko'rsatilardi (uni
+    # istalgan payt boshqasiga almashtirish mumkin), va manzil orqali
+    # o'chirish katalogdan tashqariga chiqib ketishi mumkin edi.
+    for url in photos:
+        if not media.is_own_media(url):
+            raise HTTPException(400, f"Rasm manzili noto'g'ri: {url[:80]!r}")
 
     listing = Listing(
         client_id=client.id,
@@ -276,14 +286,24 @@ def list_feed(
     limit: int = 50,
 ) -> List[Listing]:
     """
-    Egaga: ochiq e'lonlar va u olgan e'lonlar.
+    Egaga: ochiq e'lonlar va u olgan, hali TUGAMAGAN e'lonlar.
 
     O'z e'lonlari lentaga tushmaydi — ularni "Mening e'lonlarim" da ko'radi.
+
+    Tugagan va bekor qilinganlar ham chiqmaydi. Avval "u olgan hamma e'lon"
+    qaytardi va taxta bajarilgan ishlar bilan to'lib borardi: brauzerda
+    tekshirganda ekranning yuqorisi butunlay "Yakunlangan" kartochkalar edi,
+    yangi e'lonni ko'rish uchun pastga aylantirish kerak bo'lardi.
     """
     expire_stale(db)
 
     query = _with_photos(db.query(Listing)).filter(
-        or_(Listing.status == "open", Listing.taken_by == viewer.id),
+        or_(
+            Listing.status == "open",
+            # O'zi olgani — faqat javob kutayotgani yoki ishdagisi
+            (Listing.taken_by == viewer.id)
+            & Listing.status.in_(("taken", "confirmed")),
+        ),
         Listing.client_id != viewer.id,
     )
     if equipment_type:

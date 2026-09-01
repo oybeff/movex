@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'dart:math';
 import '../../../../core/services/equipment_service.dart';
 import '../../../../core/models/equipment_model.dart';
+import '../../../../core/constants/app_config.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/utils/number_formatter.dart';
@@ -556,7 +557,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                       ? ClipRRect(
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                           child: Image.network(
-                            equipment.photos!.first.url,
+                            AppConfig.mediaUrl(equipment.photos!.first.url),
                             fit: BoxFit.cover,
                             width: double.infinity,
                             // Rasm bo'lmasa — umumiy belgi emas, aynan shu
@@ -751,7 +752,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.network(
-                        equipment.photos.first.url,
+                        AppConfig.mediaUrl(equipment.photos.first.url),
                         height: 200,
                         width: double.infinity,
                         fit: BoxFit.cover,
