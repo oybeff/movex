@@ -64,7 +64,10 @@ if [ "$bad" -ne 0 ]; then
     die "DNS ещё не готов — выпуск сертификата пока не запускаю"
 fi
 
-ARGS=(--nginx --non-interactive --agree-tos --redirect -d "$DOMAIN")
+# www тоже: nginx слушает оба имени, и без него certbot ставит
+# сертификат только на голый домен, а на www отвечает чужим — браузер
+# ругается на несовпадение имени
+ARGS=(--nginx --non-interactive --agree-tos --redirect -d "$DOMAIN" -d "www.$DOMAIN")
 [ -n "$ADMIN_DOMAIN" ] && ARGS+=(-d "$ADMIN_DOMAIN")
 if [ -n "$EMAIL" ]; then
     ARGS+=(-m "$EMAIL")

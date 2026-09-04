@@ -155,11 +155,11 @@ ok "параметры под 2 ГБ применены"
 step "5/12 Переменные окружения"
 ENV_FILE="$APP_DIR/backend/.env"
 if [ "$ADMIN_MODE" = "subdomain" ]; then
-    ENV_HOSTS="$DOMAIN,$ADMIN_DOMAIN,127.0.0.1,localhost"
-    ENV_ORIGINS="https://$DOMAIN,https://$ADMIN_DOMAIN"
+    ENV_HOSTS="$DOMAIN,www.$DOMAIN,$ADMIN_DOMAIN,127.0.0.1,localhost"
+    ENV_ORIGINS="https://$DOMAIN,https://www.$DOMAIN,https://$ADMIN_DOMAIN"
 else
-    ENV_HOSTS="$DOMAIN,127.0.0.1,localhost"
-    ENV_ORIGINS="https://$DOMAIN"
+    ENV_HOSTS="$DOMAIN,www.$DOMAIN,127.0.0.1,localhost"
+    ENV_ORIGINS="https://$DOMAIN,https://www.$DOMAIN"
 fi
 if [ -f "$ENV_FILE" ]; then
     ok ".env уже есть — НЕ трогаем (ключи внутри)"
@@ -320,7 +320,7 @@ cat > /etc/nginx/sites-available/movex-api.conf <<NGXEOF
 server {
     listen 80;
     listen [::]:80;
-    server_name $DOMAIN;
+    server_name $DOMAIN www.$DOMAIN;
 
     # Нужен только для /panel/ — всё остальное уходит в uvicorn
     root /var/www/movex;
