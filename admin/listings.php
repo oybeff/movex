@@ -64,8 +64,31 @@ $countStmt->execute($params);
 $totalListings = $countStmt->fetch()['total'];
 $totalPages = ceil($totalListings / $perPage);
 
+/**
+ * Saralash. Foydalanuvchi bergan matn SO'ROVGA QO'SHILMAYDI — faqat shu
+ * ro'yxatdagi kalit ishlatiladi, aks holda ORDER BY orqali SQL yozib
+ * yuborish mumkin bo'lardi.
+ */
+$sortOptions = [
+    'created' => ['l.created_at DESC', 'Yangi e\'lonlar'],
+    'views'   => ['l.views_count DESC, l.created_at DESC', "Ko'p ko'rilgan"],
+    'likes'   => ['likes_count DESC, l.created_at DESC', "Ko'p yoqtirilgan"],
+    'saves'   => ['saves_count DESC, l.created_at DESC', "Ko'p saqlangan"],
+    'offers'  => ['offers_count DESC, l.created_at DESC', "Ko'p taklif"],
+    'quiet'   => ['(l.views_count + 0) ASC, l.created_at DESC', "Eng sust"],
+];
+$sort = $_GET['sort'] ?? 'created';
+if (!isset($sortOptions[$sort])) {
+    $sort = 'created';
+}
+$orderBy = $sortOptions[$sort][0];
+
 // Rasmlar soni LEFT JOIN bilan: har qator uchun alohida so'rov ketsa,
 // 50 ta e'lon 51 ta so'rovga aylanadi.
+//
+// Yoqtirish/saqlash/takliflar esa skalyar so'rovchalar bilan: ularni ham
+// JOIN qilsak, qatorlar bir-biriga ko'payib, rasm sanog'i yolg'on
+// ko'rsatardi.
 $query = "
     SELECT
         l.id,
@@ -85,14 +108,23 @@ $query = "
         c.phone AS client_phone,
         t.full_name AS taker_name,
         t.phone AS taker_phone,
-        COUNT(p.id) AS photo_count
+        COUNT(p.id) AS photo_count,
+        (SELECT COUNT(*) FROM listing_reactions r
+          WHERE r.listing_id = l.id AND r.kind = 'like')  AS likes_count,
+        (SELECT COUNT(*) FROM listing_reactions r
+          WHERE r.listing_id = l.id AND r.kind = 'save')  AS saves_count,
+        (SELECT COUNT(*) FROM listing_offers o
+          WHERE o.listing_id = l.id
+            AND o.status IN ('pending','accepted'))       AS offers_count,
+        (SELECT MIN(o.price) FROM listing_offers o
+          WHERE o.listing_id = l.id AND o.status = 'pending') AS best_offer
     FROM listings l
     JOIN users c ON l.client_id = c.id
     LEFT JOIN users t ON l.taken_by = t.id
     LEFT JOIN listing_photos p ON p.listing_id = l.id
     $whereClause
     GROUP BY l.id, c.full_name, c.phone, t.full_name, t.phone
-    ORDER BY l.created_at DESC
+    ORDER BY $orderBy
     LIMIT ? OFFSET ?
 ";
 $params[] = $perPage;
@@ -117,6 +149,28 @@ $stale = $db->query("
     SELECT COUNT(*) AS n
     FROM listings
     WHERE status = 'open' AND created_at < NOW() - INTERVAL '3 days'
+")->fetch()['n'];
+
+// Qiziqish ko'rsatkichlari. Ular alohida turadi, chunki savol boshqacha:
+// e'lonlar ko'rilyaptimi va ularga javob berilyaptimi.
+$engagement = $db->query("
+    SELECT
+        COALESCE(SUM(views_count), 0) AS views,
+        (SELECT COUNT(*) FROM listing_reactions WHERE kind = 'like') AS likes,
+        (SELECT COUNT(*) FROM listing_reactions WHERE kind = 'save') AS saves,
+        (SELECT COUNT(*) FROM listing_offers
+          WHERE status IN ('pending','accepted')) AS offers,
+        COUNT(*) FILTER (WHERE views_count = 0 AND status = 'open') AS unseen
+    FROM listings
+")->fetch();
+
+// Nechta e'lon umuman javob olgan — konversiya. Ko'rish ko'p, javob yo'q
+// bo'lsa, e'lonlar odamlarga mos kelmayapti degani.
+$answered = $db->query("
+    SELECT COUNT(DISTINCT l.id) AS n
+    FROM listings l
+    WHERE EXISTS (SELECT 1 FROM listing_offers o WHERE o.listing_id = l.id)
+       OR l.taken_by IS NOT NULL
 ")->fetch()['n'];
 
 include 'includes/header.php';
@@ -172,6 +226,83 @@ include 'includes/header.php';
         </div>
     </div>
 
+    <!-- ==================== Qiziqish ====================
+         Savol boshqacha: e'lonlar ko'rilyaptimi va ularga javob
+         berilyaptimi. Shuning uchun alohida qator. -->
+
+    <h2 style="margin: 30px 0 14px; font-size: 19px;">Qiziqish</h2>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-header">
+                <div>
+                    <div class="stat-title">Ko'rishlar</div>
+                    <div class="stat-value"><?= number_format($engagement['views']) ?></div>
+                    <div class="stat-change">
+                        <a href="?sort=views<?= $statusFilter ? '&status=' . urlencode($statusFilter) : '' ?>">
+                            ko'p ko'rilganlar →
+                        </a>
+                    </div>
+                </div>
+                <div class="stat-icon primary">👁</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div>
+                    <div class="stat-title">Yoqtirishlar</div>
+                    <div class="stat-value"><?= number_format($engagement['likes']) ?></div>
+                    <div class="stat-change">
+                        <a href="?sort=likes<?= $statusFilter ? '&status=' . urlencode($statusFilter) : '' ?>">
+                            reyting →
+                        </a>
+                    </div>
+                </div>
+                <div class="stat-icon danger">❤️</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div>
+                    <div class="stat-title">Saqlanganlar</div>
+                    <div class="stat-value"><?= number_format($engagement['saves']) ?></div>
+                    <div class="stat-change">
+                        <a href="?sort=saves<?= $statusFilter ? '&status=' . urlencode($statusFilter) : '' ?>">
+                            xatcho'plar →
+                        </a>
+                    </div>
+                </div>
+                <div class="stat-icon info">🔖</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div>
+                    <div class="stat-title">Takliflar</div>
+                    <div class="stat-value"><?= number_format($engagement['offers']) ?></div>
+                    <div class="stat-change">
+                        <?= number_format($answered) ?> ta e'lon javob olgan
+                    </div>
+                </div>
+                <div class="stat-icon success">💬</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div>
+                    <div class="stat-title">Hech kim ochmagan</div>
+                    <div class="stat-value"><?= number_format($engagement['unseen']) ?></div>
+                    <div class="stat-change">ochiq, lekin 0 ko'rish</div>
+                </div>
+                <div class="stat-icon <?= $engagement['unseen'] > 0 ? 'warning' : 'success' ?>">🕳</div>
+            </div>
+        </div>
+    </div>
+
     <div class="card mb-3">
         <div class="card-body">
             <form method="GET" action="" class="d-flex gap-2" style="align-items: flex-end;">
@@ -188,9 +319,20 @@ include 'includes/header.php';
                     </select>
                 </div>
 
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="sort">Saralash</label>
+                    <select name="sort" id="sort">
+                        <?php foreach ($sortOptions as $key => [$_expr, $label]): ?>
+                            <option value="<?= $key ?>" <?= $sort === $key ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($label) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
                 <button type="submit" class="btn btn-primary">🔍 Filtrlash</button>
 
-                <?php if (!empty($statusFilter)): ?>
+                <?php if (!empty($statusFilter) || $sort !== 'created'): ?>
                     <a href="listings.php" class="btn btn-secondary">✖️ Tozalash</a>
                 <?php endif; ?>
             </form>
@@ -214,6 +356,7 @@ include 'includes/header.php';
                             <th>Byudjet</th>
                             <th>Ijrochi</th>
                             <th>Status</th>
+                            <th>Qiziqish</th>
                             <th>Yaratilgan</th>
                             <th>Amal</th>
                         </tr>
@@ -221,7 +364,7 @@ include 'includes/header.php';
                     <tbody>
                         <?php if (empty($listings)): ?>
                         <tr>
-                            <td colspan="9" class="text-muted" style="text-align: center; padding: 24px;">
+                            <td colspan="10" class="text-muted" style="text-align: center; padding: 24px;">
                                 E'lonlar yo'q
                             </td>
                         </tr>
@@ -296,7 +439,39 @@ include 'includes/header.php';
                                 ][$l['status']] ?? ($l['status'] ?? '');
                                 ?>
                                 <span class="badge badge-<?= $statusClass ?>"><?= $statusText ?></span>
-                                <br><small class="text-muted">👁 <?= intval($l['views_count']) ?></small>
+                            </td>
+                            <td style="white-space: nowrap;">
+                                <?php
+                                // Ko'rish sanog'i ilgari status ostida mayda
+                                // kulrang yozuv edi va uni hech kim topmasdi.
+                                // Endi alohida ustun: raqamlar bir qatorda,
+                                // nolga tegmagani ko'zga tashlanmaydi.
+                                $views  = intval($l['views_count']);
+                                $likes  = intval($l['likes_count']);
+                                $saves  = intval($l['saves_count']);
+                                $offers = intval($l['offers_count']);
+                                $dim = 'color:#c0c4cc;';   // nol — bo'sh joydek
+                                ?>
+                                <span title="ko'rishlar" style="<?= $views ? '' : $dim ?>">
+                                    👁 <strong><?= $views ?></strong>
+                                </span>
+                                &nbsp;
+                                <span title="yoqtirishlar" style="<?= $likes ? '' : $dim ?>">
+                                    ❤️ <strong><?= $likes ?></strong>
+                                </span>
+                                <br>
+                                <span title="saqlanganlar" style="<?= $saves ? '' : $dim ?>">
+                                    🔖 <strong><?= $saves ?></strong>
+                                </span>
+                                &nbsp;
+                                <span title="takliflar" style="<?= $offers ? '' : $dim ?>">
+                                    💬 <strong><?= $offers ?></strong>
+                                </span>
+                                <?php if ($l['best_offer'] !== null): ?>
+                                    <br><small class="text-muted">
+                                        eng arzon: <?= number_format($l['best_offer'], 0, '.', ' ') ?>
+                                    </small>
+                                <?php endif; ?>
                             </td>
                             <td><?= formatDate($l['created_at'], 'd.m.Y H:i') ?></td>
                             <td>
@@ -320,7 +495,12 @@ include 'includes/header.php';
 
             <?php if ($totalPages > 1): ?>
                 <div class="pagination">
-                    <?php $q = $statusFilter ? '&status=' . urlencode($statusFilter) : ''; ?>
+                    <?php
+                    // Saralash ham havolada qolishi kerak: aks holda ikkinchi
+                    // sahifaga o'tganda ro'yxat yana sanaga qaytib ketardi.
+                    $q = ($statusFilter ? '&status=' . urlencode($statusFilter) : '')
+                       . ($sort !== 'created' ? '&sort=' . urlencode($sort) : '');
+                    ?>
                     <?php if ($page > 1): ?>
                         <a href="?page=<?= $page - 1 ?><?= $q ?>">← Oldingi</a>
                     <?php endif; ?>

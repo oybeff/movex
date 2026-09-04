@@ -29,7 +29,12 @@ class PayoutRequestRead(BaseModel):
 
     id: int
     user_id: int
+
+    # amount — so'ralgan summa, balansdan shu yechiladi.
+    # commission — platforma ulushi, payout_amount — kartaga tushadigan qismi.
     amount: float
+    commission: float = 0
+    payout_amount: float
     status: str
     card_masked: str
     card_holder: Optional[str] = None
@@ -46,3 +51,18 @@ class PayoutRequestResolve(BaseModel):
     """Admin arizani hal qiladi."""
 
     admin_comment: Optional[str] = Field(None, max_length=500)
+
+
+class PayoutSettingsRead(BaseModel):
+    """
+    Pul yechish shartlari — ilova ularni ariza berishdan OLDIN ko'rsatadi.
+
+    Ilova o'zi hisoblab qo'ya olmaydi: foiz adminkadan o'zgaradi, va
+    yig'ilgan ilovada eski qiymat qotib qolardi — ekranda bir summa,
+    balansdan boshqasi.
+    """
+
+    mode: str                  # fixed yoki percent
+    fixed: float               # qat'iy ushlanma, so'm
+    percent: float             # ushlanma foizi
+    min_amount: float          # eng kam yechish summasi

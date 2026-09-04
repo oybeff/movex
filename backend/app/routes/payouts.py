@@ -12,7 +12,12 @@ from sqlalchemy.orm import Session
 from app.core.roles import role_checker
 from app.db.session import get_db
 from app.routes.auth import get_current_user
-from app.schemas.payout import PayoutRequestCreate, PayoutRequestRead, PayoutRequestResolve
+from app.schemas.payout import (
+    PayoutRequestCreate,
+    PayoutRequestRead,
+    PayoutRequestResolve,
+    PayoutSettingsRead,
+)
 from app.services import payout_service
 
 router = APIRouter()
@@ -24,6 +29,10 @@ def _to_read(request) -> PayoutRequestRead:
         id=request.id,
         user_id=request.user_id,
         amount=float(request.amount),
+        commission=float(request.commission or 0),
+        # Eski arizalarda ustun bo'sh bo'lishi mumkin emas, lekin
+        # ehtiyot uchun: komissiyasiz ariza = to'liq summa kartaga.
+        payout_amount=float(request.payout_amount or request.amount),
         status=request.status,
         card_masked=request.card_masked,
         card_holder=request.card_holder,
@@ -31,6 +40,29 @@ def _to_read(request) -> PayoutRequestRead:
         admin_comment=request.admin_comment,
         processed_at=request.processed_at,
         created_at=request.created_at,
+    )
+
+
+@router.get("/settings", response_model=PayoutSettingsRead)
+def payout_settings(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Pul yechish shartlari: ushlanma va eng kam summa.
+
+    Ilova buni ariza berishdan oldin so'raydi va ekranda ko'rsatadi —
+    ega qancha ushlanishini va kartaga qancha tushishini oldindan biladi.
+
+    E'tibor: bu yo'l "/{request_id}" ko'rinishidagi yo'llardan OLDIN
+    e'lon qilinishi shart, aks holda FastAPI "settings" so'zini son deb
+    o'qishga urinadi.
+    """
+    return PayoutSettingsRead(
+        mode=payout_service.get_commission_mode(db),
+        fixed=float(payout_service.get_commission_fixed(db)),
+        percent=float(payout_service.get_commission_percent(db)),
+        min_amount=float(payout_service.MIN_PAYOUT_SUM),
     )
 
 

@@ -11,6 +11,7 @@ from app.routes import (
     orders,
     requests as request_routes,
     listings,
+    materials,
     chats,
     messages,
     reviews,
@@ -119,6 +120,7 @@ app.include_router(equipment.router, prefix="/equipment", tags=["Equipment"])
 app.include_router(orders.router, prefix="/orders", tags=["Orders"])
 app.include_router(request_routes.router, prefix="/requests", tags=["Requests"])
 app.include_router(listings.router, prefix="/listings", tags=["Listings"])
+app.include_router(materials.router, prefix="/materials", tags=["Materials"])
 app.include_router(chats.router, prefix="/chats", tags=["Chats"])
 app.include_router(messages.router, prefix="/messages", tags=["Messages"])
 app.include_router(reviews.router, prefix="/reviews", tags=["Reviews"])
@@ -142,7 +144,25 @@ app.include_router(admin.router, prefix="/admin", tags=["Admin"])
 # Путь и правила задаются в app/core/media.py — там же, где файлы кладутся.
 media.folder("equipment")
 media.folder("listings")
+media.folder("materials")
 app.mount("/static", StaticFiles(directory=media.MEDIA_ROOT), name="static")
+
+# Telegramdan yangiliklarni so'rash — kirish shu orqali tasdiqlanadi.
+#
+# Vebhuk emas, chunki unga ochiq HTTPS manzil kerak, prod esa hali
+# ko'tarilmagan. TELEGRAM_POLLING=false bo'lsa hech narsa boshlanmaydi:
+# bitta botni ikki joydan so'rab bo'lmaydi, Telegram 409 qaytaradi.
+@app.on_event("startup")
+async def _start_telegram_polling():
+    from app.services import telegram_poller
+    telegram_poller.start()
+
+
+@app.on_event("shutdown")
+async def _stop_telegram_polling():
+    from app.services import telegram_poller
+    await telegram_poller.stop()
+
 
 # Health check endpoint
 @app.get("/health")

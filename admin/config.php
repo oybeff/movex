@@ -287,6 +287,52 @@ function equipmentTypeName($code) {
 }
 
 /**
+ * Material turi: bazada KOD, ekranda esa nomi.
+ *
+ * Xuddi texnika turlaridagi kabi. Kod foydalanuvchiga chiqib ketmasligi
+ * kerak — bu loyihada allaqachon to'rt marta bo'lgan xato.
+ * Ro'yxat backend/app/core/material_types.py bilan bir xil.
+ */
+function materialTypeName($code) {
+    static $names = [
+        'brick'     => "G'isht",
+        'gas_block' => 'Gazoblok',
+        'cement'    => 'Sement',
+        'sand'      => 'Qum',
+        'gravel'    => "Shag'al",
+        'stone'     => 'Tosh',
+        'rebar'     => 'Armatura',
+        'concrete'  => 'Beton',
+        'lumber'    => "Yog'och",
+        'other'     => 'Boshqa material',
+    ];
+    if ($code === null || $code === '') return '—';
+    return $names[$code] ?? $code;
+}
+
+/** O'lchov birligi: piece → dona. */
+function materialUnitName($unit) {
+    static $units = [
+        'piece' => 'dona',
+        'bag'   => 'qop',
+        'tonne' => 'tonna',
+        'm3'    => 'm³',
+    ];
+    return $units[$unit] ?? ($unit ?? '');
+}
+
+/** Yetkazadigan mashina: kod → nomi va sig'imi. */
+function deliveryVehicleName($code) {
+    static $vehicles = [
+        'labo'  => 'Labo (0.7 t)',
+        'isuzu' => 'Isuzu (5 t)',
+        'kamaz' => 'KamAZ (15 t)',
+        'howo'  => 'Howo (25 t)',
+    ];
+    return $vehicles[$code] ?? ($code ?? '—');
+}
+
+/**
  * Utility Functions
  */
 function formatBytes($bytes, $precision = 2) {

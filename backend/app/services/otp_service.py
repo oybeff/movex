@@ -9,9 +9,23 @@ from app.models.otp_verification import OTPVerification
 from app.models.user import User
 from app.core.config import settings
 from app.services.eskiz_service import EskizService
+from app.services import telegram_auth_service
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _test_phones() -> set:
+    """
+    Sinov raqamlari ro'yxati sozlamalardan.
+
+    Bu raqamlarga SMS yuborilmaydi va kod javobda qaytadi. Qolganlar
+    haqiqiy SMS oladi. Butun bazani test rejimiga o'tkazmaslik uchun:
+    avtotestlar va demo-stendga kirish kerak, lekin haqiqiy odamlar
+    SMS siz qolmasligi kerak.
+    """
+    raw = getattr(settings, "OTP_TEST_PHONES", "") or ""
+    return {p.strip() for p in raw.split(",") if p.strip()}
 
 
 class OTPService:
@@ -115,9 +129,12 @@ class OTPService:
             self.db.add(otp_record)
             self.db.commit()
 
-            # Send SMS (skip if test mode)
-            if settings.OTP_TEST_MODE:
-                logger.info(f"TEST MODE: OTP code for {clean_phone}: {otp_code}")
+            # SMS yuborish. Ikki holatda o'tkazib yuboriladi: butun
+            # server test rejimida bo'lsa, yoki raqam sinov ro'yxatida
+            # bo'lsa — ikkinchisi haqiqiy foydalanuvchilarga tegmaydi.
+            is_test_phone = clean_phone in _test_phones()
+            if settings.OTP_TEST_MODE or is_test_phone:
+                logger.info("TEST MODE: OTP code for %s: %s", clean_phone, otp_code)
 
                 # ADMIN uchun kod HECH QACHON javobda qaytmaydi.
                 #
@@ -163,6 +180,29 @@ class OTPService:
                     "message": t("test_mode.code", lang, code=otp_code),
                     "expires_in": settings.OTP_EXPIRY_MINUTES * 60,
                     "otp_code": otp_code  # Only in test mode
+                }
+
+            # Avval TELEGRAM. U asosiy kanal: bepul, bir zumda va
+            # shablon moderatsiyasi yo'q. Bog'lanish bo'lmasa — SMS ga
+            # tushamiz, Telegrami yo'q odam ham kira olishi kerak.
+            # Import shu yerda: User funksiyaning quyi qismida ham
+            # lokal import qilinadi, va Python uni butun funksiya bo'yicha
+            # lokal deb hisoblaydi — importdan oldin ishlatilsa yiqiladi.
+            from app.models.user import User
+
+            language = (
+                self.db.query(User.language)
+                .filter(User.phone == clean_phone)
+                .scalar()
+            ) or "uz"
+
+            if await telegram_auth_service.send_code(self.db, clean_phone, otp_code, language):
+                logger.info("OTP Telegram orqali yuborildi: %s", clean_phone)
+                return {
+                    "success": True,
+                    "message": "Tasdiqlash kodi Telegramga yuborildi",
+                    "expires_in": settings.OTP_EXPIRY_MINUTES * 60,
+                    "channel": "telegram",
                 }
 
             sms_result = await self.eskiz_service.send_otp(clean_phone, otp_code)

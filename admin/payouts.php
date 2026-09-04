@@ -144,7 +144,8 @@ $totalPages = max(1, ceil($totalRecords / $perPage));
 
 $query = "
     SELECT
-        pr.id, pr.amount, pr.status, pr.card_number, pr.card_holder,
+        pr.id, pr.amount, pr.commission, pr.payout_amount,
+        pr.status, pr.card_number, pr.card_holder,
         pr.comment, pr.admin_comment, pr.created_at, pr.processed_at,
         u.full_name, u.phone,
         b.balance, b.frozen_balance
@@ -163,10 +164,11 @@ $requests = $stmt->fetchAll();
 $stats = $db->query("
     SELECT
         COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count,
-        COALESCE(SUM(CASE WHEN status = 'pending' THEN amount END), 0) as pending_amount,
-        COALESCE(SUM(CASE WHEN status = 'paid' THEN amount END), 0) as paid_amount,
+        COALESCE(SUM(CASE WHEN status = 'pending' THEN payout_amount END), 0) as pending_amount,
+        COALESCE(SUM(CASE WHEN status = 'paid' THEN payout_amount END), 0) as paid_amount,
         COALESCE(SUM(CASE WHEN status = 'paid' AND processed_at >= NOW() - INTERVAL '30 days'
-                          THEN amount END), 0) as paid_month
+                          THEN payout_amount END), 0) as paid_month,
+        COALESCE(SUM(CASE WHEN status = 'paid' THEN commission END), 0) as commission_total
     FROM payout_requests
 ")->fetch();
 
@@ -186,7 +188,9 @@ include 'includes/header.php';
                 <div>
                     <div class="stat-title">Kutilmoqda</div>
                     <div class="stat-value"><?= number_format($stats['pending_count']) ?></div>
-                    <div class="stat-change"><?= number_format($stats['pending_amount'], 0) ?> so'm</div>
+                    <div class="stat-change">
+                        <?= number_format($stats['pending_amount'], 0) ?> so'm kartaga
+                    </div>
                 </div>
                 <div class="stat-icon warning">⏳</div>
             </div>
@@ -197,7 +201,7 @@ include 'includes/header.php';
                 <div>
                     <div class="stat-title">Oxirgi 30 kun</div>
                     <div class="stat-value"><?= number_format($stats['paid_month'], 0) ?></div>
-                    <div class="stat-change">so'm to'langan</div>
+                    <div class="stat-change">so'm kartalarga o'tkazilgan</div>
                 </div>
                 <div class="stat-icon primary">📅</div>
             </div>
@@ -206,11 +210,22 @@ include 'includes/header.php';
         <div class="stat-card">
             <div class="stat-header">
                 <div>
-                    <div class="stat-title">Jami to'langan</div>
+                    <div class="stat-title">Jami o'tkazilgan</div>
                     <div class="stat-value"><?= number_format($stats['paid_amount'], 0) ?></div>
                     <div class="stat-change">so'm</div>
                 </div>
                 <div class="stat-icon success">✅</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div>
+                    <div class="stat-title">Ushlangan ulush</div>
+                    <div class="stat-value"><?= number_format($stats['commission_total'], 0) ?></div>
+                    <div class="stat-change">so'm — <a href="commission.php">sozlash</a></div>
+                </div>
+                <div class="stat-icon primary">💳</div>
             </div>
         </div>
     </div>
@@ -255,7 +270,8 @@ include 'includes/header.php';
                     <tr>
                         <th>#</th>
                         <th>Texnika egasi</th>
-                        <th>Summa</th>
+                        <th>Balansidan</th>
+                        <th>Kartaga o'tkazing</th>
                         <th>Karta</th>
                         <th>Balans</th>
                         <th>Sana</th>
@@ -271,7 +287,22 @@ include 'includes/header.php';
                             <?= htmlspecialchars($r['full_name']) ?><br>
                             <small style="color:#6b7280;"><?= htmlspecialchars($r['phone']) ?></small>
                         </td>
-                        <td><strong><?= number_format($r['amount'], 0) ?></strong> so'm</td>
+                        <td>
+                            <?= number_format($r['amount'], 0) ?> so'm
+                            <?php if ((float)$r['commission'] > 0): ?>
+                                <br><small style="color:#6b7280;">
+                                    ulush: <?= number_format($r['commission'], 0) ?> so'm
+                                </small>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <!-- Kartaga aynan shu summa o'tkaziladi. Ulush ariza
+                                 summasining ichidan ushlanadi, shuning uchun bu
+                                 raqam yuqoridagidan kichik bo'lishi normal. -->
+                            <strong style="font-size:15px;">
+                                <?= number_format($r['payout_amount'], 0) ?>
+                            </strong> so'm
+                        </td>
                         <td>
                             <?php
                             // To'liq raqam faqat shu yerda ko'rsatiladi — pulni
@@ -315,7 +346,7 @@ include 'includes/header.php';
                                            style="width:120px; padding:4px 8px; font-size:13px;">
                                     <button type="submit" name="action" value="paid"
                                             class="btn btn-primary" style="padding:4px 10px; font-size:13px;"
-                                            onclick="return confirm('Pul haqiqatan o\'tkazildimi? Summa balansdan yechiladi.')">
+                                            onclick="return confirm('Kartaga <?= number_format($r['payout_amount'], 0, '.', ' ') ?> so\'m o\'tkazildimi? Egasining balansidan <?= number_format($r['amount'], 0, '.', ' ') ?> so\'m yechiladi.')">
                                         To'landi
                                     </button>
                                     <button type="submit" name="action" value="rejected"

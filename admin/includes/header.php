@@ -7,6 +7,7 @@ $adminUser = getAdminUser();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $pageTitle ?? 'Admin Panel' ?> - Movex GO</title>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
         /* Foydalanuvchini boshqarish paneli — bosilganda ochiladi */
@@ -18,7 +19,11 @@ $adminUser = getAdminUser();
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <h2>🚜 Movex GO</h2>
+                <h2 style="display:flex; align-items:center; gap:9px;">
+                    <img src="assets/logo.png" alt="MovexGo" width="30" height="30"
+                         style="border-radius:7px; background:#fff;">
+                    Movex GO
+                </h2>
                 <p>Admin Panel</p>
             </div>
             
@@ -85,6 +90,29 @@ $adminUser = getAdminUser();
                             if ($waitingConfirm > 0):
                             ?>
                                 <span class="badge badge-info" style="margin-left:auto;"><?= $waitingConfirm ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="materials.php" class="<?= ($currentPage ?? '') === 'materials' ? 'active' : '' ?>">
+                            <span>🧱</span>
+                            Materiallar
+                            <?php
+                            // Moderatsiyada turgan tovarlar. Ular katalogda
+                            // KO'RINMAYDI, ya'ni sotuvchi kutib turadi va
+                            // xaridor tovarni umuman ko'rmaydi — bu raqam
+                            // uzoq nolda turmasligi kerak.
+                            try {
+                                $pendingProducts = getDbConnection()->query("
+                                    SELECT COUNT(*) FROM material_products
+                                     WHERE status = 'pending'
+                                ")->fetchColumn();
+                            } catch (Throwable $e) {
+                                $pendingProducts = 0;
+                            }
+                            if ($pendingProducts > 0):
+                            ?>
+                                <span class="badge badge-warning" style="margin-left:auto;"><?= $pendingProducts ?></span>
                             <?php endif; ?>
                         </a>
                     </li>

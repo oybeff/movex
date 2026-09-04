@@ -23,6 +23,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -99,6 +100,13 @@ class Listing(Base):
         order_by="ListingPhoto.id",
     )
 
+    offers = relationship(
+        "ListingOffer",
+        back_populates="listing",
+        cascade="all, delete-orphan",
+        order_by="ListingOffer.id",
+    )
+
     __table_args__ = (
         CheckConstraint(
             "status IN ('open','taken','confirmed','done','cancelled','expired')",
@@ -110,6 +118,97 @@ class Listing(Base):
             name="check_listing_dates",
         ),
         CheckConstraint("views_count >= 0", name="check_listing_views"),
+    )
+
+
+class ListingOffer(Base):
+    """
+    E'longa javoban aytilgan O'Z narxi.
+
+    "Olaman" tugmasi joyida qoladi: u muallifning byudjetiga rozilik
+    bildiradi. Taklif esa boshqa narsa — ijrochi o'z summasini aytadi, va
+    muallif kelgan takliflardan birini tanlaydi. Ikkalasi bir vaqtda
+    ishlaydi, chunki e'lonlarning yarmida byudjet umuman ko'rsatilmaydi.
+
+    Bir odam bitta e'longa BITTA taklif bera oladi (unique). Fikrini
+    o'zgartirsa — o'sha taklifning narxi yangilanadi, yangi qator
+    yaratilmaydi: aks holda bitta odam ro'yxatni to'ldirib tashlardi.
+
+    PUL YO'Q, zayavkadagidek savdo ham yo'q. Narx — kelishuv uchun raqam;
+    eskrou buyurtmaga bog'langan, e'londa esa texnika bo'lmasligi mumkin.
+    """
+
+    __tablename__ = "listing_offers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(
+        Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    #: Kim taklif qildi. Rol muhim emas: e'lon ikki tomonlama.
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    price = Column(Numeric(12, 2), nullable=False)
+    comment = Column(Text, nullable=True)
+
+    # pending  — muallif hali qaramagan
+    # accepted — muallif shu taklifni tanladi
+    # declined — muallif boshqasini tanladi yoki e'lon yopildi
+    # withdrawn — ijrochi o'zi qaytarib oldi
+    status = Column(String(20), nullable=False, default="pending", index=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    listing = relationship("Listing", back_populates="offers")
+
+    __table_args__ = (
+        UniqueConstraint("listing_id", "user_id", name="uq_listing_offer_once"),
+        CheckConstraint("price > 0", name="check_listing_offer_price"),
+        CheckConstraint(
+            "status IN ('pending','accepted','declined','withdrawn')",
+            name="check_listing_offer_status",
+        ),
+    )
+
+
+class ListingReaction(Base):
+    """
+    Yoqtirish va saqlash.
+
+    Ikkalasi bitta jadvalda: farqi faqat `kind` da, mantiqi bir xil —
+    bosildi/olib tashlandi, bir odamdan bitta. Alohida ikki jadval bir xil
+    kodni ikki marta yozishga majbur qilardi.
+
+    Sanoq denormalizatsiya QILINMAYDI: e'lonlar soni kichik, va
+    listings.likes_count kabi ustun ertami-kechmi haqiqatdan ajralib
+    qoladi. Kerak bo'lganda bitta GROUP BY so'rov bilan sanaladi.
+    """
+
+    __tablename__ = "listing_reactions"
+
+    LIKE = "like"
+    SAVE = "save"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(
+        Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    kind = Column(String(10), nullable=False, index=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "listing_id", "user_id", "kind", name="uq_listing_reaction_once"
+        ),
+        CheckConstraint("kind IN ('like','save')", name="check_listing_reaction_kind"),
     )
 
 

@@ -242,5 +242,112 @@ check("свои просмотры не считаются", after_own == before
 
 requests.post(f"{API}/listings/{lid3}/cancel", headers=client)
 
+head("10. ПРЕДЛОЖЕНИЯ С ЦЕНОЙ")
+
+lid4 = create(title="Нужны три грузчика", budget=800_000).json()["id"]
+
+r = requests.post(f"{API}/listings/{lid4}/offers", headers=client, json={"price": 100})
+check("на своё объявление предложить нельзя", r.status_code == 400, f"{r.status_code}")
+
+r = requests.post(f"{API}/listings/{lid4}/offers", headers=owner,
+                  json={"price": 950_000, "comment": "вчетвером за 3 часа"})
+check("исполнитель предложил цену", r.status_code == 200, f"{r.status_code} {r.text[:120]}")
+offer_id = r.json().get("id")
+check("телефон предложившего автору ПОКА не отдаётся",
+      r.json().get("user_phone") is None, str(r.json().get("user_phone")))
+
+r = requests.post(f"{API}/listings/{lid4}/offers", headers=owner, json={"price": 900_000})
+check("повторное предложение обновляет старое, а не плодит новое",
+      r.status_code == 200 and r.json().get("id") == offer_id,
+      f"{r.status_code} {r.json().get('id')} vs {offer_id}")
+
+r = requests.post(f"{API}/listings/{lid4}/offers", headers=other, json={"price": 870_000})
+check("второй исполнитель тоже может предложить", r.status_code == 200, f"{r.status_code}")
+other_offer_id = r.json().get("id")
+
+seen = requests.get(f"{API}/listings/{lid4}/offers", headers=client).json()
+check("автор видит оба предложения", len(seen) == 2, str(len(seen)))
+check("предложения отсортированы от дешёвых",
+      [float(o["price"]) for o in seen] == sorted(float(o["price"]) for o in seen),
+      str([float(o["price"]) for o in seen]))
+
+mine_view = requests.get(f"{API}/listings/{lid4}/offers", headers=owner).json()
+check("исполнитель видит ТОЛЬКО своё предложение, не конкурентов",
+      len(mine_view) == 1 and mine_view[0]["id"] == offer_id, str(len(mine_view)))
+
+row = next(x for x in requests.get(f"{API}/listings/mine", headers=client).json()
+           if x["id"] == lid4)
+check("счётчик предложений виден автору", row["offers_count"] == 2, str(row["offers_count"]))
+
+r = requests.post(f"{API}/listings/{lid4}/offers/{offer_id}/accept", headers=owner)
+check("чужой не может принять предложение за автора", r.status_code == 403, f"{r.status_code}")
+
+r = requests.post(f"{API}/listings/{lid4}/offers/{offer_id}/accept", headers=client)
+check("автор принял предложение", r.status_code == 200, f"{r.status_code} {r.text[:150]}")
+check("объявление сразу подтверждено", r.json().get("status") == "confirmed",
+      str(r.json().get("status")))
+check("исполнителем стал автор предложения", r.json().get("taken_by_me") is False)
+
+after = requests.get(f"{API}/listings/{lid4}", headers=owner).json()
+check("принятому исполнителю телефон открыт", after.get("contact_phone") is not None)
+check("постороннему телефон закрыт",
+      requests.get(f"{API}/listings/{lid4}", headers=other).json().get("contact_phone") is None)
+
+seen = requests.get(f"{API}/listings/{lid4}/offers", headers=client).json()
+accepted = next(o for o in seen if o["id"] == offer_id)
+declined = next(o for o in seen if o["id"] == other_offer_id)
+check("принятое предложение отмечено accepted", accepted["status"] == "accepted",
+      accepted["status"])
+check("остальные предложения отклонены автоматически", declined["status"] == "declined",
+      declined["status"])
+check("телефон принятого исполнителя автору открылся",
+      accepted.get("user_phone") is not None, str(accepted.get("user_phone")))
+
+r = requests.post(f"{API}/listings/{lid4}/offers", headers=other, json={"price": 500_000})
+check("в закрытое объявление предложить уже нельзя", r.status_code == 400, f"{r.status_code}")
+
+requests.post(f"{API}/listings/{lid4}/cancel", headers=client)
+
+head("11. ЛАЙКИ И СОХРАНЕНИЯ")
+
+lid5 = create(title="Нужен самосвал на неделю").json()["id"]
+
+before_views = requests.get(f"{API}/listings/{lid5}", headers=client).json()["views_count"]
+
+r = requests.post(f"{API}/listings/{lid5}/like", headers=owner)
+check("лайк поставлен", r.status_code == 200 and r.json()["likes_count"] == 1,
+      f"{r.status_code} {r.json().get('likes_count')}")
+check("свой лайк отмечен", r.json()["liked_by_me"] is True)
+check("ЛАЙК НЕ НАКРУЧИВАЕТ ПРОСМОТРЫ", r.json()["views_count"] == before_views,
+      f"было {before_views}, стало {r.json()['views_count']}")
+
+r = requests.post(f"{API}/listings/{lid5}/like", headers=owner)
+check("повторный лайк не удваивает счётчик", r.json()["likes_count"] == 1,
+      str(r.json()["likes_count"]))
+
+r = requests.post(f"{API}/listings/{lid5}/like", headers=other)
+check("второй лайк от другого человека считается", r.json()["likes_count"] == 2,
+      str(r.json()["likes_count"]))
+
+r = requests.delete(f"{API}/listings/{lid5}/like", headers=other)
+check("лайк снят", r.json()["likes_count"] == 1, str(r.json()["likes_count"]))
+
+r = requests.post(f"{API}/listings/{lid5}/save", headers=owner)
+check("закладка поставлена", r.json()["saves_count"] == 1 and r.json()["saved_by_me"],
+      str(r.json().get("saves_count")))
+
+saved = requests.get(f"{API}/listings/saved", headers=owner).json()
+check("объявление попало в «Сохранённое»", any(x["id"] == lid5 for x in saved),
+      str([x["id"] for x in saved]))
+check("«Сохранённое» не путается с параметрическим путём — вернулся список",
+      isinstance(saved, list))
+
+requests.delete(f"{API}/listings/{lid5}/save", headers=owner)
+saved = requests.get(f"{API}/listings/saved", headers=owner).json()
+check("после снятия закладки объявление ушло из списка",
+      not any(x["id"] == lid5 for x in saved), str([x["id"] for x in saved]))
+
+requests.post(f"{API}/listings/{lid5}/cancel", headers=client)
+
 head(f"ИТОГ: {ok_count} пройдено, {fail_count} провалено")
 raise SystemExit(1 if fail_count else 0)

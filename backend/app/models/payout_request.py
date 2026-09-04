@@ -22,7 +22,14 @@ class PayoutRequest(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # amount — egasi so'ragan summa, balansdan aynan shu ushlab qolinadi.
+    # commission — platforma ulushi, payout_amount — kartaga o'tkaziladigan
+    # qolgan qism. Uchalasi ham saqlanadi: sozlama keyin o'zgarsa, eski ariza
+    # yangi foiz bo'yicha qayta hisoblanib, tarixni yolg'on ko'rsatardi.
     amount = Column(Numeric(12, 2), nullable=False)
+    commission = Column(Numeric(12, 2), nullable=False, default=0)
+    payout_amount = Column(Numeric(12, 2), nullable=False)
 
     # pending — ko'rib chiqilmoqda, paid — to'langan, rejected — rad etilgan
     status = Column(String(20), nullable=False, default="pending", index=True)
@@ -42,6 +49,10 @@ class PayoutRequest(Base):
 
     __table_args__ = (
         CheckConstraint("amount > 0", name="check_payout_amount_positive"),
+        CheckConstraint("commission >= 0", name="check_payout_commission_not_negative"),
+        # Kartaga ketadigan summa musbat: aks holda ega ariza berib,
+        # hech narsa olmasdan balansidan ayrilardi.
+        CheckConstraint("payout_amount > 0", name="check_payout_amount_positive_net"),
         CheckConstraint(
             "status IN ('pending','paid','rejected')",
             name="check_payout_status",

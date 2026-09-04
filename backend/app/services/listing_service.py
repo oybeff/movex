@@ -24,10 +24,11 @@ qolardi.
 """
 import logging
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from typing import List, Optional
 
 from fastapi import HTTPException
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, selectinload
 
 from app.core import media
@@ -38,7 +39,9 @@ from app.models.listing import (
     MAX_LISTING_PHOTOS,
     MAX_OPEN_LISTINGS_PER_CLIENT,
     Listing,
+    ListingOffer,
     ListingPhoto,
+    ListingReaction,
 )
 from app.models.user import User
 from app.services import notification_service
@@ -274,6 +277,282 @@ def cancel_listing(db: Session, listing_id: int, user: User) -> Listing:
             title=listing.title,
         )
     return listing
+
+
+# ------------------------------------------------------- takliflar (narx)
+
+def make_offer(db: Session, listing_id: int, user: User, price, comment=None) -> ListingOffer:
+    """
+    O'z narxini aytish.
+
+    "Olaman" dan farqi: u muallifning byudjetiga rozilik bildiradi, taklif
+    esa boshqa summani taklif qiladi. Muallif kelganlardan birini tanlaydi.
+
+    Faqat OCHIQ e'longa taklif berish mumkin. Kimdir e'lonni olib bo'lgan
+    bo'lsa, muallif avval u bilan ish ko'rsin: aks holda "olingan" e'londa
+    parallel savdo ketardi va muallif ikki tomonga va'da bergan bo'lardi.
+    """
+    assert_not_frozen(user)
+
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if listing is None:
+        raise HTTPException(404, "E'lon topilmadi")
+    if listing.client_id == user.id:
+        raise HTTPException(400, "O'z e'loningizga taklif bera olmaysiz")
+    if listing.status != "open":
+        raise HTTPException(400, "E'lon ochiq emas")
+
+    try:
+        amount = Decimal(str(price)).quantize(Decimal("0.01"))
+    except (ArithmeticError, TypeError, ValueError):
+        raise HTTPException(400, "Narx noto'g'ri")
+    if amount <= 0:
+        raise HTTPException(400, "Narx noldan katta bo'lishi kerak")
+
+    # Bir odamdan bitta taklif. Fikrini o'zgartirsa — o'sha qator
+    # yangilanadi, aks holda bitta odam ro'yxatni to'ldirib tashlardi.
+    offer = (
+        db.query(ListingOffer)
+        .filter(ListingOffer.listing_id == listing_id, ListingOffer.user_id == user.id)
+        .first()
+    )
+    if offer is None:
+        offer = ListingOffer(listing_id=listing_id, user_id=user.id)
+        db.add(offer)
+
+    offer.price = amount
+    offer.comment = (comment or None)
+    offer.status = "pending"
+
+    db.commit()
+    db.refresh(offer)
+
+    notification_service.create_localized(
+        db, listing.client_id, "listing_offer",
+        "listing_offer.title", "listing_offer.body",
+        None, listing.equipment_type, None,
+        title=listing.title, who=user.full_name, price=f"{int(amount):,}".replace(",", " "),
+    )
+    return offer
+
+
+def withdraw_offer(db: Session, listing_id: int, user: User) -> None:
+    """Ijrochi taklifini qaytarib oladi."""
+    offer = (
+        db.query(ListingOffer)
+        .filter(ListingOffer.listing_id == listing_id, ListingOffer.user_id == user.id)
+        .first()
+    )
+    if offer is None:
+        raise HTTPException(404, "Taklif topilmadi")
+    if offer.status == "accepted":
+        raise HTTPException(400, "Qabul qilingan taklifni qaytarib bo'lmaydi")
+
+    db.delete(offer)
+    db.commit()
+
+
+def accept_offer(db: Session, listing_id: int, offer_id: int, author: User) -> Listing:
+    """
+    Muallif taklifni tanladi.
+
+    Natija "olaman"dagi bilan bir xil: e'lon TASDIQLANGAN holatga o'tadi va
+    ikkala tomon telefonni ko'radi. Oraliq "taken" holati kerak emas —
+    tanlashning o'zi muallifning tasdig'i.
+
+    Qator BLOKLANADI: muallif ikki taklifni bir vaqtda bosib yuborishi
+    mumkin, blokirovkasiz ikkalasi ham "qabul qilindi" javobini olardi.
+    """
+    assert_not_frozen(author)
+
+    listing = (
+        db.query(Listing).filter(Listing.id == listing_id).with_for_update().first()
+    )
+    if listing is None:
+        raise HTTPException(404, "E'lon topilmadi")
+    if listing.client_id != author.id:
+        raise HTTPException(403, "Bu e'lon sizniki emas")
+    if listing.status != "open":
+        raise HTTPException(400, "E'lon ochiq emas")
+
+    offer = (
+        db.query(ListingOffer)
+        .filter(ListingOffer.id == offer_id, ListingOffer.listing_id == listing_id)
+        .first()
+    )
+    if offer is None:
+        raise HTTPException(404, "Taklif topilmadi")
+    if offer.status != "pending":
+        raise HTTPException(400, "Taklif allaqachon ko'rib chiqilgan")
+
+    offer.status = "accepted"
+
+    # Qolganlari rad etilgan deb belgilanadi — ijrochilar javobni kutib
+    # o'tirmasin.
+    (
+        db.query(ListingOffer)
+        .filter(
+            ListingOffer.listing_id == listing_id,
+            ListingOffer.id != offer.id,
+            ListingOffer.status == "pending",
+        )
+        .update({ListingOffer.status: "declined"}, synchronize_session=False)
+    )
+
+    listing.status = "confirmed"
+    listing.taken_by = offer.user_id
+    listing.taken_at = _now()
+    listing.confirmed_at = _now()
+
+    db.commit()
+    db.refresh(listing)
+
+    notification_service.create_localized(
+        db, offer.user_id, "listing_confirmed",
+        "listing_offer_accepted.title", "listing_offer_accepted.body",
+        None, listing.equipment_type, None,
+        title=listing.title,
+    )
+    return listing
+
+
+def list_offers(db: Session, listing_id: int, viewer: User) -> List[ListingOffer]:
+    """
+    Takliflar ro'yxati.
+
+    Hammasini faqat MUALLIF (va admin) ko'radi: aks holda ijrochilar
+    bir-birining narxini ko'rib, bir-birini arzonlatishga tushardi.
+    Ijrochiga faqat o'zinikisi qaytadi.
+    """
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if listing is None:
+        raise HTTPException(404, "E'lon topilmadi")
+
+    query = db.query(ListingOffer).filter(ListingOffer.listing_id == listing_id)
+    if viewer.role != "admin" and viewer.id != listing.client_id:
+        query = query.filter(ListingOffer.user_id == viewer.id)
+
+    return query.order_by(ListingOffer.price.asc(), ListingOffer.created_at.asc()).all()
+
+
+# --------------------------------------------- yoqtirish va saqlash
+
+def set_reaction(db: Session, listing_id: int, user: User, kind: str, on: bool) -> None:
+    """Yoqtirish yoki saqlashni qo'yish/olib tashlash."""
+    if kind not in (ListingReaction.LIKE, ListingReaction.SAVE):
+        raise HTTPException(400, f"Noma'lum turi: {kind!r}")
+
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if listing is None:
+        raise HTTPException(404, "E'lon topilmadi")
+
+    existing = (
+        db.query(ListingReaction)
+        .filter(
+            ListingReaction.listing_id == listing_id,
+            ListingReaction.user_id == user.id,
+            ListingReaction.kind == kind,
+        )
+        .first()
+    )
+
+    if on and existing is None:
+        db.add(ListingReaction(listing_id=listing_id, user_id=user.id, kind=kind))
+    elif not on and existing is not None:
+        db.delete(existing)
+    else:
+        return  # allaqachon shu holatda — bekorga yozmaymiz
+
+    db.commit()
+
+
+def reaction_counts(db: Session, listing_ids: List[int]) -> dict:
+    """
+    {listing_id: {"likes": n, "saves": n, "offers": n}} — BITTA so'rovda.
+
+    Har bir e'lon uchun alohida sanash 20 ta kartochkada 60 ta so'rov
+    berardi. Shuning uchun sahifadagi hamma id bo'yicha guruhlab olinadi.
+    """
+    result = {i: {"likes": 0, "saves": 0, "offers": 0} for i in listing_ids}
+    if not listing_ids:
+        return result
+
+    rows = (
+        db.query(
+            ListingReaction.listing_id,
+            ListingReaction.kind,
+            func.count(ListingReaction.id),
+        )
+        .filter(ListingReaction.listing_id.in_(listing_ids))
+        .group_by(ListingReaction.listing_id, ListingReaction.kind)
+        .all()
+    )
+    for listing_id, kind, count in rows:
+        key = "likes" if kind == ListingReaction.LIKE else "saves"
+        result[listing_id][key] = count
+
+    offer_rows = (
+        db.query(ListingOffer.listing_id, func.count(ListingOffer.id))
+        .filter(
+            ListingOffer.listing_id.in_(listing_ids),
+            ListingOffer.status.in_(("pending", "accepted")),
+        )
+        .group_by(ListingOffer.listing_id)
+        .all()
+    )
+    for listing_id, count in offer_rows:
+        result[listing_id]["offers"] = count
+
+    return result
+
+
+def viewer_marks(db: Session, user_id: int, listing_ids: List[int]) -> dict:
+    """{listing_id: {"liked": bool, "saved": bool, "offered": bool}} — ko'ruvchi uchun."""
+    marks = {
+        i: {"liked": False, "saved": False, "offered": False} for i in listing_ids
+    }
+    if not listing_ids:
+        return marks
+
+    for listing_id, kind in (
+        db.query(ListingReaction.listing_id, ListingReaction.kind)
+        .filter(
+            ListingReaction.listing_id.in_(listing_ids),
+            ListingReaction.user_id == user_id,
+        )
+        .all()
+    ):
+        marks[listing_id]["liked" if kind == ListingReaction.LIKE else "saved"] = True
+
+    for (listing_id,) in (
+        db.query(ListingOffer.listing_id)
+        .filter(
+            ListingOffer.listing_id.in_(listing_ids),
+            ListingOffer.user_id == user_id,
+            ListingOffer.status.in_(("pending", "accepted")),
+        )
+        .all()
+    ):
+        marks[listing_id]["offered"] = True
+
+    return marks
+
+
+def list_saved(db: Session, user: User, skip: int = 0, limit: int = 50) -> List[Listing]:
+    """Saqlanganlar — ijrochi keyin qaytib kelishi uchun."""
+    expire_stale(db)
+    return (
+        _with_photos(db.query(Listing))
+        .join(ListingReaction, ListingReaction.listing_id == Listing.id)
+        .filter(
+            ListingReaction.user_id == user.id,
+            ListingReaction.kind == ListingReaction.SAVE,
+        )
+        .order_by(ListingReaction.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 
 # ------------------------------------------------------------------ o'qish

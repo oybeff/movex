@@ -19,7 +19,12 @@ from app.db.session import get_db
 from app.models.listing import Listing
 from app.models.user import User
 from app.routes.auth import get_current_user
-from app.schemas.listing import ListingCreate, ListingRead
+from app.schemas.listing import (
+    ListingCreate,
+    ListingOfferCreate,
+    ListingOfferRead,
+    ListingRead,
+)
 from app.services import listing_service, pricing_service
 
 router = APIRouter()
@@ -32,7 +37,13 @@ def _as_float(value):
         return None
 
 
-def _to_read(db: Session, listing: Listing, viewer: User) -> ListingRead:
+def _to_read(
+    db: Session,
+    listing: Listing,
+    viewer: User,
+    counts: Optional[dict] = None,
+    marks: Optional[dict] = None,
+) -> ListingRead:
     data = ListingRead.model_validate(listing)
 
     client = db.query(User).filter(User.id == listing.client_id).first()
@@ -54,6 +65,50 @@ def _to_read(db: Session, listing: Listing, viewer: User) -> ListingRead:
     if None not in (v_lat, v_lon, l_lat, l_lon):
         data.distance_km = float(pricing_service.distance_km(v_lat, v_lon, l_lat, l_lon))
 
+    # Ro'yxat uchun sanoqlar oldindan beriladi (bitta so'rovda); bitta e'lon
+    # so'ralganda shu yerda sanaladi.
+    if counts is None:
+        counts = listing_service.reaction_counts(db, [listing.id])[listing.id]
+    if marks is None:
+        marks = listing_service.viewer_marks(db, viewer.id, [listing.id])[listing.id]
+
+    data.likes_count = counts["likes"]
+    data.saves_count = counts["saves"]
+    data.offers_count = counts["offers"]
+    data.liked_by_me = marks["liked"]
+    data.saved_by_me = marks["saved"]
+    data.offered_by_me = marks["offered"]
+
+    return data
+
+
+def _to_read_many(db: Session, listings: List[Listing], viewer: User) -> List[ListingRead]:
+    """
+    Ro'yxat uchun: sanoqlar BITTA so'rovda olinadi.
+
+    Har bir kartochka uchun alohida sanash 20 ta e'londa oltmishga yaqin
+    so'rov berardi.
+    """
+    ids = [item.id for item in listings]
+    counts = listing_service.reaction_counts(db, ids)
+    marks = listing_service.viewer_marks(db, viewer.id, ids)
+    return [
+        _to_read(db, item, viewer, counts.get(item.id), marks.get(item.id))
+        for item in listings
+    ]
+
+
+def _offer_to_read(db: Session, offer, listing: Listing, viewer: User) -> ListingOfferRead:
+    data = ListingOfferRead.model_validate(offer)
+    user = db.query(User).filter(User.id == offer.user_id).first()
+    data.user_name = user.full_name if user else None
+
+    # Telefon — faqat muallifga va faqat qabul qilingandan keyin, xuddi
+    # e'lonning o'zidagi qoida bo'yicha: "taklif berdi" hali kelishuv emas.
+    may_see = viewer.role == "admin" or (
+        viewer.id == listing.client_id and offer.status == "accepted"
+    )
+    data.user_phone = (user.phone if user else None) if may_see else None
     return data
 
 
@@ -68,7 +123,24 @@ def my_listings(
 ):
     """Faqat o'z e'lonlari."""
     items = listing_service.list_mine(db, current_user, skip, limit)
-    return [_to_read(db, item, current_user) for item in items]
+    return _to_read_many(db, items, current_user)
+
+
+@router.get("/saved", response_model=List[ListingRead])
+def saved_listings(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+):
+    """
+    Saqlanganlar — xatcho'p bosilgan e'lonlar.
+
+    Yo'l "/{listing_id}" dan OLDIN turishi shart, aks holda FastAPI "saved"
+    so'zini son deb o'qishga urinadi.
+    """
+    items = listing_service.list_saved(db, current_user, skip, limit)
+    return _to_read_many(db, items, current_user)
 
 
 @router.get("/feed", response_model=List[ListingRead])
@@ -85,7 +157,7 @@ def feed(
     O'z e'lonlari bu yerga tushmaydi — ular /listings/mine da.
     """
     items = listing_service.list_feed(db, current_user, equipment_type, skip, limit)
-    return [_to_read(db, item, current_user) for item in items]
+    return _to_read_many(db, items, current_user)
 
 
 @router.post("/photos")
@@ -187,3 +259,128 @@ def cancel(
 ):
     listing = listing_service.cancel_listing(db, listing_id, current_user)
     return _to_read(db, listing, current_user)
+
+
+# ------------------------------------------------------- takliflar (narx)
+
+@router.post("/{listing_id}/offers", response_model=ListingOfferRead)
+def create_offer(
+    listing_id: int,
+    data: ListingOfferCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    O'z narxini taklif qilish.
+
+    "Olaman" tugmasi joyida qoladi — u muallif byudjetiga rozilik. Taklif
+    esa boshqa summa: muallif kelganlaridan birini tanlaydi.
+
+    ROL TEKSHIRILMAYDI: e'lon ikki tomonlama, taklifni ham mijoz, ham ega
+    bera oladi. Cheklov bittasi — o'z e'loningga taklif berib bo'lmaydi.
+    """
+    offer = listing_service.make_offer(
+        db, listing_id, current_user, data.price, data.comment
+    )
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    return _offer_to_read(db, offer, listing, current_user)
+
+
+@router.get("/{listing_id}/offers", response_model=List[ListingOfferRead])
+def list_offers(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Takliflar. Hammasini faqat muallif va admin ko'radi.
+
+    Ijrochiga faqat o'zinikisi qaytadi: aks holda u raqiblarining narxini
+    ko'rib, ularni bir so'mga arzonlatib qo'yardi.
+    """
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if listing is None:
+        raise HTTPException(404, "E'lon topilmadi")
+    offers = listing_service.list_offers(db, listing_id, current_user)
+    return [_offer_to_read(db, offer, listing, current_user) for offer in offers]
+
+
+@router.delete("/{listing_id}/offers/mine")
+def withdraw_offer(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Taklifni qaytarib olish."""
+    listing_service.withdraw_offer(db, listing_id, current_user)
+    return {"status": "ok"}
+
+
+@router.post("/{listing_id}/offers/{offer_id}/accept", response_model=ListingRead)
+def accept_offer(
+    listing_id: int,
+    offer_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Muallif taklifni tanladi: e'lon tasdiqlanadi va telefonlar ochiladi.
+
+    Oraliq "taken" holati kerak emas — tanlash muallifning o'zi tomonidan
+    qilinadi, ya'ni bu allaqachon tasdiq.
+    """
+    listing = listing_service.accept_offer(db, listing_id, offer_id, current_user)
+    return _to_read(db, listing, current_user)
+
+
+# --------------------------------------------- yoqtirish va saqlash
+
+def _reaction(db: Session, listing_id: int, user: User, kind: str, on: bool) -> ListingRead:
+    """
+    Yoqtirish/saqlashni o'zgartirib, e'lonni qaytaradi.
+
+    DIQQAT: bu yerda listing_service.get_listing ISHLATILMAYDI. U ko'rishlar
+    sanog'ini oshiradi, ya'ni har bir yurakcha bosilganda e'lon yana bir
+    marta "ko'rilgan" bo'lib qolardi va statistika yolg'on ko'rsatardi.
+    """
+    listing_service.set_reaction(db, listing_id, user, kind, on)
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if listing is None:
+        raise HTTPException(404, "E'lon topilmadi")
+    return _to_read(db, listing, user)
+
+
+@router.post("/{listing_id}/like", response_model=ListingRead)
+def like(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return _reaction(db, listing_id, current_user, "like", True)
+
+
+@router.delete("/{listing_id}/like", response_model=ListingRead)
+def unlike(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return _reaction(db, listing_id, current_user, "like", False)
+
+
+@router.post("/{listing_id}/save", response_model=ListingRead)
+def save(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return _reaction(db, listing_id, current_user, "save", True)
+
+
+@router.delete("/{listing_id}/save", response_model=ListingRead)
+def unsave(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return _reaction(db, listing_id, current_user, "save", False)

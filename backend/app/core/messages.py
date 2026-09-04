@@ -125,6 +125,22 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "«{title}» bo'yicha ishni boshlashingiz mumkin. Telefon endi ochiq.",
         "ru": "Можно приступать к «{title}». Телефон клиента теперь открыт.",
     },
+    "listing_offer.title": {
+        "uz": "E'loningizga narx taklif qilindi",
+        "ru": "На ваше объявление предложили цену",
+    },
+    "listing_offer.body": {
+        "uz": "{who}: «{title}» uchun {price} so'm",
+        "ru": "{who}: {price} сум за «{title}»",
+    },
+    "listing_offer_accepted.title": {
+        "uz": "Taklifingiz qabul qilindi",
+        "ru": "Ваше предложение приняли",
+    },
+    "listing_offer_accepted.body": {
+        "uz": "«{title}» bo'yicha ishni boshlashingiz mumkin. Telefon endi ochiq.",
+        "ru": "Можно приступать к «{title}». Телефон теперь открыт.",
+    },
     "listing_rejected.title": {
         "uz": "Mijoz boshqasini tanladi",
         "ru": "Клиент выбрал другого",
@@ -183,6 +199,55 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "Buyurtma #{order_id} bekor qilindi, pul qaytarildi — {what}",
         "ru": "Заказ #{order_id} отменён, деньги возвращены — {what}",
     },
+    # --- qurilish materiallari ---
+    "material_approved.title": {
+        "uz": "Tovar tasdiqlandi",
+        "ru": "Товар одобрен",
+    },
+    "material_approved.body": {
+        "uz": "«{title}» endi katalogda ko'rinadi",
+        "ru": "«{title}» теперь виден в каталоге",
+    },
+    "material_rejected.title": {
+        "uz": "Tovar rad etildi",
+        "ru": "Товар отклонён",
+    },
+    "material_rejected.body": {
+        "uz": "«{title}» katalogga qo'yilmadi. {reason}",
+        "ru": "«{title}» не попал в каталог. {reason}",
+    },
+    "material_order.title": {
+        "uz": "Yangi material buyurtmasi",
+        "ru": "Новый заказ материала",
+    },
+    "material_order.body": {
+        "uz": "«{title}» — {quantity} birlik. Tasdiqlaysizmi?",
+        "ru": "«{title}» — {quantity} ед. Подтвердите заказ",
+    },
+    "material_confirmed.title": {
+        "uz": "Buyurtma tasdiqlandi",
+        "ru": "Заказ подтверждён",
+    },
+    "material_confirmed.body": {
+        "uz": "Buyurtma #{order_number} yo'lga tayyor",
+        "ru": "Заказ #{order_number} принят продавцом",
+    },
+    "material_delivered.title": {
+        "uz": "Yetkazildi, pul o'tdi",
+        "ru": "Доставлено, деньги перечислены",
+    },
+    "material_delivered.body": {
+        "uz": "Buyurtma #{order_number} bo'yicha pul hisobingizga tushdi",
+        "ru": "Деньги по заказу #{order_number} зачислены на баланс",
+    },
+    "material_cancelled.title": {
+        "uz": "Material buyurtmasi bekor qilindi",
+        "ru": "Заказ материала отменён",
+    },
+    "material_cancelled.body": {
+        "uz": "Buyurtma #{order_number} yopildi",
+        "ru": "Заказ #{order_number} закрыт",
+    },
     "tx.topup": {
         "uz": "Hisobni to'ldirish — {method}",
         "ru": "Пополнение счёта — {method}",
@@ -190,6 +255,15 @@ MESSAGES: Dict[str, Dict[str, str]] = {
     "tx.payout": {
         "uz": "Pul yechish #{request_id} — karta {card}",
         "ru": "Вывод средств #{request_id} — карта {card}",
+    },
+    # Komissiya ushlangan holat. Alohida matn kerak: aks holda egasi
+    # tarixda 100 000 yechilganini ko'radi, kartasiga esa 95 000 tushadi
+    # va farq qayerga ketganini hech qayerdan bilolmaydi.
+    "tx.payout_with_commission": {
+        "uz": "Pul yechish #{request_id} — karta {card}. "
+              "Kartaga {net} so'm, komissiya {commission} so'm",
+        "ru": "Вывод средств #{request_id} — карта {card}. "
+              "На карту {net} сум, комиссия {commission} сум",
     },
     # Faqat OTP_TEST_MODE da ko'rinadi, prodda hech qachon chiqmaydi.
     "test_mode.code": {

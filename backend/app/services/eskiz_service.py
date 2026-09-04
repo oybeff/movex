@@ -106,7 +106,7 @@ class EskizService:
                     data={
                         "mobile_phone": clean_phone,
                         "message": message,
-                        "from": "4546",  # Default sender name
+                        "from": settings.ESKIZ_SENDER,
                     },
                     headers={
                         "Authorization": f"Bearer {token}"
@@ -124,7 +124,7 @@ class EskizService:
                         data={
                             "mobile_phone": clean_phone,
                             "message": message,
-                            "from": "4546",
+                            "from": settings.ESKIZ_SENDER,
                         },
                         headers={
                             "Authorization": f"Bearer {token}"

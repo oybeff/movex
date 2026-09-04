@@ -80,5 +80,43 @@ class ListingRead(BaseModel):
     #: Ko'ruvchi masofasi, km (qidiruv nuqtasi sozlangan bo'lsa)
     distance_km: Optional[float] = None
 
+    # --- sanoqlar. Bazada ustun sifatida saqlanmaydi, so'rovda sanaladi ---
+    likes_count: int = 0
+    saves_count: int = 0
+    offers_count: int = 0
+
+    # --- ko'ruvchiga nisbatan ---
+    liked_by_me: bool = False
+    saved_by_me: bool = False
+    #: Shu e'longa allaqachon narx taklif qilganmi
+    offered_by_me: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class ListingOfferCreate(BaseModel):
+    """Ijrochi o'z narxini aytadi."""
+
+    price: Decimal = Field(gt=0, le=Decimal("10000000000"))
+    comment: Optional[str] = Field(default=None, max_length=1000)
+
+
+class ListingOfferRead(BaseModel):
+    id: int
+    listing_id: int
+    user_id: int
+    price: Decimal
+    comment: Optional[str] = None
+    status: str
+    created_at: datetime
+
+    #: Qo'lda to'ldiriladi — kim taklif qilgani ro'yxatda ko'rinishi uchun
+    user_name: Optional[str] = None
+
+    #: Faqat MUALLIF va qabul qilingan ijrochi ko'radi. Aks holda taxta
+    #: raqam yig'ish uchun ochiq manbaga aylanardi.
+    user_phone: Optional[str] = None
+
     class Config:
         from_attributes = True

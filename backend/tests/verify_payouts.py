@@ -182,5 +182,112 @@ check("баланс не изменился после отказа", bal4 == ba
 check("заморозка снята после отказа", frozen4 == frozen3,
       f"ожидалось {money(frozen3)}, получено {money(frozen4)}")
 
+head("6. КОМИССИЯ ЗА ВЫВОД — ПЛАТИТ ВЛАДЕЛЕЦ")
+
+
+def set_payout_setting(key, value):
+    """Настройка меняется админским API — тем же путём, что и из панели."""
+    return requests.put(f"{API}/settings/app-settings/{key}", headers=admin,
+                        json={"value": value})
+
+
+def payout_settings():
+    return requests.get(f"{API}/payouts/settings", headers=owner).json()
+
+
+# Исходные значения запоминаем и возвращаем в конце: тест идемпотентный,
+# после него стенд должен работать как прежде.
+saved = payout_settings()
+
+r = requests.get(f"{API}/payouts/settings", headers=owner)
+check("условия вывода отдаются владельцу", r.status_code == 200, f"{r.status_code}")
+conditions = r.json()
+check("в условиях есть режим, фикс, процент и минимум",
+      all(k in conditions for k in ("mode", "fixed", "percent", "min_amount")),
+      str(conditions))
+
+# --- режим "фикс" -------------------------------------------------------
+set_payout_setting("payout_commission_mode", "fixed")
+set_payout_setting("payout_commission_fixed", "5000")
+
+bal5, frozen5 = balance_of(owner)
+r = requests.post(f"{API}/payouts/", headers=owner,
+                  json={"amount": AMOUNT, "card_number": CARD})
+check("заявка при фиксированной комиссии создана", r.status_code == 200, r.text[:150])
+fixed_req = r.json()
+
+check("комиссия = 5 000", float(fixed_req["commission"]) == 5000,
+      str(fixed_req.get("commission")))
+check("на карту = сумма минус комиссия",
+      float(fixed_req["payout_amount"]) == AMOUNT - 5000,
+      f"ожидалось {money(AMOUNT - 5000)}, получено {money(fixed_req['payout_amount'])}")
+
+bal6, frozen6 = balance_of(owner)
+check("заморожена ПОЛНАЯ сумма заявки, а не сумма к перечислению",
+      frozen6 == frozen5 + AMOUNT,
+      f"ожидалось {money(frozen5 + AMOUNT)}, получено {money(frozen6)}")
+
+r = requests.post(f"{API}/payouts/{fixed_req['id']}/paid", headers=admin, json={})
+check("выплата подтверждена", r.status_code == 200, r.text[:150])
+
+bal7, _ = balance_of(owner)
+check("с баланса списана ПОЛНАЯ сумма, комиссия осталась платформе",
+      bal7 == bal6 - AMOUNT,
+      f"ожидалось {money(bal6 - AMOUNT)}, получено {money(bal7)}")
+
+txs = requests.get(f"{API}/balance/transactions", headers=owner).json()
+withdrawal = next((t for t in txs if t["type"] == "withdrawal"), None)
+check("в описании транзакции видно и сумму на карту, и комиссию",
+      withdrawal is not None and "195 000" in (withdrawal.get("description") or "")
+      and "5 000" in (withdrawal.get("description") or ""),
+      str(withdrawal.get("description") if withdrawal else None))
+
+# --- режим "процент" ----------------------------------------------------
+set_payout_setting("payout_commission_mode", "percent")
+set_payout_setting("payout_commission_percent", "10")
+check("режим переключился на процент", payout_settings()["mode"] == "percent",
+      str(payout_settings()))
+
+r = requests.post(f"{API}/payouts/", headers=owner,
+                  json={"amount": AMOUNT, "card_number": CARD})
+check("заявка при процентной комиссии создана", r.status_code == 200, r.text[:150])
+percent_req = r.json()
+check("комиссия = 10% от суммы", float(percent_req["commission"]) == AMOUNT * 0.10,
+      f"ожидалось {money(AMOUNT * 0.10)}, получено {money(percent_req['commission'])}")
+check("на карту = 90% суммы", float(percent_req["payout_amount"]) == AMOUNT * 0.90,
+      str(percent_req.get("payout_amount")))
+
+requests.post(f"{API}/payouts/{percent_req['id']}/reject", headers=admin, json={})
+
+# --- комиссия не может съесть всю сумму ---------------------------------
+set_payout_setting("payout_commission_mode", "fixed")
+set_payout_setting("payout_commission_fixed", "500000")
+
+_, frozen_before = balance_of(owner)
+r = requests.post(f"{API}/payouts/", headers=owner,
+                  json={"amount": 100_000, "card_number": CARD})
+check("заявка отклонена, если комиссия не меньше суммы", r.status_code == 400,
+      f"{r.status_code} {r.text[:150]}")
+
+_, frozen_after = balance_of(owner)
+check("отклонённая заявка ничего не заморозила", frozen_after == frozen_before,
+      f"было {money(frozen_before)}, стало {money(frozen_after)}")
+
+# --- старые заявки не пересчитываются ------------------------------------
+r = requests.get(f"{API}/payouts/", headers=owner)
+old = next((x for x in r.json() if x["id"] == fixed_req["id"]), None)
+check("старая заявка сохранила свою комиссию после смены настроек",
+      old is not None and float(old["commission"]) == 5000,
+      str(old.get("commission") if old else None))
+
+# --- возвращаем как было -------------------------------------------------
+set_payout_setting("payout_commission_mode", saved["mode"])
+set_payout_setting("payout_commission_fixed", str(int(saved["fixed"])))
+set_payout_setting("payout_commission_percent", str(int(saved["percent"])))
+restored = payout_settings()
+check("настройки возвращены к исходным",
+      restored["mode"] == saved["mode"] and restored["fixed"] == saved["fixed"],
+      f"{restored} vs {saved}")
+
 head(f"ИТОГ: {ok_count} пройдено, {fail_count} провалено")
 raise SystemExit(1 if fail_count else 0)

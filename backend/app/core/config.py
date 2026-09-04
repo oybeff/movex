@@ -15,7 +15,39 @@ class Settings(BaseSettings):
     # Eskiz SMS Service
     ESKIZ_EMAIL: str
     ESKIZ_PASSWORD: str
+    # ------------------------------------------------------------ Telegram
+    #
+    # Kirish uchun ASOSIY kanal. SMS zaxira bo'lib qoladi: Telegramsiz
+    # odam ham kira olishi kerak.
+    #
+    # DIQQAT: bu qiymatlar shu yerda, settings da e'lon qilinishi SHART.
+    # telegram_service.py ilgari ularni os.getenv orqali o'qirdi va HECH
+    # QACHON topmasdi: .env ni pydantic-settings o'qiydi va qiymatlar
+    # os.environ ga tushmaydi. Click kalitlari bilan aynan shunday
+    # bo'lgan — to'lov xabarnomalari jimgina yuborilmay turgan.
+    TELEGRAM_BOT_TOKEN: str = ""
+    #: Bot logini @ siz — chuqur havola shundan yig'iladi
+    TELEGRAM_BOT_USERNAME: str = ""
+    TELEGRAM_GROUP_ID: str = ""
+    TELEGRAM_GROUP_TOPIC_ID: str = ""
+
+    #: Bot yangiliklarini so'rab turadigan fon vazifasi. Vebhukdan farqi —
+    #: ochiq HTTPS manzil kerak emas, ya'ni tunnel o'lsa ham ishlaydi.
+    TELEGRAM_POLLING: bool = False
+
+    #: Vebhuk maxfiy so'zi. Bo'sh bo'lsa — /auth/telegram/webhook YO'Q
+    #: (404), ya'ni so'rab turish rejimi ishlaydi. To'ldirilgan bo'lsa
+    #: manzil ochiladi va HAR BIR so'rov shu so'z bilan tekshiriladi:
+    #: aks holda manzilni bilgan har kim soxta yangilik yuborib,
+    #: istalgan raqamdan kirishni tasdiqlagan bo'lardi.
+    TELEGRAM_WEBHOOK_SECRET: str = ""
+
     ESKIZ_API_URL: str = "https://notify.eskiz.uz/api"
+
+    # SMS jo'natuvchi nomi. 4546 — Eskiz ning sinov raqami, u hammada
+    # ishlaydi. O'z nomi (masalan MOVEXGO) Eskiz kabinetida tasdiqlangach,
+    # shu yerga yoziladi — kodga tegmasdan.
+    ESKIZ_SENDER: str = "4546"
 
     # Click to'lov tizimi.
     # Ilgari bu qiymatlar click_service ichida os.getenv orqali o'qilardi, ya'ni
@@ -78,6 +110,20 @@ class Settings(BaseSettings):
     OTP_MAX_ATTEMPTS: int = 5
     OTP_BLOCK_DURATION_HOURS: int = 1
     OTP_TEST_MODE: bool = False  # Set to True to skip SMS sending
+
+    # Sinov raqamlari: vergul bilan, masalan "998901110001,998901110002".
+    #
+    # Bu raqamlarga SMS YUBORILMAYDI, kod javobda qaytadi — xuddi test
+    # rejimidagidek, lekin faqat ular uchun. Qolgan hamma odam haqiqiy SMS
+    # oladi.
+    #
+    # Nega kerak: avtotestlar va demo-stend kirish uchun kodni biladigan
+    # yo'lni talab qiladi, lekin butun bazani test rejimiga o'tkazish
+    # haqiqiy foydalanuvchilarni SMS siz qoldiradi.
+    #
+    # ADMIN raqami bu ro'yxatga qo'shilsa ham kod javobda qaytmaydi —
+    # tekshiruv quyida, send_otp ichida.
+    OTP_TEST_PHONES: str = ""
 
     # Push-bildirishnomalar (Firebase Cloud Messaging, HTTP v1).
     #

@@ -4,8 +4,18 @@ Texnika egasining pul yechishi.
 Pul harakati qat'iy: ariza berilganda summa muzlatiladi, to'langanda
 balansdan yechiladi, rad etilganda muzlatish qaytariladi. Muzlatish
 kerak, aks holda ega bir xil pulni bir necha marta so'rab olishi mumkin.
+
+Pul yechishdan platforma ulushi ushlab qolinadi va uni TEXNIKA EGASI
+to'laydi. Sabab oddiy: bir buyurtmadan atigi 5 000 so'm olinadi, va bu
+summa pulni kartaga o'tkazish uchun to'lov tizimi oladigan foizni
+qoplamaydi.
+
+Ulush ariza summasidan ICHIDAN ushlanadi: 100 000 so'radi — balansidan
+100 000 yechiladi, kartaga 95 000 tushadi. Shuning uchun ega balansini
+oxirgi so'migacha yecha oladi; ustiga qo'shilganda esa to'liq balansni
+yechishning iloji bo'lmasdi.
 """
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional
 
 from fastapi import HTTPException
@@ -13,12 +23,88 @@ from sqlalchemy.orm import Session
 
 from app.core.account_state import assert_not_frozen
 from app.core.messages import t
+from app.models.app_settings import AppSettings
 from app.models.balance import Balance, BalanceTransaction
 from app.models.payout_request import PayoutRequest
 from app.schemas.payout import PayoutRequestCreate
 from app.services.balance_service import get_or_create_balance
 
 MIN_PAYOUT_SUM = Decimal("50000")
+
+# ------------------------------------------------------------- komissiya
+#
+# Tuzilishi buyurtma komissiyasi bilan bir xil (pricing_service.py):
+# rejim + ikkala qiymat. Ikkovi bir vaqtda ishlamaydi — rejim qaysi biri
+# amal qilishini belgilaydi. Adminkadan almashtiriladi, kodni tahrirlash
+# shart emas.
+PAYOUT_COMMISSION_MODE_KEY = "payout_commission_mode"
+PAYOUT_COMMISSION_FIXED_KEY = "payout_commission_fixed"
+PAYOUT_COMMISSION_PERCENT_KEY = "payout_commission_percent"
+
+MODE_FIXED = "fixed"
+MODE_PERCENT = "percent"
+
+DEFAULT_PAYOUT_COMMISSION_MODE = MODE_FIXED
+DEFAULT_PAYOUT_COMMISSION_FIXED = Decimal("5000")
+DEFAULT_PAYOUT_COMMISSION_PERCENT = Decimal("10")
+
+
+def _setting(db: Session, key: str) -> Optional[str]:
+    row = db.query(AppSettings).filter(AppSettings.key == key).first()
+    return None if row is None or row.value is None else str(row.value)
+
+
+def get_commission_mode(db: Session) -> str:
+    """'fixed' yoki 'percent'. Notanish qiymat — standart rejim."""
+    raw = (_setting(db, PAYOUT_COMMISSION_MODE_KEY) or "").strip().lower()
+    return raw if raw in (MODE_FIXED, MODE_PERCENT) else DEFAULT_PAYOUT_COMMISSION_MODE
+
+
+def get_commission_fixed(db: Session) -> Decimal:
+    """Qat'iy ushlanma, so'mda. Manfiy yoki xato qiymat — standart 5 000."""
+    raw = _setting(db, PAYOUT_COMMISSION_FIXED_KEY)
+    if raw is None:
+        return DEFAULT_PAYOUT_COMMISSION_FIXED
+    try:
+        amount = Decimal(raw)
+    except (ArithmeticError, TypeError, ValueError):
+        return DEFAULT_PAYOUT_COMMISSION_FIXED
+    return amount if amount >= 0 else DEFAULT_PAYOUT_COMMISSION_FIXED
+
+
+def get_commission_percent(db: Session) -> Decimal:
+    """Ushlanma foizi. Xato yoki chegaradan tashqari qiymat — standart 10%."""
+    raw = _setting(db, PAYOUT_COMMISSION_PERCENT_KEY)
+    if raw is None:
+        return DEFAULT_PAYOUT_COMMISSION_PERCENT
+    try:
+        percent = Decimal(raw)
+    except (ArithmeticError, TypeError, ValueError):
+        return DEFAULT_PAYOUT_COMMISSION_PERCENT
+    return percent if 0 <= percent <= 100 else DEFAULT_PAYOUT_COMMISSION_PERCENT
+
+
+def calculate_commission(db: Session, amount: Decimal) -> Decimal:
+    """
+    Pul yechishdan ushlanadigan summa.
+
+    Ushlanma ariza summasidan OSHMAYDI: aks holda kartaga manfiy summa
+    tushib qolardi. Buyurtma komissiyasida ham xuddi shu qoida.
+    """
+    if get_commission_mode(db) == MODE_FIXED:
+        commission = get_commission_fixed(db)
+    else:
+        commission = amount * get_commission_percent(db) / Decimal("100")
+
+    commission = commission.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    if commission < 0:
+        return Decimal("0")
+    return min(commission, amount)
+
+
+def _money(value: Decimal) -> str:
+    """95000 -> "95 000". Izohda summa o'qiladigan ko'rinishda turishi kerak."""
+    return f"{int(value):,}".replace(",", " ")
 
 
 def _user_language(db: Session, user_id: int):
@@ -62,11 +148,30 @@ def create_request(db: Session, user_id: int, data: PayoutRequestCreate) -> Payo
             ),
         )
 
+    # Ushlanma ariza berilgan paytdagi sozlama bo'yicha hisoblanadi va
+    # o'sha holicha saqlanadi: admin ertaga foizni o'zgartirsa, kecha
+    # berilgan ariza qayta hisoblanib ketmasligi kerak.
+    commission = calculate_commission(db, amount)
+    payout_amount = amount - commission
+
+    if payout_amount <= 0:
+        # Ushlanma butun summani yeb qo'ygan holat. Bunday arizani qabul
+        # qilish — egadan pulni olib, evaziga hech narsa bermaslik.
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Komissiya ({int(commission):,} so'm) so'ralgan summadan kam "
+                f"emas. Kattaroq summa kiriting.".replace(",", " ")
+            ),
+        )
+
     balance.frozen_balance = Decimal(str(balance.frozen_balance)) + amount
 
     request = PayoutRequest(
         user_id=user_id,
         amount=amount,
+        commission=commission,
+        payout_amount=payout_amount,
         status="pending",
         card_number=data.card_number,
         card_holder=data.card_holder,
@@ -129,6 +234,30 @@ def mark_paid(db: Session, request_id: int, admin_id: int, admin_comment: Option
     balance.frozen_balance = Decimal(str(balance.frozen_balance)) - amount
     balance.balance = Decimal(str(balance.balance)) - amount
 
+    # Balansdan to'liq summa yechiladi, kartaga esa komissiyasiz qismi
+    # o'tkaziladi — farqi platformada qoladi. Izohda ikkalasi ham
+    # ko'rsatiladi, aks holda ega yo'qolgan pulni izlab qolardi.
+    commission = Decimal(str(request.commission or 0))
+    net = Decimal(str(request.payout_amount or amount))
+    language = _user_language(db, request.user_id)
+
+    if commission > 0:
+        description = t(
+            "tx.payout_with_commission",
+            language,
+            request_id=request.id,
+            card=request.card_masked,
+            net=_money(net),
+            commission=_money(commission),
+        )
+    else:
+        description = t(
+            "tx.payout",
+            language,
+            request_id=request.id,
+            card=request.card_masked,
+        )
+
     db.add(
         BalanceTransaction(
             user_id=request.user_id,
@@ -136,12 +265,7 @@ def mark_paid(db: Session, request_id: int, admin_id: int, admin_comment: Option
             type="withdrawal",
             status="completed",
             # Izoh egasining "Amallar tarixi"ga tushadi — uning tilida.
-            description=t(
-                "tx.payout",
-                _user_language(db, request.user_id),
-                request_id=request.id,
-                card=request.card_masked,
-            ),
+            description=description,
         )
     )
 
