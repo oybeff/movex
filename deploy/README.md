@@ -80,16 +80,50 @@ ssh-copy-id root@189.74.98.45
 ## Шаг 3. Код на сервер
 
 Каталоги `backend/` и `admin/` должны лежать **рядом**: `admin/config.php`
-читает доступ к базе из `../backend/.env`. Разложить их порознь —
-значит уронить админку.
+читает доступ к базе из `../backend/.env`. Разложить их порознь — значит
+уронить админку.
+
+### Ключ развёртывания (репозиторий приватный)
+
+Пароль от GitHub на сервер класть не нужно и нельзя. Заводится отдельный
+ключ, который умеет только читать этот один репозиторий:
 
 ```bash
 ssh root@189.74.98.45
-mkdir -p /opt/movex
-# либо git clone <репозиторий> /opt/movex
-# либо с локальной машины:
-#   rsync -az --exclude venv --exclude .env --exclude media \
-#         ~/Desktop/outsource/movex/ root@189.74.98.45:/opt/movex/
+ssh-keygen -t ed25519 -C "movex-vps" -f /root/.ssh/movex_deploy -N ""
+cat /root/.ssh/movex_deploy.pub
+```
+
+Показанную строку добавить на GitHub: **Settings → Deploy keys → Add deploy
+key**, галочку «Allow write access» НЕ ставить — серверу писать незачем, а
+украденный ключ с записью означал бы подмену кода.
+
+Дальше сказать ssh использовать этот ключ:
+
+```bash
+cat >> /root/.ssh/config <<'EOF'
+Host github.com
+    IdentityFile /root/.ssh/movex_deploy
+    IdentitiesOnly yes
+EOF
+chmod 600 /root/.ssh/config
+ssh -T git@github.com        # должно поздороваться по имени репозитория
+```
+
+### Клонирование
+
+```bash
+git clone git@github.com:ВЛАДЕЛЕЦ/РЕПОЗИТОРИЙ.git /opt/movex
+```
+
+После этого обновления делаются одной командой — `deploy/update.sh` сам
+делает `git pull`, дамп базы, миграции и перезапуск.
+
+**Без GitHub** (если репозиторий останется локальным) — с этой машины:
+
+```bash
+rsync -az --exclude venv --exclude .env --exclude media --exclude .git \
+      ~/Desktop/outsource/movex/ root@189.74.98.45:/opt/movex/
 ```
 
 `.env`, `venv/` и `media/` не копируются: первый создаётся на сервере со
