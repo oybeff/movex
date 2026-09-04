@@ -1,5 +1,10 @@
 # Выкат MoveX GO в продакшн
 
+**Чистый сервер настраивается не отсюда, а комплектом `deploy/`** —
+`deploy/README.md`, один скрипт делает всё: пакеты, база, окружение,
+systemd, nginx, админка, файрвол, дампы. Этот файл описывает выкат на
+уже настроенный сервер и то, что делается руками помимо него.
+
 Единый чеклист. В `docs/backend/` лежат семь старых документов о деплое
 (`DEPLOY.md`, `SIMPLE_DEPLOY.md`, `QUICK_START.md`, `START_HERE.md`,
 `README_DEPLOY.md`, `DEPLOY_SUMMARY.md`, `DEPLOY_MOVEX_004_UZ.md`) — они
@@ -14,7 +19,7 @@
 
 ```bash
 cd /opt/movex_go
-python3.11 -m venv venv
+python3 -m venv venv          # в Ubuntu 24.04 это 3.12; пакета python3.11 там НЕТ
 venv/bin/pip install -r requirements.txt
 
 cp .env.example .env && nano .env      # см. раздел «Переменные» ниже
@@ -84,6 +89,35 @@ curl https://movex.004.uz/health          # {"status":"healthy",...}
 curl https://movex.004.uz/docs            # должно быть 404 — в проде документация скрыта
 ```
 
+### Вход по Telegram
+
+В проде бот работает через **вебхук**, а не опросом:
+
+```bash
+cd backend
+venv/bin/python scripts/telegram_webhook.py set https://movex.004.uz
+venv/bin/python scripts/telegram_webhook.py info
+```
+
+Опрос (`TELEGRAM_POLLING=true`) запускается в КАЖДОМ процессе uvicorn, а
+их несколько. Два опроса одного бота Telegram встречает ответом 409, и
+вход начинает работать через раз. Вебхуку число процессов безразлично.
+
+Адрес `/auth/telegram/webhook` закрыт словом `TELEGRAM_WEBHOOK_SECRET`.
+Пока оно пустое, адреса нет вовсе (404) — иначе любой, кто знает домен,
+слал бы поддельные `contact` и заходил под чужим номером: ни пароля, ни
+кода на этом пути не спрашивают. Сторожит `tests/verify_telegram_webhook.py`.
+
+### Администратор
+
+На чистой базе администратора нет — в панель войти нечем:
+
+```bash
+cd backend && venv/bin/python scripts/create_admin.py
+```
+
+Логин в панели — номер ровно как в базе, без плюса: `998901234567`.
+
 ---
 
 ## 2. Платёжные системы
@@ -104,13 +138,17 @@ curl https://movex.004.uz/docs            # должно быть 404 — в п�
 
 ## 3. Админка
 
-```bash
-APP_ENV=production               # иначе ошибки будут видны посетителям
-POSTGRES_HOST=localhost
-POSTGRES_DB=movex_go
-POSTGRES_USER=
-POSTGRES_PASSWORD=
-```
+Отдельных настроек у админки нет: `admin/config.php` берёт доступ к базе
+из `backend/.env`, из `DATABASE_URL`. Поэтому `admin/` и `backend/` должны
+лежать РЯДОМ, а `.env` — быть доступен на чтение пользователю php-fpm
+(`bootstrap_ubuntu24.sh` кладёт файл в группу `movex` и добавляет туда
+`www-data`).
+
+Раньше здесь стояли `POSTGRES_*` — таких переменных в проекте нет, панель
+падала с «role does not exist».
+
+Панель живёт на отдельном поддомене `admin.<домен>`, а не на `/admin`
+основного: этот путь у API занят собственным роутером.
 
 Cookie сессии сама получает флаг `Secure`, когда сайт открыт по HTTPS —
 руками ничего править не нужно.
@@ -163,8 +201,10 @@ flutter run --dart-define=API_BASE_URL=http://<ваш-ip>:8000
 bash backend/tests/run_all.sh
 ```
 
-187 проверок: деньги, возвраты, Payme, выплаты, права доступа, уведомления,
-защита OTP. Все должны быть зелёными.
+Деньги, возвраты, Payme, выплаты, права доступа, уведомления, объявления,
+материалы, защита OTP, вебхук Telegram и смоук по всем GET-эндпоинтам.
+Скрипт заканчивается строкой `BARCHA TEKSHIRUVLAR MUVAFFAQIYATLI` — любая
+другая означает провал.
 
 Отдельно руками:
 
