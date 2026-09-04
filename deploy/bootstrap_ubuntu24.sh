@@ -293,6 +293,11 @@ step "9/12 nginx"
 mkdir -p /var/www/movex
 ln -sfn "$APP_DIR/admin" /var/www/movex/panel
 
+# Политика конфиденциальности. Google Play не публикует приложение без
+# публичной ссылки на неё, и страница про удаление данных обязана быть
+# доступна БЕЗ входа в приложение — поэтому обычный файл, а не экран.
+install -m 644 "$APP_DIR/deploy/privacy.html" /var/www/movex/privacy.html
+
 if [ "$ADMIN_MODE" = "path" ]; then
     ADMIN_BLOCK=$(cat <<'NGXPANEL'
 
@@ -338,6 +343,13 @@ server {
         try_files \$uri =404;
     }
 $ADMIN_BLOCK
+    location = /privacy {
+        root /var/www/movex;
+        try_files /privacy.html =404;
+        default_type text/html;
+        charset utf-8;
+    }
+
     location / {
         proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
