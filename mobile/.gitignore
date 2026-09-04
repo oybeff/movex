@@ -34,6 +34,11 @@ admin/
 .pub-cache/
 .pub/
 /build/
+# build здесь — СИМЛИНК на ~/Library/Caches (iCloud вешает на папки сборки
+# com.apple.FinderInfo, и codesign отказывается подписывать). Строка
+# "/build/" со слешем симлинк НЕ ловит, и он попадал в git как файл —
+# на чужой машине это ссылка в никуда.
+/build
 
 # Symbolication related
 app.*.symbols

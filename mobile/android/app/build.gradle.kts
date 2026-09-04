@@ -1,9 +1,26 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Imzolash kalitlari android/key.properties dan o'qiladi.
+//
+// Fayl git ga TUSHMAYDI (.gitignore), chunki ichida parol bor. Shuning
+// uchun u yo'q bo'lishi ham mumkin — masalan boshqa mashinada yoki toza
+// klonda. Bunday holda reliz eski yo'l bilan, debug kaliti bilan
+// imzolanadi: `flutter build apk --release` ishlashda davom etadi, faqat
+// Google Play bunday buildni qabul qilmaydi.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+val hasReleaseKeystore = keystoreProperties.getProperty("storeFile") != null
 
 android {
     namespace = "uz.movexgo.app"
@@ -38,11 +55,31 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Ilgari bu yerda debug kaliti turardi va yonida "TODO: o'z
+            // kalitingizni qo'ying" degan izoh. Debug kaliti bilan
+            // imzolangan buildni Google Play QABUL QILMAYDI, ya'ni ilovani
+            // chiqarib bo'lmasdi.
+            //
+            // Kalit bo'lmasa — eski yo'l saqlanadi, aks holda toza klonda
+            // yig'ilish umuman ishlamay qolardi.
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

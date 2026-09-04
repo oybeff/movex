@@ -29,6 +29,10 @@
         <!-- Ishlab chiqish kompyuteri. Shu ro'yxatni tahrirlang. -->
         <domain includeSubdomains="false">192.168.1.128</domain>
         <domain includeSubdomains="false">192.168.1.124</domain>
+        <domain includeSubdomains="false">192.168.1.144</domain>   <!-- 2026-09-01 -->
+        <domain includeSubdomains="false">192.168.1.101</domain>   <!-- CLAUDE.md dagi misol -->
+        <domain includeSubdomains="false">192.168.0.144</domain>   <!-- boshqa router uchun -->
+        <domain includeSubdomains="false">192.168.0.101</domain>
     </domain-config>
 
     <!-- Qolgan hamma narsa: HTTPS majburiy -->

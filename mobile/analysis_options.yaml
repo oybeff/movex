@@ -10,6 +10,10 @@
 analyzer:
   exclude:
     - build/**
+    # Yamoqlangan yandex_mapkit nusxasi. Bu bizning kodimiz emas —
+    # uni tekshirish `flutter analyze` sanog'ini 225 dan 291 ga
+    # ko'tarardi va o'z ogohlantirishlarimizni ko'mib tashlardi.
+    - third_party/**
     - android/**
     - ios/**
     - web/**

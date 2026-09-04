@@ -32,6 +32,19 @@
 	<string>ajetl5ke6ad17jrbtlke</string>
 
 	<!-- Location ruxsatlari uchun izohlar -->
+	<!-- Eksport nazorati javobi.
+	     Ilova faqat oddiy HTTPS ishlatadi, ya'ni Apple ning "istisno
+	     qilingan shifrlash" ta'rifiga tushadi. Bu kalitsiz TestFlight ga
+	     yuklangan har bir build savol bilan to'xtaydi va testerlarga
+	     tarqatilmaydi — javobni qo'lda bosib o'tirish kerak bo'ladi. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>Texnika, e'lon va material rasmlarini olish uchun kamera kerak</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Texnika, e'lon va material rasmlarini yuklash uchun galereya kerak</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Rasmni galereyaga saqlash uchun ruxsat kerak</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Texnika joylashuvini aniqlash uchun sizning joylashuvingiz kerak</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

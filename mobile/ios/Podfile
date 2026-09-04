@@ -1,5 +1,11 @@
-# Uncomment this line to define a global platform for your project
-# platform :ios, '13.0'
+# Eng past iOS versiyasi. Raqam O'YLAB OLINMAYDI: u o'rnatilgan Flutter
+# SDK sidan keladi — bin/cache/artifacts/engine/ios/Flutter.xcframework
+# ichidagi MinimumOSVersion. Flutter 3.47 da bu 15.0.
+#
+# Pastroq qo'yilsa, `pod install` "required a higher minimum deployment
+# target" deb to'xtaydi va sababini aytmaydi — biz aynan shunga
+# uchradik, 13.0 qo'yib.
+platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -39,5 +45,20 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    # Har bir podning eng past iOS versiyasini 15.0 ga ko'taramiz.
+    #
+    # flutter_additional_ios_build_settings hammasini tuzatmaydi: ba'zi
+    # podlar o'z podspec ida 11.0 yoki 12.0 yozib qo'yadi, va Xcode
+    # "compiling for iOS 12.0, but module has a minimum deployment target
+    # of iOS 15.0" deb yig'ishni to'xtatadi. Buni faqat shu yerda,
+    # o'rnatishdan keyin tuzatish mumkin.
+    target.build_configurations.each do |config|
+      current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f
+      if current < 15.0
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      end
+
+    end
   end
 end

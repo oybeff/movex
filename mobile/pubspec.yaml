@@ -84,6 +84,24 @@ dependencies:
   image_picker: ^1.1.2
 
 
+# Yamoqlangan bog'liqliklar.
+#
+# yandex_mapkit 3.4.0 yangi iOS SDK bilan yig'ilmaydi: ichida Apple olib
+# tashlagan TARGET_IPHONE_SIMULATOR makrosi ishlatilgan. Bitta satr
+# tuzatilgan nusxa third_party/ da yotadi.
+#
+# Nega 4.x ga o'tilmadi: bu major versiya, xaritani 11 ta fayl ishlatadi
+# (YandexMap, Point, CameraUpdate, PlacemarkMapObject...), va Android da
+# xarita HOZIR ishlaydi. Bitta satr uchun ishlab turgan narsani buzish
+# noto'g'ri almashuv.
+#
+# Nega ~/.pub-cache dagi manba tahrirlanmadi: u umumiy, boshqa
+# loyihalarga ham tegishli, va `flutter pub get` uni istalgan payt qayta
+# yozadi.
+dependency_overrides:
+  yandex_mapkit:
+    path: third_party/yandex_mapkit
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -116,6 +134,10 @@ flutter:
       - assets/app_icon.jpg
       - assets/logo-png.png
       - assets/logo_only.png
+      # Новый логотип MovexGo. Иконки приложения из него собирает
+      # tool/generate_app_icons.py — руками их не режут.
+      - assets/logo_full.png
+      - assets/logo_mark.png
       # Texnika turlari ikonkalari: .svg — interfeys uchun, .png — xarita
       # markerlari uchun. tool/generate_equipment_icons.py yasaydi.
       - assets/equipment_types/
