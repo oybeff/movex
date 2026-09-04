@@ -10,6 +10,12 @@ import '../network/dio_client.dart';
 class PayoutService {
   final Dio _dio = DioClient.create();
 
+  /// Ushlanma va eng kam summa — ariza berishdan OLDIN ko'rsatish uchun.
+  Future<PayoutSettingsModel> getSettings() async {
+    final response = await _dio.get('/payouts/settings');
+    return PayoutSettingsModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
   Future<List<PayoutRequestModel>> getMyRequests() async {
     final response = await _dio.get('/payouts/');
     final List<dynamic> data = response.data as List<dynamic>;

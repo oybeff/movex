@@ -9,8 +9,10 @@ import '../../../../core/models/equipment_model.dart';
 import '../../../../core/constants/app_config.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/equipment_types.dart';
+import '../../../../core/constants/material_types.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../materials/presentation/pages/materials_catalog_page.dart';
 
 class ClientCatalogPage extends StatefulWidget {
   const ClientCatalogPage({super.key});
@@ -421,6 +423,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
         ),
         body: Column(
           children: [
+            _materialsStrip(),
             // Search and filters
             Container(
               color: Colors.white,
@@ -497,6 +500,96 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Qurilish materiallari — katalogning eng tepasida.
+  ///
+  /// Nega shu yerda. Odam texnika qidirib kelganda ham unga g'isht,
+  /// sement va qum kerak bo'ladi; alohida bo'limga yashirilsa, uni
+  /// umuman topmaydi. Bosilgan kategoriya materiallar katalogini
+  /// darhol o'sha tur bilan ochadi.
+  Widget _materialsStrip() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.only(top: 12, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'materials.strip_title'.tr(),
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const MaterialsCatalogPage(),
+                    ),
+                  ),
+                  child: Text('common.all'.tr(),
+                      style: const TextStyle(fontSize: 13)),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 86,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: MaterialTypes.codes.length,
+              itemBuilder: (context, i) {
+                final code = MaterialTypes.codes[i];
+                return InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MaterialsCatalogPage(initialType: code),
+                    ),
+                  ),
+                  child: SizedBox(
+                    width: 72,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(MaterialTypes.emoji(code),
+                              style: const TextStyle(fontSize: 24)),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          MaterialTypes.label(code),
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey[700]),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

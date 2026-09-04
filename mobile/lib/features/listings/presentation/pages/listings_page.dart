@@ -5,6 +5,7 @@ import '../../../../core/constants/app_colors.dart';
 import 'create_listing_page.dart';
 import 'listings_feed_view.dart';
 import 'my_listings_view.dart';
+import 'saved_listings_view.dart';
 
 /// E'lonlar bo'limi — ikkala rol uchun BIR XIL ekran.
 ///
@@ -26,16 +27,27 @@ class ListingsPage extends StatefulWidget {
 
 class _ListingsPageState extends State<ListingsPage>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 2, vsync: this);
+  late final TabController _tabs = TabController(length: 3, vsync: this)
+    ..addListener(_onTabChanged);
 
   // Bo'limlar o'z ma'lumotini o'zi yuklaydi, lekin e'lon joylangandan keyin
   // ikkalasini ham yangilash kerak: yangi e'lon "meniki" ga tushadi va
   // taxtadagi hisob o'zgarishi mumkin.
   final _feedKey = GlobalKey<ListingsFeedViewState>();
   final _mineKey = GlobalKey<MyListingsViewState>();
+  final _savedKey = GlobalKey<SavedListingsViewState>();
+
+  /// Saqlanganlar taxtadan boshqariladi: odam taxtada xatcho'p bosadi,
+  /// keyin shu bo'limga o'tadi. Bo'lim ochilganda qayta yuklanmasa, u
+  /// eski ro'yxatni ko'rsatib turardi.
+  void _onTabChanged() {
+    if (_tabs.indexIsChanging) return;
+    if (_tabs.index == 2) _savedKey.currentState?.reload();
+  }
 
   @override
   void dispose() {
+    _tabs.removeListener(_onTabChanged);
     _tabs.dispose();
     super.dispose();
   }
@@ -80,6 +92,7 @@ class _ListingsPageState extends State<ListingsPage>
           tabs: [
             Tab(text: 'listings.tab_board'.tr()),
             Tab(text: 'listings.tab_mine'.tr()),
+            Tab(text: 'listings.tab_saved'.tr()),
           ],
         ),
       ),
@@ -101,6 +114,7 @@ class _ListingsPageState extends State<ListingsPage>
         children: [
           ListingsFeedView(key: _feedKey),
           MyListingsView(key: _mineKey),
+          SavedListingsView(key: _savedKey),
         ],
       ),
     );

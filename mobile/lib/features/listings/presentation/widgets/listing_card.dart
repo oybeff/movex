@@ -18,11 +18,18 @@ class ListingCard extends StatelessWidget {
     required this.listing,
     this.actions = const [],
     this.onTap,
+    this.onToggleLike,
+    this.onToggleSave,
   });
 
   final ListingModel listing;
   final List<Widget> actions;
   final VoidCallback? onTap;
+
+  /// Berilsa — yurakcha va xatcho'p bosiladigan bo'ladi. Berilmasa faqat
+  /// raqamlar ko'rinadi: o'z e'loningni yoqtirishning ma'nosi yo'q.
+  final VoidCallback? onToggleLike;
+  final VoidCallback? onToggleSave;
 
   @override
   Widget build(BuildContext context) {
@@ -147,17 +154,129 @@ class ListingCard extends StatelessWidget {
             if (listing.hasPhone)
               _row(Icons.phone_outlined, listing.contactPhone!, bold: true),
 
+            _stats(),
+
             if (actions.isNotEmpty) ...[
               const SizedBox(height: 14),
-              Row(
-                children: [
-                  for (int i = 0; i < actions.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 10),
-                    Expanded(child: actions[i]),
+              // Uchta tugma bitta qatorga sig'maydi: telefon ekranida
+              // yozuvlar qirqilib ketadi. Shuning uchun birinchisi (odatda
+              // "Marshrut") alohida qatorda turadi.
+              if (actions.length > 2) ...[
+                SizedBox(width: double.infinity, child: actions.first),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    for (int i = 1; i < actions.length; i++) ...[
+                      if (i > 1) const SizedBox(width: 10),
+                      Expanded(child: actions[i]),
+                    ],
                   ],
-                ],
-              ),
+                ),
+              ] else
+                Row(
+                  children: [
+                    for (int i = 0; i < actions.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 10),
+                      Expanded(child: actions[i]),
+                    ],
+                  ],
+                ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Ko'rishlar, yoqtirishlar, xatcho'plar va takliflar bitta qatorda.
+  ///
+  /// Muallif uchun bu javob: e'lonim ko'rinyaptimi va unga qiziqish
+  /// bormi. Ijrochi uchun — qanchalik raqobat borligi.
+  Widget _stats() {
+    final canReact = onToggleLike != null || onToggleSave != null;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        children: [
+          _stat(Icons.visibility_outlined, listing.viewsCount),
+          const SizedBox(width: 14),
+
+          if (onToggleLike != null)
+            _tappable(
+              icon: listing.likedByMe ? Icons.favorite : Icons.favorite_border,
+              color: listing.likedByMe ? Colors.redAccent : null,
+              count: listing.likesCount,
+              onTap: onToggleLike!,
+            )
+          else
+            _stat(Icons.favorite_border, listing.likesCount),
+          const SizedBox(width: 14),
+
+          if (onToggleSave != null)
+            _tappable(
+              icon: listing.savedByMe ? Icons.bookmark : Icons.bookmark_border,
+              color: listing.savedByMe ? AppColors.primaryGreen : null,
+              count: listing.savesCount,
+              onTap: onToggleSave!,
+            )
+          else
+            _stat(Icons.bookmark_border, listing.savesCount),
+
+          if (listing.offersCount > 0) ...[
+            const SizedBox(width: 14),
+            _stat(Icons.local_offer_outlined, listing.offersCount,
+                highlight: !canReact),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _stat(IconData icon, int count, {bool highlight = false}) {
+    final color = highlight ? AppColors.primaryGreen : Colors.grey[600];
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 4),
+        Text(
+          '$count',
+          style: TextStyle(
+            fontSize: 12.5,
+            color: color,
+            fontWeight: highlight ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _tappable({
+    required IconData icon,
+    required int count,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      // Barmoq uchun kattaroq maydon: 16px ikonka o'zi juda kichik nishon.
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 19, color: color ?? Colors.grey[600]),
+            const SizedBox(width: 4),
+            Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 12.5,
+                color: color ?? Colors.grey[600],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),

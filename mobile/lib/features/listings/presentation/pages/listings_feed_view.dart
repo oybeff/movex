@@ -1,11 +1,13 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/models/listing_model.dart';
 import '../../../../core/services/listing_service.dart';
+import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import '../widgets/listing_card.dart';
 
@@ -74,6 +76,114 @@ class ListingsFeedViewState extends State<ListingsFeedView> {
       // aynan ko'rsatamiz, o'zimizdan sabab o'ylab topmaymiz.
       _snack(_detail(e) ?? 'errors.something_went_wrong'.tr());
       await _load();
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
+
+  /// Yurakcha va xatcho'p.
+  ///
+  /// Server javobida yangi sanoqlar keladi — ro'yxatni butunlay qayta
+  /// yuklamasdan, faqat shu kartochka almashtiriladi: aks holda har bir
+  /// bosishda ekran sakrab ketardi.
+  Future<void> _toggleMark(ListingModel listing, {required bool like}) async {
+    try {
+      final updated = like
+          ? await _service.setLike(listing.id, !listing.likedByMe)
+          : await _service.setSaved(listing.id, !listing.savedByMe);
+      if (!mounted) return;
+      setState(() {
+        final index = _items.indexWhere((x) => x.id == listing.id);
+        if (index != -1) _items[index] = updated;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      _snack(_detail(e) ?? 'errors.something_went_wrong'.tr());
+    }
+  }
+
+  /// Narx taklif qilish. "Olaman" dan farqi shundaki, bu yerda ijrochi
+  /// O'Z summasini aytadi, muallif esa kelganlaridan birini tanlaydi.
+  Future<void> _offerPrice(ListingModel listing) async {
+    final controller = TextEditingController(
+      text: listing.budget != null ? listing.budget!.round().toString() : '',
+    );
+    final commentController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('listings.offer_title'.tr()),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (listing.budget != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(
+                  '${'listings.budget'.tr()}: '
+                  '${NumberFormatter.formatCurrency(listing.budget)} '
+                  '${'common.currency'.tr()}',
+                  style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                ),
+              ),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'listings.offer_price'.tr(),
+                suffixText: 'common.currency'.tr(),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: commentController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'listings.offer_comment'.tr(),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('common.cancel'.tr()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('listings.offer_send'.tr()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final price = double.tryParse(controller.text.replaceAll(' ', ''));
+    if (price == null || price <= 0) {
+      _snack('listings.offer_price_invalid'.tr());
+      return;
+    }
+
+    setState(() => _busyId = listing.id);
+    try {
+      await _service.makeOffer(listing.id,
+          price: price, comment: commentController.text.trim());
+      if (!mounted) return;
+      _snack('listings.offer_sent'.tr());
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      _snack(_detail(e) ?? 'errors.something_went_wrong'.tr());
     } finally {
       if (mounted) setState(() => _busyId = null);
     }
@@ -220,6 +330,8 @@ class ListingsFeedViewState extends State<ListingsFeedView> {
 
     return ListingCard(
       listing: listing,
+      onToggleLike: () => _toggleMark(listing, like: true),
+      onToggleSave: () => _toggleMark(listing, like: false),
       actions: busy
           ? [
               const Center(
@@ -252,8 +364,26 @@ class ListingsFeedViewState extends State<ListingsFeedView> {
         : null;
 
     if (listing.isOpen) {
+      // Ikkala yo'l ham ochiq: "olaman" — muallif byudjetiga rozilik,
+      // "narx taklif qilaman" — o'z summasi. Byudjet ko'rsatilmagan
+      // e'lonlar ko'p, shuning uchun bittasi yetmaydi.
       return [
         if (route != null) route,
+        OutlinedButton(
+          onPressed: () => _offerPrice(listing),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primaryGreen,
+            side: const BorderSide(color: AppColors.primaryGreen),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Text(
+            listing.offeredByMe
+                ? 'listings.offer_change'.tr()
+                : 'listings.offer_button'.tr(),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+        ),
         ElevatedButton(
           onPressed: () => _take(listing),
           style: ElevatedButton.styleFrom(

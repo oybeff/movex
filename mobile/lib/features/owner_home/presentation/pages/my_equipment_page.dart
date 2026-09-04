@@ -7,6 +7,7 @@ import '../../../../core/models/equipment_model.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../materials/presentation/pages/my_materials_page.dart';
 
 class MyEquipmentPage extends StatefulWidget {
   const MyEquipmentPage({super.key});
@@ -297,6 +298,17 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
         backgroundColor: AppColors.white,
         elevation: 0,
         actions: [
+          // Materiallar shu yerda: ega uchun bu ham "sotadigan narsam",
+          // faqat ijaraga emas, sotuvga. Alohida bo'limga yashirilsa,
+          // sotuvchi uni umuman topmaydi.
+          IconButton(
+            icon: const Text('🧱', style: TextStyle(fontSize: 20)),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MyMaterialsPage()),
+            ),
+            tooltip: 'materials.my_products'.tr(),
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () async {

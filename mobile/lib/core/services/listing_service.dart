@@ -118,6 +118,62 @@ class ListingService {
   Future<ListingModel> take(int id) async =>
       _one(await _dio.post('/listings/$id/take'));
 
+  // ------------------------------------------------------ narx takliflari
+
+  /// O'z narxini taklif qilish. Ikkinchi marta chaqirilsa — narx
+  /// yangilanadi, yangi taklif yaratilmaydi.
+  Future<ListingOfferModel> makeOffer(
+    int listingId, {
+    required double price,
+    String? comment,
+  }) async {
+    final response = await _dio.post('/listings/$listingId/offers', data: {
+      'price': price,
+      if (comment != null && comment.isNotEmpty) 'comment': comment,
+    });
+    return ListingOfferModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Takliflar. Muallif hammasini ko'radi, ijrochi faqat o'zinikisi —
+  /// buni server hal qiladi.
+  Future<List<ListingOfferModel>> getOffers(int listingId) async {
+    final response = await _dio.get('/listings/$listingId/offers');
+    return (response.data as List<dynamic>)
+        .map((e) => ListingOfferModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> withdrawOffer(int listingId) async {
+    await _dio.delete('/listings/$listingId/offers/mine');
+  }
+
+  /// Muallif taklifni tanladi: e'lon darhol tasdiqlanadi.
+  Future<ListingModel> acceptOffer(int listingId, int offerId) async =>
+      _one(await _dio.post('/listings/$listingId/offers/$offerId/accept'));
+
+  // ------------------------------------------------- yoqtirish va saqlash
+
+  Future<ListingModel> setLike(int id, bool on) async => _one(
+        on
+            ? await _dio.post('/listings/$id/like')
+            : await _dio.delete('/listings/$id/like'),
+      );
+
+  Future<ListingModel> setSaved(int id, bool on) async => _one(
+        on
+            ? await _dio.post('/listings/$id/save')
+            : await _dio.delete('/listings/$id/save'),
+      );
+
+  /// Xatcho'p qo'yilgan e'lonlar.
+  Future<List<ListingModel>> getSaved({int skip = 0, int limit = 50}) async {
+    final response = await _dio.get('/listings/saved', queryParameters: {
+      'skip': skip,
+      'limit': limit,
+    });
+    return _list(response);
+  }
+
   // ----------------------------------------------------------- ikkalasi
 
   Future<ListingModel> getOne(int id) async =>

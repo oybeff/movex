@@ -45,6 +45,17 @@ class ListingModel {
   final bool takenByMe;
   final double? distanceKm;
 
+  /// Sanoqlar. Serverda ustun sifatida saqlanmaydi — so'rovda sanaladi,
+  /// shuning uchun ular har doim haqiqatga mos.
+  final int likesCount;
+  final int savesCount;
+  final int offersCount;
+
+  /// Ko'ruvchining o'ziga nisbatan
+  final bool likedByMe;
+  final bool savedByMe;
+  final bool offeredByMe;
+
   const ListingModel({
     required this.id,
     required this.clientId,
@@ -70,6 +81,12 @@ class ListingModel {
     this.contactPhone,
     this.takenByMe = false,
     this.distanceKm,
+    this.likesCount = 0,
+    this.savesCount = 0,
+    this.offersCount = 0,
+    this.likedByMe = false,
+    this.savedByMe = false,
+    this.offeredByMe = false,
   });
 
   static double? _toDouble(dynamic v) {
@@ -110,6 +127,12 @@ class ListingModel {
       contactPhone: json['contact_phone'] as String?,
       takenByMe: json['taken_by_me'] as bool? ?? false,
       distanceKm: _toDouble(json['distance_km']),
+      likesCount: json['likes_count'] as int? ?? 0,
+      savesCount: json['saves_count'] as int? ?? 0,
+      offersCount: json['offers_count'] as int? ?? 0,
+      likedByMe: json['liked_by_me'] as bool? ?? false,
+      savedByMe: json['saved_by_me'] as bool? ?? false,
+      offeredByMe: json['offered_by_me'] as bool? ?? false,
     );
   }
 
@@ -123,4 +146,58 @@ class ListingModel {
 
   String? get typeLabel =>
       equipmentType == null ? null : EquipmentTypes.label(equipmentType);
+}
+
+/// E'longa aytilgan narx.
+///
+/// "Olaman" dan farqi: u muallif byudjetiga rozilik, taklif esa o'z summasi.
+/// Muallif kelganlaridan birini tanlaydi.
+class ListingOfferModel {
+  final int id;
+  final int listingId;
+  final int userId;
+  final double price;
+  final String? comment;
+
+  /// pending | accepted | declined | withdrawn
+  final String status;
+  final DateTime createdAt;
+
+  final String? userName;
+
+  /// Faqat muallifga va faqat QABUL QILINGANDAN keyin keladi. Aks holda
+  /// taklif berish raqam olishning oson yo'liga aylanardi.
+  final String? userPhone;
+
+  const ListingOfferModel({
+    required this.id,
+    required this.listingId,
+    required this.userId,
+    required this.price,
+    required this.status,
+    required this.createdAt,
+    this.comment,
+    this.userName,
+    this.userPhone,
+  });
+
+  bool get isAccepted => status == 'accepted';
+  bool get isPending => status == 'pending';
+  bool get hasPhone => userPhone != null && userPhone!.isNotEmpty;
+
+  factory ListingOfferModel.fromJson(Map<String, dynamic> json) {
+    return ListingOfferModel(
+      id: json['id'] as int,
+      listingId: json['listing_id'] as int,
+      userId: json['user_id'] as int,
+      // Narx serverdan SATR bo'lib keladi ("950000.00") — num deb o'qib
+      // bo'lmaydi, shuning uchun umumiy ko'rinishga keltiriladi.
+      price: ListingModel._toDouble(json['price']) ?? 0,
+      comment: json['comment'] as String?,
+      status: json['status'] as String? ?? 'pending',
+      createdAt: DateTime.parse(json['created_at'] as String),
+      userName: json['user_name'] as String?,
+      userPhone: json['user_phone'] as String?,
+    );
+  }
 }

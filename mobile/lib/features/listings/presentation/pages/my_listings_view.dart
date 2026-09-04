@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/models/listing_model.dart';
 import '../../../../core/services/listing_service.dart';
+import '../../../../core/utils/number_formatter.dart';
 import '../widgets/listing_card.dart';
 
 /// O'z e'lonlari — muallif tomoni.
@@ -195,6 +196,33 @@ class MyListingsViewState extends State<MyListingsView> {
               ],
             ),
           ),
+        // Narx takliflari kelgan — muallif buni o'tkazib yubormasligi kerak.
+        if (!listing.takenByMe && listing.isOpen && listing.offersCount > 0)
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primaryGreen.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.local_offer_outlined,
+                    size: 16, color: AppColors.primaryGreen),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'listings.offers_waiting'
+                        .tr(namedArgs: {'count': '${listing.offersCount}'}),
+                    style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.primaryGreen,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ListingCard(
           listing: listing,
           actions: busy
@@ -322,10 +350,148 @@ class MyListingsViewState extends State<MyListingsView> {
           child: Text('listings.cancel'.tr(),
               style: const TextStyle(fontSize: 13)),
         ),
+        // Takliflar kelgan bo'lsa — ularni ko'rish muallifning asosiy ishi.
+        if (listing.offersCount > 0)
+          ElevatedButton(
+            onPressed: () => _showOffers(listing),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text(
+              'listings.offers_view'
+                  .tr(namedArgs: {'count': '${listing.offersCount}'}),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
       ];
     }
 
     return const [];
+  }
+
+  /// Kelgan takliflar ro'yxati va ulardan birini tanlash.
+  ///
+  /// Tanlash — bu allaqachon tasdiq: e'lon darhol "ishda" holatiga o'tadi va
+  /// telefonlar ochiladi. Oraliq "olindi" bosqichi bu yerda kerak emas.
+  Future<void> _showOffers(ListingModel listing) async {
+    List<ListingOfferModel> offers;
+    try {
+      offers = await _service.getOffers(listing.id);
+    } catch (e) {
+      if (!mounted) return;
+      _snack(_detail(e) ?? 'errors.something_went_wrong'.tr());
+      return;
+    }
+    if (!mounted) return;
+
+    final chosen = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: AppColors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'listings.offers_title'.tr(),
+                style: const TextStyle(
+                    fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                listing.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 14),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: offers.length,
+                  separatorBuilder: (_, __) => const Divider(height: 20),
+                  itemBuilder: (context, i) {
+                    final offer = offers[i];
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${NumberFormatter.formatCurrency(offer.price)} '
+                                '${'common.currency'.tr()}',
+                                style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              if (offer.userName != null)
+                                Text(offer.userName!,
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey[700])),
+                              if (offer.comment != null &&
+                                  offer.comment!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    offer.comment!,
+                                    style: TextStyle(
+                                        fontSize: 12.5,
+                                        color: Colors.grey[600]),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: () =>
+                              Navigator.pop(sheetContext, offer.id),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryGreen,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: Text('listings.offer_choose'.tr(),
+                              style: const TextStyle(fontSize: 13)),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (chosen == null || !mounted) return;
+
+    setState(() => _busyId = listing.id);
+    try {
+      await _service.acceptOffer(listing.id, chosen);
+      if (!mounted) return;
+      _snack('listings.offer_accepted'.tr());
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      _snack(_detail(e) ?? 'errors.something_went_wrong'.tr());
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
   }
 
   Widget _empty() {

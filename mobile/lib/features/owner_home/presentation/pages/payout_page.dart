@@ -31,21 +31,33 @@ class _PayoutPageState extends State<PayoutPage> {
 
   BalanceModel? _balance;
   List<PayoutRequestModel> _requests = [];
+
+  /// Ushlanma shartlari. Serverdan kelmasa null — u holda hisob-kitob
+  /// ko'rsatilmaydi, lekin ariza berish ishlashda davom etadi.
+  PayoutSettingsModel? _settings;
+
   bool _isLoading = true;
   bool _isSending = false;
 
   @override
   void initState() {
     super.initState();
+    // Summa yozilishi bilan "kartaga qancha tushadi" qayta hisoblanadi.
+    _amountController.addListener(_onAmountChanged);
     _load();
   }
 
   @override
   void dispose() {
+    _amountController.removeListener(_onAmountChanged);
     _amountController.dispose();
     _cardController.dispose();
     _holderController.dispose();
     super.dispose();
+  }
+
+  void _onAmountChanged() {
+    if (_settings != null && mounted) setState(() {});
   }
 
   Future<void> _load() async {
@@ -66,9 +78,21 @@ class _PayoutPageState extends State<PayoutPage> {
       setState(() => _isLoading = false);
       _snack('errors.something_went_wrong'.tr());
     }
+
+    // Shartlar alohida so'raladi: ular kelmasa ham sahifa ishlashi kerak.
+    try {
+      final settings = await _payoutService.getSettings();
+      if (mounted) setState(() => _settings = settings);
+    } catch (_) {
+      // Eski server — hisob-kitobsiz ishlaymiz.
+    }
   }
 
   double get _available => _balance?.availableBalance ?? 0;
+
+  /// Maydonga yozilgan summa. Yozilmagan yoki noto'g'ri bo'lsa — 0.
+  double get _enteredAmount =>
+      double.tryParse(_amountController.text.replaceAll(' ', '')) ?? 0;
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -198,9 +222,17 @@ class _PayoutPageState extends State<PayoutPage> {
                 final amount = double.tryParse((value ?? '').replaceAll(' ', ''));
                 if (amount == null || amount <= 0) return 'payout.enter_amount'.tr();
                 if (amount > _available) return 'payout.not_enough'.tr();
+                // Ushlanma butun summani yeb qo'ysa, server baribir rad
+                // etadi — sababni oldinroq va tushunarliroq aytamiz.
+                final settings = _settings;
+                if (settings != null && amount > 0 && settings.netFor(amount) <= 0) {
+                  return 'payout.commission_too_big'.tr();
+                }
                 return null;
               },
             ),
+            _commissionNote(),
+            _calculation(),
             const SizedBox(height: 12),
             TextFormField(
               controller: _cardController,
@@ -257,6 +289,93 @@ class _PayoutPageState extends State<PayoutPage> {
         ),
       ),
     );
+  }
+
+  /// Shart summa kiritilishidan OLDIN ko'rinadi: ega nimaga rozi
+  /// bo'layotganini bilib turishi kerak.
+  Widget _commissionNote() {
+    final settings = _settings;
+    if (settings == null) return const SizedBox.shrink();
+
+    final text = settings.isFixed
+        ? 'payout.commission_note_fixed'.tr(namedArgs: {
+            'amount': NumberFormatter.formatCurrency(settings.fixed),
+            'currency': 'common.currency'.tr(),
+          })
+        : 'payout.commission_note_percent'.tr(namedArgs: {
+            'percent': _trimZero(settings.percent),
+          });
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Text(
+        text,
+        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+      ),
+    );
+  }
+
+  /// Summa yozilgan zahoti: qancha ushlanadi va kartaga qancha tushadi.
+  Widget _calculation() {
+    final settings = _settings;
+    final amount = _enteredAmount;
+    if (settings == null || amount <= 0) return const SizedBox.shrink();
+
+    final commission = settings.commissionFor(amount);
+    final net = amount - commission;
+    if (commission <= 0) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          _calcRow('payout.amount'.tr(), amount),
+          const SizedBox(height: 6),
+          _calcRow('payout.commission'.tr(), -commission),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Divider(height: 1),
+          ),
+          _calcRow('payout.to_card'.tr(), net, bold: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _calcRow(String label, double value, {bool bold = false}) {
+    final prefix = value < 0 ? '− ' : '';
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: bold ? AppColors.black : Colors.grey[700],
+            fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+        Text(
+          '$prefix${NumberFormatter.formatCurrency(value.abs())} '
+          '${'common.currency'.tr()}',
+          style: TextStyle(
+            fontSize: bold ? 15 : 13,
+            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 10.0 -> "10", 2.5 -> "2.5". Foizda nol quyruq ortiqcha.
+  String _trimZero(double value) {
+    final text = value.toStringAsFixed(1);
+    return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
   }
 
   Widget _history() {
@@ -319,6 +438,19 @@ class _PayoutPageState extends State<PayoutPage> {
               ),
             ],
           ),
+          if (request.commission > 0) ...[
+            const SizedBox(height: 4),
+            // Ega tarixda ham farqni ko'rishi kerak: yuqorida so'ralgan
+            // summa, bu yerda kartaga tushgani va ushlangani.
+            Text(
+              '${'payout.to_card'.tr()}: '
+              '${NumberFormatter.formatCurrency(request.payoutAmount)} '
+              '${'common.currency'.tr()} · '
+              '${'payout.commission'.tr()} '
+              '${NumberFormatter.formatCurrency(request.commission)}',
+              style: TextStyle(color: Colors.grey[700], fontSize: 13),
+            ),
+          ],
           const SizedBox(height: 6),
           Text(
             '${request.cardMasked} · ${DateFormat('dd.MM.yyyy HH:mm').format(request.createdAt)}',
