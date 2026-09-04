@@ -40,11 +40,20 @@ class AuthRepository {
       },
     );
 
-    // If verification successful and user exists, save token
-    if (response.data["success"] == true && response.data["access_token"] != null) {
-      final token = response.data["access_token"];
-      final role = response.data["role"];
-      final userId = response.data["user_id"];
+    return _saveSession(response.data);
+  }
+
+  /// Kirish tugagach sessiyani saqlaydi.
+  ///
+  /// SMS kodi ham, Telegram ham shu yerga keladi: javob tanasi bir xil
+  /// (OTPVerifyResponse). Ikki nusxa bo'lsa, biri til yuborishni yoki
+  /// rolni saqlashni unutib qoladi — shundan keyin ruscha interfeysdagi
+  /// odam o'zbekcha xabarnoma olardi.
+  Future<Map<String, dynamic>> _saveSession(dynamic data) async {
+    if (data["success"] == true && data["access_token"] != null) {
+      final token = data["access_token"];
+      final role = data["role"];
+      final userId = data["user_id"];
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString("token", token);
@@ -79,9 +88,52 @@ class AuthRepository {
     }
 
     return {
-      "success": response.data["success"] ?? true,
-      "message": response.data["message"] ?? "Tasdiqlandi",
+      "success": data["success"] ?? true,
+      "message": data["message"] ?? "Tasdiqlandi",
     };
+  }
+
+  // ------------------------------------------------ Telegram orqali kirish
+
+  /// Kirishni boshlaydi: t.me havolasi va kuzatish uchun token qaytadi.
+  ///
+  /// Nega havola. Bot odamga BIRINCHI bo'lib yoza olmaydi va uni telefon
+  /// raqami bo'yicha topa olmaydi — bunday API yo'q. Shuning uchun birinchi
+  /// qadamni doim odamning o'zi bosadi.
+  Future<Map<String, dynamic>> telegramStart() async {
+    final response = await _dio.post("/auth/telegram/start");
+    return {
+      "token": response.data["token"] as String,
+      "url": response.data["url"] as String,
+      "expires_in": response.data["expires_in"] as int? ?? 600,
+    };
+  }
+
+  /// Tasdiqlandimi — ilova shu yerni so'rab turadi.
+  ///
+  /// Tasdiqlangan bo'lsa raqam ham keladi: hisob hali yo'q bo'lsa,
+  /// ro'yxatdan o'tish oynasiga aynan shu raqam bilan o'tiladi.
+  Future<Map<String, dynamic>> telegramStatus(String token) async {
+    final response = await _dio.get(
+      "/auth/telegram/status",
+      queryParameters: {"token": token},
+    );
+    return {
+      "status": response.data["status"] as String? ?? "not_found",
+      "phone": response.data["phone"] as String?,
+    };
+  }
+
+  /// Tasdiqlangan so'rov bo'yicha kirish.
+  ///
+  /// Raqam Telegramning O'ZIDAN kelgan, ya'ni tasdiqlangan — SMS kodidan
+  /// kam ishonchli emas. Token bir martalik: ikkinchi chaqiriq 400 beradi.
+  Future<Map<String, dynamic>> telegramComplete(String token) async {
+    final response = await _dio.post(
+      "/auth/telegram/complete",
+      queryParameters: {"token": token},
+    );
+    return _saveSession(response.data);
   }
 
   /// Register new user (phone must be verified first)
