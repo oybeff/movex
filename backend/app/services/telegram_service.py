@@ -1,11 +1,12 @@
 """
 Telegram bot orqali xabar yuborish servisi
 """
-import os
 import requests
 from typing import Optional
 from datetime import datetime
 import logging
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +15,17 @@ class TelegramService:
     """Telegram bot orqali guruhga xabar yuborish"""
     
     def __init__(self):
-        self.bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
-        self.group_id = os.getenv("TELEGRAM_GROUP_ID", "")
-        self.topic_id = os.getenv("TELEGRAM_GROUP_TOPIC_ID", "")
+        # settings dan, os.getenv dan EMAS.
+        #
+        # .env ni pydantic-settings o'qiydi va qiymatlar os.environ ga
+        # TUSHMAYDI — os.getenv bu yerda doim bo'sh satr qaytarardi va
+        # guruhga xabar hech qachon ketmasdi. Xato ko'rinmaydi: servis
+        # "sozlanmagan" deb jimgina False qaytaradi. config.py da bu
+        # haqda ogohlantirish bor edi, lekin tuzatish shu faylga
+        # yetib kelmagan.
+        self.bot_token = settings.TELEGRAM_BOT_TOKEN
+        self.group_id = settings.TELEGRAM_GROUP_ID
+        self.topic_id = settings.TELEGRAM_GROUP_TOPIC_ID
         
         # Base URL
         self.base_url = f"https://api.telegram.org/bot{self.bot_token}"
