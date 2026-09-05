@@ -19,6 +19,28 @@ def clean_phone_number(phone: str) -> str:
     return cleaned
 
 
+def to_db_phone(phone: str) -> str:
+    """
+    Bazada saqlanadigan YAGONA ko'rinish: 998901234567.
+
+    Kirish har doim shu ko'rinish bo'yicha qidiradi (`/auth` da raqamdan
+    "+", probel va qavslar olib tashlanadi). Agar profilga raqam boshqacha
+    yozilib qolsa — masalan "+998901234567" — odam O'Z hisobiga kira
+    olmaydi: qidiruv uni topmaydi.
+
+    Bo'sh yoki tanib bo'lmaydigan qiymat o'zgartirilmasdan qaytariladi:
+    tekshiruv bu funksiyaning ishi emas.
+    """
+    digits = clean_phone_number(phone or "")
+    if digits.startswith("00998"):
+        digits = digits[5:]
+    if len(digits) == 9:
+        digits = "998" + digits
+    elif len(digits) == 10 and digits.startswith("8"):
+        digits = "998" + digits[1:]
+    return digits
+
+
 def format_phone_number(phone: str) -> str:
     """
     Telefon raqamni standart formatga keltirish: +998901234567

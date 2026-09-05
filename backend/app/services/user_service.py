@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.services import auth_service
+from fastapi import HTTPException
+from app.utils.phone_utils import to_db_phone
 
 
 def create_user(db: Session, user: UserCreate):
@@ -30,6 +32,23 @@ def update_user(db: Session, user_id: int, user: UserUpdate):
     if not db_user:
         return None
     for key, value in user.dict(exclude_unset=True).items():
+        if key == "phone" and value:
+            # Raqam bazadagi yagona ko'rinishga keltiriladi. Aks holda
+            # profilga "+998901234567" deb yozgan odam O'Z hisobiga kira
+            # olmasdi: kirish "998901234567" ni qidiradi.
+            normalized = to_db_phone(value)
+            if normalized != db_user.phone:
+                taken = (
+                    db.query(User)
+                    .filter(User.phone == normalized, User.id != user_id)
+                    .first()
+                )
+                if taken:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Bu telefon raqam allaqachon band",
+                    )
+            value = normalized
         setattr(db_user, key, value)
     db.commit()
     db.refresh(db_user)

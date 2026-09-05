@@ -9,6 +9,7 @@ from app.routes.auth import get_current_user
 from app.core.access import assert_can_view_user, assert_self_or_admin
 from app.core.roles import role_checker
 from app.core.security import hash_password
+from app.utils.phone_utils import to_db_phone
 
 router = APIRouter()
 
@@ -55,7 +56,16 @@ def update_current_user(
 
     # Telefon raqam boshqa hisobda band bo'lmasin — aks holda commit
     # unique cheklovga urilib, 500 xato qaytarardi
+    # Raqam bazadagi YAGONA ko'rinishga keltiriladi: 998901234567.
+    # Ilgari u qanday yozilgan bo'lsa shundayligicha saqlanardi, va
+    # profilga "+998901234567" deb yozgan odam O'Z hisobiga kira olmay
+    # qolardi — kirish "+" siz qidiradi. Bandlik tekshiruvi ham shu
+    # sababdan ishlamasdi: "+998..." va "998..." boshqa satr deb
+    # hisoblanardi, ya'ni begona raqamni egallab olsa bo'lardi.
     new_phone = data.get("phone")
+    if new_phone:
+        new_phone = to_db_phone(new_phone)
+        data["phone"] = new_phone
     if new_phone and new_phone != current_user.phone:
         taken = db.query(User).filter(User.phone == new_phone, User.id != current_user.id).first()
         if taken:
