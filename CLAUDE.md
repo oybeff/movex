@@ -369,7 +369,26 @@ Apple M1. Результат — `build/ios/iphoneos/Runner.app`, 86 МБ, arm64
    такую сборку не принимает.
 4. **`yandex_mapkit 3.4.0` не собирается новым SDK.** Внутри используется
    `TARGET_IPHONE_SIMULATOR` — макрос, убранный Apple из видимости Swift в
-   iOS 26 SDK. Правленая копия лежит в `mobile/third_party/yandex_mapkit`
+   iOS 26 SDK.
+
+   **Нативная библиотека карт на Android поднята до `maps.mobile:4.19.0-full`**
+   (строка в `third_party/yandex_mapkit/android/build.gradle`). Она отдельна
+   от версии flutter-плагина, поэтому dart-код и все 11 файлов с картой
+   остались нетронутыми. Причина: Google Play не принимает релиз, пока
+   `libmaps-mobile.so` выровнена под 4 КБ, а 16 КБ появились ровно в 4.19.0
+   — в 4.18.0 ещё 4 КБ, проверено перебором версий.
+
+   Апгрейд потребовал правок в java-части плагина, API за 15 версий
+   разошлось: `SearchFactory`/`TransportFactory`/`DirectionsFactory` больше
+   не принимают `Context` (`initialize()` убран совсем), `createDrivingRouter`
+   требует `DrivingRouterType`, `setHeadingEnabled` переименован в
+   `setHeadingModeActive`, у `GeoObjectSelectionMetadata` и `RequestPoint`
+   добавились поля, `SuggestListener.onResponse` принимает `SuggestResponse`
+   вместо списка. Сигнатуры брались не наугад — читались из самого `.aar`
+   через `javap`.
+
+   **Из-за карт `minSdk` поднят с 24 до 26**: 4.19.0 ниже Android 8.0 не
+   работает. Телефоны на Android 7.x приложение в магазине не увидят. Правленая копия лежит в `mobile/third_party/yandex_mapkit`
    и подключена через `dependency_overrides`; отличается от оригинала **ровно
    одним файлом** (`ios/Classes/YandexMapController.swift`, проверка на
    симулятор переписана на `#if targetEnvironment(simulator)`), android- и

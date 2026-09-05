@@ -61,21 +61,24 @@ public class Utils {
 
   @SuppressWarnings({"unchecked", "ConstantConditions"})
   public static RequestPoint requestPointFromJson(Map<String, Object> json) {
+    // MapKit 4.19 da RequestPoint ga yana bitta String maydon qo'shilgan.
     return new RequestPoint(
       pointFromJson((Map<String, Object>) json.get("point")),
       RequestPointType.values()[(Integer) json.get("requestPointType")],
+      null,
       null,
       null
     );
   }
 
   public static DrivingOptions drivingOptionsFromJson(Map<String, Object> json) {
+    // MapKit 4.19: avoid* bayroqlari alohida AvoidanceFlags obyektiga
+    // ko'chirilgan. Ilova marshrutlarni ishlatmaydi, shuning uchun ular
+    // uzatilmaydi — konstruktor esa yangi ko'rinishda chaqiriladi.
     return new DrivingOptions(
       (Double) json.get("initialAzimuth"),
       (Integer) json.get("routesCount"),
-      (Boolean) json.get("avoidTolls"),
-      (Boolean) json.get("avoidUnpaved"),
-      (Boolean) json.get("avoidPoorConditions"),
+      null,
       null,
       null
     );
@@ -87,13 +90,15 @@ public class Utils {
       pointFromJson((Map<String, Object>) json.get("userPosition")) :
       null;
 
+    // MapKit 4.19: uchinchi o'rinda yangi int (snippets) paydo bo'lgan.
     return new SearchOptions(
       ((Number) json.get("searchType")).intValue(),
       (Integer) json.get("resultPageSize"),
+      0,
       userPosition,
       (String) json.get("origin"),
-      (Boolean) json.get("geometry"),
-      (Boolean) json.get("disableSpellingCorrection"),
+      Boolean.TRUE.equals(json.get("geometry")),
+      Boolean.TRUE.equals(json.get("disableSpellingCorrection")),
       null
     );
   }
@@ -104,10 +109,12 @@ public class Utils {
       pointFromJson((Map<String, Object>) json.get("userPosition")) :
       null;
 
+    // MapKit 4.19: to'rtinchi bayroq qo'shilgan.
     return new SuggestOptions(
       ((Number) json.get("suggestType")).intValue(),
       userPosition,
-      ((Boolean) json.get("suggestWords"))
+      Boolean.TRUE.equals(json.get("suggestWords")),
+      false
     );
   }
 

@@ -24,7 +24,8 @@ public class YandexSuggest implements MethodCallHandler {
   private final Map<Integer, YandexSuggestSession> suggestSessions  = new HashMap<>();
 
   public YandexSuggest(Context context, BinaryMessenger messenger) {
-    SearchFactory.initialize(context);
+    // MapKit 4.19: fabrikalar endi Context olmaydi — initialize()
+    // butunlay olib tashlangan, faqat getInstance() qoldi.
 
     searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED);
     binaryMessenger = messenger;

@@ -49,7 +49,13 @@ android {
         applicationId = "uz.movexgo.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // Android 8.0 (API 26). Yandex xaritalarining 4.19 versiyasi 26 dan
+        // pastini qo'llab-quvvatlamaydi, u esa 16 KB sahifalar uchun kerak —
+        // Google Play 4 KB li kutubxona bilan relizni qabul qilmaydi.
+        //
+        // Narxi: Android 7.x dagi telefonlar ilovani ko'rmaydi. Bu 2017 yilgi
+        // versiya, ulushi juda kichik.
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

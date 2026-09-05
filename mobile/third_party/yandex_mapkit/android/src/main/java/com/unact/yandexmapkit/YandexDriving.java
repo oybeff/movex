@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import com.yandex.mapkit.RequestPoint;
 import com.yandex.mapkit.directions.DirectionsFactory;
 import com.yandex.mapkit.directions.driving.DrivingRouter;
+import com.yandex.mapkit.directions.driving.DrivingRouterType;
 import com.yandex.mapkit.directions.driving.DrivingSession;
 import com.yandex.mapkit.directions.driving.VehicleOptions;
 
@@ -27,9 +28,13 @@ public class YandexDriving implements MethodCallHandler {
   private final Map<Integer, YandexDrivingSession> drivingSessions = new HashMap<>();
 
   public YandexDriving(Context context, BinaryMessenger messenger) {
-    DirectionsFactory.initialize(context);
+    // MapKit 4.19: fabrikalar endi Context olmaydi — initialize()
+    // butunlay olib tashlangan, faqat getInstance() qoldi.
 
-    drivingRouter = DirectionsFactory.getInstance().createDrivingRouter();
+    // 4.19 da router turi majburiy. COMBINED — onlayn va oflayn
+    // birgalikda, eski xatti-harakatga eng yaqini.
+    drivingRouter = DirectionsFactory.getInstance()
+      .createDrivingRouter(DrivingRouterType.COMBINED);
     binaryMessenger = messenger;
   }
 

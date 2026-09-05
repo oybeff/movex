@@ -3,6 +3,7 @@ package com.unact.yandexmapkit;
 import androidx.annotation.NonNull;
 
 import com.yandex.mapkit.search.SuggestItem;
+import com.yandex.mapkit.search.SuggestResponse;
 import com.yandex.mapkit.search.SuggestSession;
 import com.yandex.runtime.Error;
 
@@ -21,10 +22,11 @@ public class YandexSuggestListener implements SuggestSession.SuggestListener {
   }
 
   @Override
-  public void onResponse(@NonNull List<SuggestItem> suggestItems) {
+  public void onResponse(@NonNull SuggestResponse suggestResponse) {
+    // 4.19: javob endi ro'yxat emas, SuggestResponse obyekti.
     List<Map<String, Object>> suggests = new ArrayList<>();
 
-    for (SuggestItem suggestItem : suggestItems) {
+    for (SuggestItem suggestItem : suggestResponse.getItems()) {
       Map<String, Object> suggestMap = new HashMap<>();
 
       suggestMap.put("title", suggestItem.getTitle().getText());

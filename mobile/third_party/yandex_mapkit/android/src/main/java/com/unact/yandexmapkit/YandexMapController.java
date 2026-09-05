@@ -234,7 +234,9 @@ public class YandexMapController implements
     Map<String, Object> anchor = (Map<String, Object>) params.get("anchor");
 
     userLocationLayer.setVisible((Boolean) params.get("visible"));
-    userLocationLayer.setHeadingEnabled((Boolean) params.get("headingEnabled"));
+    // 4.19: setHeadingEnabled -> setHeadingModeActive
+    userLocationLayer.setHeadingModeActive(
+      Boolean.TRUE.equals(params.get("headingEnabled")));
     userLocationLayer.setAutoZoomEnabled((Boolean) params.get("autoZoomEnabled"));
     userLocationLayer.resetAnchor();
 
@@ -265,10 +267,12 @@ public class YandexMapController implements
     Map<String, Object> params = ((Map<String, Object>) call.arguments);
 
     mapView.getMapWindow().getMap().selectGeoObject(
+      // 4.19: to'rtinchi maydon (Long) qo'shilgan.
       new GeoObjectSelectionMetadata(
         (String) params.get("objectId"),
         (String) params.get("dataSourceName"),
-        (String) params.get("layerId")
+        (String) params.get("layerId"),
+        null
       )
     );
   }

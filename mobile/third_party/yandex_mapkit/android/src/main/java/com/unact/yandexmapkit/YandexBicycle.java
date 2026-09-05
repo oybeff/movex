@@ -27,7 +27,8 @@ public class YandexBicycle implements MethodCallHandler {
   private final Map<Integer, YandexBicycleSession> bicycleSessions = new HashMap<>();
 
   public YandexBicycle(Context context, BinaryMessenger messenger) {
-    TransportFactory.initialize(context);
+    // MapKit 4.19: fabrikalar endi Context olmaydi — initialize()
+    // butunlay olib tashlangan, faqat getInstance() qoldi.
 
     bicycleRouter = TransportFactory.getInstance().createBicycleRouter();
     binaryMessenger = messenger;

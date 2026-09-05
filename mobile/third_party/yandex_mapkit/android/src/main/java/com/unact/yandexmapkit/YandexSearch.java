@@ -25,7 +25,8 @@ public class YandexSearch implements MethodCallHandler {
   private final Map<Integer, YandexSearchSession> searchSessions = new HashMap<>();
 
   public YandexSearch(Context context, BinaryMessenger messenger) {
-    SearchFactory.initialize(context);
+    // MapKit 4.19: fabrikalar endi Context olmaydi — initialize()
+    // butunlay olib tashlangan, faqat getInstance() qoldi.
 
     searchManager = SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED);
     binaryMessenger = messenger;

@@ -34,5 +34,11 @@ android {
 }
 
 dependencies {
-    implementation 'com.yandex.android:maps.mobile:4.4.0-full'
+    // 4.19.0 — birinchi versiya, uning libmaps-mobile.so si 16 KB sahifalarga
+    // moslangan (4.18.0 da hali 4 KB). Google Play 16 KB ni talab qiladi va
+    // 4 KB li kutubxona bilan relizni qabul qilmaydi.
+    //
+    // Faqat NATIVE kutubxona versiyasi ko'tarildi; flutter-plagin o'zi
+    // 3.4.0 bo'lib qoladi — dart tarafida hech narsa o'zgarmaydi.
+    implementation 'com.yandex.android:maps.mobile:4.19.0-full'
 }
