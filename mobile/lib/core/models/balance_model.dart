@@ -3,6 +3,11 @@ class BalanceModel {
   final int userId;
   final double balance;
   final double frozenBalance;
+
+  /// Sovg'aning ishlatilmagan qismi. Ilova ichida ishlatiladi, lekin
+  /// KARTAGA YECHILMAYDI — shuning uchun u alohida yuradi.
+  final double bonusBalance;
+
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -11,12 +16,23 @@ class BalanceModel {
     required this.userId,
     required this.balance,
     required this.frozenBalance,
+    this.bonusBalance = 0,
     required this.createdAt,
     this.updatedAt,
   });
 
-  /// Mavjud balans (muzlatilmagan)
+  /// Ilovada SARFLASH mumkin bo'lgan summa. Sovg'a bunga kiradi.
   double get availableBalance => balance - frozenBalance;
+
+  /// KARTAGA yechish mumkin bo'lgan summa. Sovg'a bunga KIRMAYDI.
+  ///
+  /// Ikkita alohida son ataylab: sovg'ani ilova ichida ishlatsa bo'ladi,
+  /// yechsa bo'lmaydi. Bittasi bilan cheklansak, yechish ekrani yechib
+  /// bo'lmaydigan pulni ko'rsatardi va odam rad javobini tushunmasdi.
+  double get withdrawableBalance {
+    final value = balance - frozenBalance - bonusBalance;
+    return value > 0 ? value : 0;
+  }
 
   factory BalanceModel.fromJson(Map<String, dynamic> json) {
     return BalanceModel(
@@ -28,6 +44,11 @@ class BalanceModel {
       frozenBalance: (json['frozen_balance'] is String)
           ? double.parse(json['frozen_balance'])
           : (json['frozen_balance'] as num).toDouble(),
+      bonusBalance: json['bonus_balance'] == null
+          ? 0
+          : (json['bonus_balance'] is String)
+              ? double.parse(json['bonus_balance'])
+              : (json['bonus_balance'] as num).toDouble(),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)

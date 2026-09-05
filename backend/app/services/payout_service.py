@@ -27,7 +27,7 @@ from app.models.app_settings import AppSettings
 from app.models.balance import Balance, BalanceTransaction
 from app.models.payout_request import PayoutRequest
 from app.schemas.payout import PayoutRequestCreate
-from app.services.balance_service import get_or_create_balance
+from app.services.balance_service import get_or_create_balance, withdrawable_balance
 
 MIN_PAYOUT_SUM = Decimal("50000")
 
@@ -137,16 +137,23 @@ def create_request(db: Session, user_id: int, data: PayoutRequestCreate) -> Payo
         .with_for_update()
         .one()
     )
-    available = Decimal(str(balance.balance)) - Decimal(str(balance.frozen_balance))
+    # Sovg'a pulini YECHIB BO'LMAYDI — u summadan chiqarib tashlanadi.
+    available = withdrawable_balance(balance)
 
     if available < amount:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Yetarli mablag' yo'q. Mavjud: {float(available)} so'm, "
-                f"so'ralgan: {float(amount)} so'm"
-            ),
+        bonus = Decimal(str(balance.bonus_balance or 0))
+        detail = (
+            f"Yetarli mablag' yo'q. Yechish mumkin: {float(available)} so'm, "
+            f"so'ralgan: {float(amount)} so'm"
         )
+        if bonus > 0:
+            # Aks holda odam balansida 50 000 turganini ko'rib, nega
+            # yechilmayotganini tushunmasdi.
+            detail += (
+                f". Sovg'a puli ({float(bonus)} so'm) faqat ilova ichida "
+                f"ishlatiladi, kartaga yechilmaydi"
+            )
+        raise HTTPException(status_code=400, detail=detail)
 
     # Ushlanma ariza berilgan paytdagi sozlama bo'yicha hisoblanadi va
     # o'sha holicha saqlanadi: admin ertaga foizni o'zgartirsa, kecha

@@ -14,9 +14,20 @@ Holatlar zanjiri:
     confirmed --(ish tugadi)---------->  done
     open/taken --(muallif bekor qildi)-> cancelled
 
-MUHIM: bu yerda PUL YO'Q. E'lon tanishtiradi, kelishuvdan keyin tomonlar
-bir-birining telefonini oladi. Eskrou buyurtmalarda ishlaydi va u aniq
-texnikaga bog'langan, e'londa esa texnika umuman bo'lmasligi mumkin.
+PUL buyurtmalardagi bilan BIR XIL ishlaydi:
+
+    tasdiqlash  -> muallifning balansida kelishilgan summa MUZLAYDI
+    yakunlash   -> summa muallifdan yechiladi, ijrochiga ulush ayirilib o'tadi
+    rad etish / bekor qilish -> faqat muzlatish olib tashlanadi
+
+Ulush IJROCHIDAN ushlanadi — buyurtmada ham pulni oladigan tomon to'laydi.
+Stavka bitta: adminkadagi commission_mode / commission_fixed / commission_percent,
+buyurtmalar bilan umumiy. Ikkinchi stavka kiritilsa, ular ertami-kechmi
+ajralib ketardi.
+
+Kelishilgan summa: "olaman" yo'lida — e'lon byudjeti, taklif yo'lida —
+qabul qilingan taklif narxi. U tasdiqlash paytida listings.agreed_price ga
+yoziladi, chunki stavka keyin o'zgarishi mumkin.
 
 Telefon raqami e'londa hammaga ko'rinmaydi: uni faqat muallif va TASDIQLANGAN
 ijrochi ko'radi. Aks holda taxta raqamlarni yig'ish uchun ochiq manba bo'lib
@@ -32,6 +43,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, selectinload
 
 from app.core import media
+from app.core.messages import t
 from app.core.account_state import assert_not_frozen
 from app.core.equipment_types import is_valid_type
 from app.models.listing import (
@@ -43,8 +55,10 @@ from app.models.listing import (
     ListingPhoto,
     ListingReaction,
 )
+from app.models.balance import Balance, BalanceTransaction
+from app.models.budget_reserve import BudgetReserve
 from app.models.user import User
-from app.services import notification_service
+from app.services import notification_service, pricing_service
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +153,138 @@ def create_listing(db: Session, client: User, data) -> Listing:
     return listing
 
 
+
+# ----------------------------------------------------------------- pul
+#
+# Buyurtmalardagi bilan bir xil tartib. Farqi faqat shundaki, e'londa
+# texnika bo'lmasligi mumkin, shuning uchun summa byudjetdan yoki qabul
+# qilingan taklif narxidan olinadi.
+
+
+def _language(db: Session, user_id: int) -> Optional[str]:
+    user = db.query(User).filter(User.id == user_id).first()
+    return user.language if user else None
+
+
+def _lock_balance(db: Session, user_id: int) -> Balance:
+    """Balansni QATOR BLOKI bilan oladi — bo'lmasa yaratadi.
+
+    Blok shart: muallif ikki e'lonni bir vaqtda tasdiqlasa, bloksiz ikkalasi
+    ham bitta pulni muzlatib qo'yardi.
+    """
+    balance = (
+        db.query(Balance).filter(Balance.user_id == user_id).with_for_update().first()
+    )
+    if balance is None:
+        balance = Balance(user_id=user_id, balance=Decimal("0"), frozen_balance=Decimal("0"))
+        db.add(balance)
+        db.flush()
+        balance = (
+            db.query(Balance).filter(Balance.user_id == user_id).with_for_update().one()
+        )
+    return balance
+
+
+def _freeze_for_listing(db: Session, listing: Listing, amount: Decimal) -> None:
+    """
+    Muallifning balansida summani muzlatadi va kelishuvni e'longa yozadi.
+
+    Pul yetmasa — 400. Ilgari tekshiruv umuman yo'q edi: balansi nol bo'lgan
+    odam ham ijrochini tasdiqlay olardi, ya'ni ish boshlanardi, to'lov esa
+    hech qayerdan kelmasdi.
+    """
+    if amount is None or Decimal(str(amount)) <= 0:
+        # Byudjetsiz e'lon ham bo'ladi ("narxni ayting"). Unda summa faqat
+        # taklif orqali paydo bo'ladi, "olaman" yo'li bilan tasdiqlab
+        # bo'lmaydi — muzlatadigan summa yo'q.
+        raise HTTPException(
+            400,
+            "E'londa byudjet ko'rsatilmagan. Ijrochi narx taklif qilsin, "
+            "keyin taklifni tanlang",
+        )
+
+    amount = Decimal(str(amount))
+    balance = _lock_balance(db, listing.client_id)
+    available = Decimal(str(balance.balance)) - Decimal(str(balance.frozen_balance))
+    if available < amount:
+        raise HTTPException(
+            400,
+            f"Hisobingizda yetarli mablag' yo'q. "
+            f"Mavjud: {float(available)} so'm, Kerak: {float(amount)} so'm",
+        )
+
+    balance.frozen_balance = Decimal(str(balance.frozen_balance)) + amount
+    listing.agreed_price = amount
+    # Ulush TASDIQLASH paytida hisoblanadi va yoziladi: adminkada stavka
+    # keyin o'zgarsa, bu e'lon eski shart bo'yicha yopilishi kerak.
+    listing.commission = pricing_service.calculate_commission(db, amount, amount)
+
+
+def _unfreeze_listing(db: Session, listing: Listing) -> None:
+    """Muzlatishni olib tashlaydi. Pul muallifda qoladi.
+
+    Rad etish va bekor qilishda AYNAN shu bo'ladi — pul hech qayerga
+    ketmaydi. Buni yakunlash bilan adashtirish = pulni yo'qdan bor qilish.
+    """
+    if listing.agreed_price is None:
+        return
+    amount = Decimal(str(listing.agreed_price))
+    balance = _lock_balance(db, listing.client_id)
+    current = Decimal(str(balance.frozen_balance))
+    balance.frozen_balance = current - amount if current >= amount else Decimal("0")
+    listing.agreed_price = None
+    listing.commission = None
+
+
+def _settle_listing(db: Session, listing: Listing) -> None:
+    """
+    Ish yakunlandi: pul muallifdan CHIQADI va ijrochiga o'tadi.
+
+    Muzlatishni olib tashlashning o'zi yetarli emas — summa balansdan ham
+    yechilishi kerak, aks holda pul yo'qdan bor bo'lardi.
+    """
+    if listing.agreed_price is None or not listing.taken_by:
+        return
+
+    amount = Decimal(str(listing.agreed_price))
+    commission = Decimal(str(listing.commission or 0))
+    if commission > amount:          # ehtiyot chorasi: ijrochi minusga ketmasin
+        commission = amount
+    payout = amount - commission
+
+    author_balance = _lock_balance(db, listing.client_id)
+    author_balance.frozen_balance = Decimal(str(author_balance.frozen_balance)) - amount
+    author_balance.balance = Decimal(str(author_balance.balance)) - amount
+
+    taker_balance = _lock_balance(db, listing.taken_by)
+    taker_balance.balance = Decimal(str(taker_balance.balance)) + payout
+
+    db.add(BalanceTransaction(
+        user_id=listing.client_id,
+        amount=amount,
+        type="payment",
+        status="completed",
+        description=t("tx.listing_payment", _language(db, listing.client_id),
+                      listing_id=listing.id, title=listing.title),
+    ))
+    db.add(BalanceTransaction(
+        user_id=listing.taken_by,
+        amount=payout,
+        type="income",
+        status="completed",
+        description=t("tx.listing_income", _language(db, listing.taken_by),
+                      listing_id=listing.id, title=listing.title),
+    ))
+
+    # Nol summani jadval qabul qilmaydi (check_budget_reserve_amount).
+    if commission > 0:
+        db.add(BudgetReserve(
+            listing_id=listing.id,
+            amount=commission,
+            description=t("tx.listing_commission", None,
+                          listing_id=listing.id, title=listing.title),
+        ))
+
 def take_listing(db: Session, listing_id: int, taker: User) -> Listing:
     """
     E'lonni olish. Rol muhim emas — mijoz ham, ega ham javob bera oladi.
@@ -185,6 +331,10 @@ def confirm_listing(db: Session, listing_id: int, client: User) -> Listing:
     if listing.status != "taken":
         raise HTTPException(400, "Tasdiqlash uchun avval kimdir e'lonni olishi kerak")
 
+    # Pul TASDIQLASHDA muzlatiladi, "olaman"da emas: aks holda tasodifiy
+    # bosilgan tugma begona odamning pulini bog'lab qo'yardi.
+    _freeze_for_listing(db, listing, listing.budget)
+
     listing.status = "confirmed"
     listing.confirmed_at = _now()
     db.commit()
@@ -213,6 +363,7 @@ def reject_taker(db: Session, listing_id: int, client: User) -> Listing:
         raise HTTPException(400, "E'lon hozir olinmagan")
 
     rejected_owner = listing.taken_by
+    _unfreeze_listing(db, listing)
     listing.status = "open"
     listing.taken_by = None
     listing.taken_at = None
@@ -238,6 +389,8 @@ def finish_listing(db: Session, listing_id: int, user: User) -> Listing:
         raise HTTPException(403, "Bu e'longa ruxsat yo'q")
     if listing.status != "confirmed":
         raise HTTPException(400, "Faqat tasdiqlangan e'lonni yakunlash mumkin")
+
+    _settle_listing(db, listing)
 
     listing.status = "done"
     listing.finished_at = _now()
@@ -265,6 +418,8 @@ def cancel_listing(db: Session, listing_id: int, user: User) -> Listing:
         raise HTTPException(400, "E'lon allaqachon yopilgan")
 
     taker = listing.taken_by
+    # Bekor qilishda pul MUALLIFDA qoladi — faqat muzlatish olib tashlanadi.
+    _unfreeze_listing(db, listing)
     listing.status = "cancelled"
     db.commit()
     db.refresh(listing)
@@ -399,8 +554,10 @@ def accept_offer(db: Session, listing_id: int, offer_id: int, author: User) -> L
         .update({ListingOffer.status: "declined"}, synchronize_session=False)
     )
 
-    listing.status = "confirmed"
     listing.taken_by = offer.user_id
+    _freeze_for_listing(db, listing, offer.price)
+
+    listing.status = "confirmed"
     listing.taken_at = _now()
     listing.confirmed_at = _now()
 

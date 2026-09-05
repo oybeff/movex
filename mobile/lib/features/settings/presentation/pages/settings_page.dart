@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../../core/services/pin_service.dart';
+import '../../../auth/presentation/pages/pin_page.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -40,6 +43,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadUserData();
     _loadAppVersion();
     _loadContactMethods();
+    _loadPinState();
   }
 
   Future<void> _loadUserData() async {
@@ -325,6 +329,138 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  // ------------------------------------------------------------- PIN kod
+  //
+  // Kirish tokeni endi muddatsiz, shuning uchun telefonni PIN kod himoya
+  // qiladi. Yangi bo'lim ochilmadi — sozlamalardagi mavjud ro'yxatga
+  // qo'shildi.
+  bool _pinOn = false;
+  bool _biometricOn = false;
+  bool _biometricAvailable = false;
+
+  Future<void> _loadPinState() async {
+    final on = await PinService.hasPin();
+    final bio = await PinService.biometricEnabled();
+    final canBio = await PinService.biometricsAvailable();
+    if (!mounted) return;
+    setState(() {
+      _pinOn = on;
+      _biometricOn = bio;
+      _biometricAvailable = canBio;
+    });
+  }
+
+  Future<void> _openPinSettings() async {
+    if (!_pinOn) {
+      final ok = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const PinPage(mode: PinMode.create)),
+      );
+      if (ok == true && mounted) _snackPin('pin.saved'.tr());
+      await _loadPinState();
+      return;
+    }
+
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.password_rounded),
+              title: Text('pin.change'.tr()),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                await _changePin();
+              },
+            ),
+            if (_biometricAvailable)
+              SwitchListTile(
+                secondary: const Icon(Icons.fingerprint_rounded),
+                title: Text('pin.biometric_title'.tr()),
+                subtitle: Text('pin.biometric_desc'.tr()),
+                value: _biometricOn,
+                onChanged: (value) async {
+                  // Varaqni AVVAL yopamiz: await dan keyin sheetContext
+                  // allaqachon yaroqsiz bo'lishi mumkin.
+                  Navigator.pop(sheetContext);
+                  await PinService.setBiometricEnabled(value);
+                  await _loadPinState();
+                },
+              ),
+            ListTile(
+              leading:
+                  const Icon(Icons.lock_open_rounded, color: AppColors.error),
+              title: Text('pin.turn_off'.tr(),
+                  style: const TextStyle(color: AppColors.error)),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                await _removePin();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _changePin() async {
+    // Avval ESKI kod so'raladi: telefonni qo'lga olgan odam kodni
+    // shunchaki almashtira olmasin.
+    final confirmed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+          builder: (_) => const PinPage(mode: PinMode.confirmCurrent)),
+    );
+    if (confirmed != true || !mounted) return;
+    final ok = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const PinPage(mode: PinMode.create)),
+    );
+    if (ok == true && mounted) _snackPin('pin.saved'.tr());
+    await _loadPinState();
+  }
+
+  Future<void> _removePin() async {
+    final confirmed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+          builder: (_) => const PinPage(mode: PinMode.confirmCurrent)),
+    );
+    if (confirmed != true || !mounted) return;
+    if (!mounted) return;
+    final agreed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        content: Text('pin.turn_off_confirm'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('settings.cancel'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('settings.confirm'.tr()),
+          ),
+        ],
+      ),
+    );
+    if (agreed != true) return;
+    await PinService.clearPin();
+    if (mounted) _snackPin('pin.removed'.tr());
+    await _loadPinState();
+  }
+
+  void _snackPin(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
   Future<void> _showLogoutDialog() async {
     final result = await showDialog<bool>(
       context: context,
@@ -354,6 +490,9 @@ class _SettingsPageState extends State<SettingsPage> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('token');
       await prefs.remove('role');
+      // PIN ham o'chadi: aks holda telefonda boshqa odam kirsa, uni
+      // avvalgi egasining kodi kutib olardi.
+      await PinService.resetOnLogout();
       if (!mounted) return;
       context.go('/');
     }
@@ -524,6 +663,16 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     );
                   },
+                ),
+                // PIN kod shu yerda: alohida bo'lim ochilmadi, mavjud
+                // ro'yxatga qo'shildi.
+                _SettingsTile(
+                  icon: Icons.lock_outline_rounded,
+                  title: 'pin.settings_title'.tr(),
+                  subtitle: _pinOn
+                      ? 'pin.settings_desc_on'.tr()
+                      : 'pin.settings_desc_off'.tr(),
+                  onTap: _openPinSettings,
                 ),
                 // Ega uchun to'lovlar: shu yergacha yetib borish yo'li yo'q
                 // edi — PaymentsPage va undagi pul yechish ekrani faqat

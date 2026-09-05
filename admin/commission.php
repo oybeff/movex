@@ -88,9 +88,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fixed = trim((string)($_POST['fixed'] ?? '5000'));
     $percent = trim((string)($_POST['percent'] ?? '10'));
 
-    $error = validateCommission($mode, $fixed, $percent);
+    // Sovg'a shaklida rejim va foiz maydonlari yo'q — ularni tekshirish shart emas.
+    $error = ($_POST['form'] ?? 'order') === 'bonus'
+        ? null
+        : validateCommission($mode, $fixed, $percent);
 
-    if ($error === null && $form === 'payout') {
+    if ($form === 'bonus') {
+        // Sovg'a — alohida shakl, ulush tekshiruviga bog'liq emas.
+        $bonusAmount = trim((string)($_POST['bonus_amount'] ?? '50000'));
+        if (!is_numeric($bonusAmount) || (float)$bonusAmount < 0) {
+            $error = "Sovg'a summasi manfiy bo'lishi mumkin emas";
+        } else {
+            saveSetting($db, 'signup_bonus_enabled', isset($_POST['bonus_enabled']) ? '1' : '0');
+            saveSetting($db, 'signup_bonus_amount', $bonusAmount);
+            $message = "Saqlandi. Yangi ro'yxatdan o'tganlarga qo'llaniladi.";
+        }
+    } elseif ($error === null && $form === 'payout') {
         saveSetting($db, 'payout_commission_mode', $mode);
         saveSetting($db, 'payout_commission_fixed', $fixed);
         saveSetting($db, 'payout_commission_percent', $percent);
@@ -106,6 +119,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $mode = settingValue($db, 'commission_mode', 'fixed');
 $fixed = settingValue($db, 'commission_fixed', '5000');
 $percent = settingValue($db, 'commission_percent', '10');
+
+// Ro'yxatdan o'tganlik uchun sovg'a — faqat texnika egalari uchun.
+$bonusEnabled = settingValue($db, 'signup_bonus_enabled', '1') === '1';
+$bonusAmount = settingValue($db, 'signup_bonus_amount', '50000');
 
 // Pul yechish ulushi — alohida sozlama, buyurtma ulushiga bog'liq emas.
 $payoutMode = settingValue($db, 'payout_commission_mode', 'fixed');
@@ -340,6 +357,40 @@ include 'includes/header.php';
                 <tr><td>Kartaga o'tkaziladi</td>
                     <td><strong><?= number_format($payoutExample - $payoutTake, 0, '.', ' ') ?></strong> so'm</td></tr>
             </table>
+        </div>
+    </div>
+
+    <div class="card mb-3" style="margin-top: 24px;">
+        <div class="card-header">
+            <h3 class="card-title">Ro'yxatdan o'tganlik uchun sovg'a</h3>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info" style="margin-bottom: 18px;">
+                Sovg'a faqat <strong>texnika egasi</strong> ro'yxatdan o'tganda
+                va bir marta beriladi. Ilgari ro'yxatdan o'tganlarga berilmaydi.
+            </div>
+
+            <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                <input type="hidden" name="form" value="bonus">
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="bonus_enabled" value="1"
+                               <?= $bonusEnabled ? 'checked' : '' ?>>
+                        <strong>Sovg'a berilsin</strong>
+                    </label>
+                </div>
+                <div class="form-group" style="margin-top: 14px;">
+                    <label>Summa</label><br>
+                    <input type="number" name="bonus_amount" min="0" step="1000"
+                           value="<?= htmlspecialchars($bonusAmount) ?>"
+                           style="max-width: 220px; margin-top: 6px;">
+                    <small class="text-muted">so'm</small>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
+                    💾 Saqlash
+                </button>
+            </form>
         </div>
     </div>
 </div>

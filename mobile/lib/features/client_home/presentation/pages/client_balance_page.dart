@@ -786,8 +786,12 @@ class _TransactionCard extends StatelessWidget {
   Color _getTypeColor(String type) {
     switch (type.toLowerCase()) {
       case 'topup':
+      case 'bonus':
+      case 'income':
+      case 'refund':
         return Colors.green;
       case 'payment':
+      case 'withdrawal':
         return Colors.red;
       default:
         return Colors.grey;
@@ -795,11 +799,21 @@ class _TransactionCard extends StatelessWidget {
   }
 
   String _getTypeText(String type) {
+    // Ro'yxat TO'LIQ bo'lishi shart: yetishmagan tur `default` ga
+    // tushadi va ekranda xom kod ko'rinadi.
     switch (type.toLowerCase()) {
       case 'topup':
         return 'balance.transaction_type_topup'.tr();
       case 'payment':
         return 'balance.transaction_type_payment'.tr();
+      case 'bonus':
+        return 'balance.transaction_type_bonus'.tr();
+      case 'income':
+        return 'balance.transaction_type_income'.tr();
+      case 'refund':
+        return 'balance.transaction_type_refund'.tr();
+      case 'withdrawal':
+        return 'balance.transaction_type_withdrawal'.tr();
       default:
         return type;
     }

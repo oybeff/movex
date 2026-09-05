@@ -70,12 +70,13 @@ class MyListingsViewState extends State<MyListingsView> {
     Future<ListingModel> Function(int id) action,
     String successKey, {
     String? confirmKey,
+    Map<String, String>? confirmArgs,
   }) async {
     if (confirmKey != null) {
       final agreed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          content: Text(confirmKey.tr()),
+          content: Text(confirmKey.tr(namedArgs: confirmArgs)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -243,6 +244,13 @@ class MyListingsViewState extends State<MyListingsView> {
   }
 
   List<Widget> _actionsFor(ListingModel listing) {
+    // Tasdiqlash PULGA tegadi: byudjet muallifning balansida muzlatiladi.
+    // Kalitlar jadvalda — tarjima ko'rsatish paytida qilinadi.
+    final confirmWarningKeys = {
+      true: 'listings.confirm_money_warning_no_budget',
+      false: 'listings.confirm_money_warning',
+    };
+    final confirmWarningKey = confirmWarningKeys[listing.budget == null]!;
     // --- ijrochi tomoni: e'lonni O'ZI olgan ---
     if (listing.takenByMe) {
       // Olindi, lekin muallif hali tasdiqlagani yo'q: telefon yopiq,
@@ -303,8 +311,14 @@ class MyListingsViewState extends State<MyListingsView> {
               style: const TextStyle(fontSize: 13)),
         ),
         ElevatedButton(
-          onPressed: () =>
-              _act(listing, _service.confirm, 'listings.confirmed'),
+          // Tasdiqlash endi PULGA tegadi: byudjet muallifning balansida
+          // muzlatiladi. Odam buni oldindan bilishi kerak, aks holda
+          // "nega pulim bog'lanib qoldi" degan savol chiqadi.
+          onPressed: () => _act(listing, _service.confirm, 'listings.confirmed',
+              confirmKey: confirmWarningKey,
+              confirmArgs: listing.budget == null
+                  ? null
+                  : {'amount': NumberFormatter.formatCurrency(listing.budget!)}),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryGreen,
             foregroundColor: Colors.white,
@@ -479,6 +493,30 @@ class MyListingsViewState extends State<MyListingsView> {
     );
 
     if (chosen == null || !mounted) return;
+
+    // Taklifni tanlash ham PULGA tegadi: taklif narxi muallifning balansida
+    // muzlatiladi. Summa e'lon byudjeti emas, aynan tanlangan taklif narxi.
+    final chosenOffer = offers.firstWhere((o) => o.id == chosen);
+    final agreed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        content: Text('listings.confirm_money_warning'
+            .tr(namedArgs: {
+          'amount': NumberFormatter.formatCurrency(chosenOffer.price),
+        })),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('common.no'.tr()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('common.yes'.tr()),
+          ),
+        ],
+      ),
+    );
+    if (agreed != true || !mounted) return;
 
     setState(() => _busyId = listing.id);
     try {

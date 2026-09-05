@@ -97,6 +97,14 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    # Yangi texnika egasiga ro'yxatdan o'tganlik uchun sovg'a.
+    #
+    # Miqdor adminkadan boshqariladi. Sovg'a berilmasa ham ro'yxatdan o'tish
+    # buzilmaydi — xato ichida yutiladi.
+    from app.services import balance_service
+    balance_service.grant_signup_bonus(db, new_user)
+
     return new_user
 
 # ========================

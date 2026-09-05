@@ -9,6 +9,7 @@ import 'package:movex_go/core/utils/error_handler.dart';
 import 'package:movex_go/features/auth/data/repositories/auth_repository.dart';
 import 'package:toastification/toastification.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'pin_page.dart';
 
 /// Telegram orqali kirish.
 ///
@@ -144,6 +145,10 @@ class _TelegramLoginPageState extends State<TelegramLoginPage> {
       if (!mounted) return;
 
       if (result['success'] == true && result['token'] != null) {
+        // Kirish endi saqlanadi va qaytadan so'ralmaydi, shuning uchun
+        // bu yerda PIN kod taklif qilinadi — bir marta.
+        await offerPinSetup(context);
+        if (!mounted) return;
         final role = result['role'];
         if (role == 'client') {
           context.go('/clientHome');

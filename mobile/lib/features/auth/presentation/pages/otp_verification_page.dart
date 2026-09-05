@@ -7,6 +7,7 @@ import 'package:toastification/toastification.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../../data/repositories/auth_repository.dart';
+import 'pin_page.dart';
 
 class OTPVerificationPage extends StatefulWidget {
   final String phoneNumber;
@@ -113,6 +114,10 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
             'role': widget.role ?? 'client',
           });
         } else {
+          // Kirish endi saqlanadi va qaytadan so'ralmaydi, shuning uchun
+          // bu yerda PIN kod taklif qilinadi — bir marta.
+          await offerPinSetup(context);
+          if (!mounted) return;
           // If this is login flow, navigate to home based on role
           final role = result['role'];
           if (role == 'client') {

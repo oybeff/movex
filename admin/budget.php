@@ -31,7 +31,10 @@ $whereConditions = [];
 $params = [];
 
 if (!empty($searchQuery)) {
-    $whereConditions[] = "(u.full_name ILIKE ? OR e.type ILIKE ? OR e.model ILIKE ?)";
+    // E'lon qatorlarida texnika yo'q, shuning uchun e'lon sarlavhasi ham
+    // qidiriladi — aks holda ular qidiruvda umuman topilmasdi.
+    $whereConditions[] = "(u.full_name ILIKE ? OR e.type ILIKE ? OR e.model ILIKE ? OR l.title ILIKE ?)";
+    $params[] = "%$searchQuery%";
     $params[] = "%$searchQuery%";
     $params[] = "%$searchQuery%";
     $params[] = "%$searchQuery%";
@@ -53,9 +56,10 @@ $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereCond
 $countQuery = "
     SELECT COUNT(*) as total 
     FROM budget_reserves br
-    JOIN orders o ON br.order_id = o.id
-    JOIN users u ON o.user_id = u.id
-    JOIN equipment e ON o.equipment_id = e.id
+    LEFT JOIN orders o ON br.order_id = o.id
+    LEFT JOIN listings l ON br.listing_id = l.id
+    LEFT JOIN users u ON u.id = COALESCE(o.user_id, l.client_id)
+    LEFT JOIN equipment e ON o.equipment_id = e.id
     $whereClause
 ";
 $countStmt = $db->prepare($countQuery);
@@ -71,7 +75,9 @@ $query = "
         br.amount,
         br.description,
         br.created_at,
-        o.total_amount as order_total,
+        br.listing_id,
+        l.title as listing_title,
+        COALESCE(o.total_amount, l.agreed_price) as order_total,
         o.start_date,
         o.end_date,
         u.full_name as client_name,
@@ -80,10 +86,11 @@ $query = "
         e.model as equipment_model,
         owner.full_name as owner_name
     FROM budget_reserves br
-    JOIN orders o ON br.order_id = o.id
-    JOIN users u ON o.user_id = u.id
-    JOIN equipment e ON o.equipment_id = e.id
-    JOIN users owner ON e.owner_id = owner.id
+    LEFT JOIN orders o ON br.order_id = o.id
+    LEFT JOIN listings l ON br.listing_id = l.id
+    LEFT JOIN users u ON u.id = COALESCE(o.user_id, l.client_id)
+    LEFT JOIN equipment e ON o.equipment_id = e.id
+    LEFT JOIN users owner ON e.owner_id = owner.id
     $whereClause
     ORDER BY br.created_at DESC
     LIMIT ? OFFSET ?
@@ -248,23 +255,36 @@ include 'includes/header.php';
                         <tr>
                             <td><strong>#<?= $reserve['id'] ?></strong></td>
                             <td>
-                                <a href="orders.php?search=<?= $reserve['order_id'] ?>" style="color: var(--primary-color);">
-                                    #<?= $reserve['order_id'] ?>
-                                </a><br>
-                                <small class="text-muted">
-                                    <?= formatDate($reserve['start_date'], 'd.m.Y') ?> -
-                                    <?= formatDate($reserve['end_date'], 'd.m.Y') ?>
-                                </small>
+                                <?php if ($reserve['listing_id']): ?>
+                                    <?php /* Ulush e'londan kelgan: buyurtma yo'q, texnika ham
+                                             bo'lmasligi mumkin — shuning uchun alohida ustun. */ ?>
+                                    <a href="listings.php?search=<?= $reserve['listing_id'] ?>" style="color: var(--primary-color);">
+                                        E'lon #<?= $reserve['listing_id'] ?>
+                                    </a><br>
+                                    <small class="text-muted"><?= htmlspecialchars((string)$reserve['listing_title']) ?></small>
+                                <?php else: ?>
+                                    <a href="orders.php?search=<?= $reserve['order_id'] ?>" style="color: var(--primary-color);">
+                                        #<?= $reserve['order_id'] ?>
+                                    </a><br>
+                                    <small class="text-muted">
+                                        <?= formatDate($reserve['start_date'], 'd.m.Y') ?> -
+                                        <?= formatDate($reserve['end_date'], 'd.m.Y') ?>
+                                    </small>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <?= htmlspecialchars($reserve['client_name']) ?><br>
                                 <small class="text-muted"><?= htmlspecialchars($reserve['client_phone']) ?></small>
                             </td>
                             <td>
-                                <strong><?= htmlspecialchars(equipmentTypeName($reserve['equipment_type'])) ?></strong><br>
-                                <small class="text-muted"><?= htmlspecialchars($reserve['equipment_model']) ?></small>
+                                <?php if ($reserve['equipment_type']): ?>
+                                    <strong><?= htmlspecialchars(equipmentTypeName($reserve['equipment_type'])) ?></strong><br>
+                                    <small class="text-muted"><?= htmlspecialchars((string)$reserve['equipment_model']) ?></small>
+                                <?php else: ?>
+                                    <small class="text-muted">—</small>
+                                <?php endif; ?>
                             </td>
-                            <td><?= htmlspecialchars($reserve['owner_name']) ?></td>
+                            <td><?= htmlspecialchars((string)$reserve['owner_name']) ?></td>
                             <td>
                                 <strong><?= number_format($reserve['order_total'], 0) ?></strong> so'm
                             </td>

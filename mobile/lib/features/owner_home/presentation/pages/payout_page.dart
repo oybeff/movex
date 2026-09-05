@@ -88,7 +88,12 @@ class _PayoutPageState extends State<PayoutPage> {
     }
   }
 
-  double get _available => _balance?.availableBalance ?? 0;
+  // YECHISH mumkin bo'lgan summa: sovg'a bunga kirmaydi. Ilgari bu yerda
+  // availableBalance turardi va ekran yechib bo'lmaydigan sovg'a pulini
+  // ham ko'rsatardi — odam so'rov yuborib, rad javobini olardi.
+  double get _available => _balance?.withdrawableBalance ?? 0;
+
+  double get _bonus => _balance?.bonusBalance ?? 0;
 
   /// Maydonga yozilgan summa. Yozilmagan yoki noto'g'ri bo'lsa — 0.
   double get _enteredAmount =>
@@ -181,6 +186,17 @@ class _PayoutPageState extends State<PayoutPage> {
             '${NumberFormatter.formatCurrency(_available)} ${'common.currency'.tr()}',
             style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
+          // Sovg'a alohida satrda: aks holda odam balansida 50 000 turganini
+          // ko'rib, nega yechishga nol ekanini tushunmasdi.
+          if (_bonus > 0) ...[
+            const SizedBox(height: 8),
+            Text(
+              "${'payout.bonus_note'.tr()}: "
+              "${NumberFormatter.formatCurrency(_bonus)} ${'common.currency'.tr()} — "
+              "${'payout.bonus_hint'.tr()}",
+              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+            ),
+          ],
           if (balance != null && balance.frozenBalance > 0) ...[
             const SizedBox(height: 8),
             Text(

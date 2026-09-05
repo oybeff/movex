@@ -4,6 +4,7 @@ from app.schemas.balance import BalanceTransactionCreate, BalanceTransactionUpda
 from app.services import payment_providers
 from app.core.messages import t
 from fastapi import HTTPException
+import logging
 from decimal import Decimal
 
 # Ruxsat etilgan usullar ro'yxati payment_providers da turadi — yangi tizim
@@ -217,3 +218,102 @@ def update_transaction(
 # Buyurtma uchun pul harakati order_service da, escrow mantig'i bilan
 # birga turadi — ikkinchi, yashirin yo'l kerak emas.
 
+
+
+# --- Ro'yxatdan o'tganlik uchun bonus ---------------------------------------
+#
+# Yangi texnika egasi ro'yxatdan o'tganda hisobiga sovg'a tushadi.
+#
+# Miqdor va yoqilganligi KODDA emas, app_settings da: komissiya bilan bir xil
+# yondashuv, adminkadan o'zgartiriladi. Aks holda summani o'zgartirish uchun
+# har safar yangi versiya chiqarish kerak bo'lardi.
+SIGNUP_BONUS_ENABLED_KEY = "signup_bonus_enabled"
+SIGNUP_BONUS_AMOUNT_KEY = "signup_bonus_amount"
+DEFAULT_SIGNUP_BONUS = Decimal("50000")
+
+#: Tranzaksiya turi. Alohida tur ataylab: adminkada va tarixda sovg'a
+#: to'ldirishdan ajralib turishi kerak, aks holda pul qayerdan kelgani
+#: ko'rinmaydi.
+TX_TYPE_BONUS = "bonus"
+
+
+def _settings_value(db: Session, key: str):
+    from app.models.app_settings import AppSettings
+    row = db.query(AppSettings).filter(AppSettings.key == key).first()
+    return None if row is None or row.value is None else str(row.value)
+
+
+def is_signup_bonus_enabled(db: Session) -> bool:
+    """Sovg'a yoqilganmi. Sozlama yo'q bo'lsa — yoqilgan."""
+    raw = _settings_value(db, SIGNUP_BONUS_ENABLED_KEY)
+    if raw is None:
+        return True
+    return str(raw).strip().lower() in ("1", "true", "yes", "on")
+
+
+def get_signup_bonus_amount(db: Session) -> Decimal:
+    """Sovg'a miqdori. Xato yoki manfiy qiymat — standart 50 000."""
+    raw = _settings_value(db, SIGNUP_BONUS_AMOUNT_KEY)
+    if raw is None:
+        return DEFAULT_SIGNUP_BONUS
+    try:
+        amount = Decimal(raw)
+    except (ArithmeticError, TypeError, ValueError):
+        return DEFAULT_SIGNUP_BONUS
+    return amount if amount >= 0 else DEFAULT_SIGNUP_BONUS
+
+
+def grant_signup_bonus(db: Session, user):
+    """
+    Yangi texnika egasiga sovg'a beradi. Faqat 'owner' uchun.
+
+    Ro'yxatdan o'tish shu funksiya bilan buzilmasligi kerak: sovg'a berilmasa
+    ham odam ilovaga kirishi shart, shuning uchun xato jim yutiladi va
+    ro'yxatdan o'tish davom etadi.
+    """
+    if getattr(user, "role", None) != "owner":
+        return None
+    if not is_signup_bonus_enabled(db):
+        return None
+
+    amount = get_signup_bonus_amount(db)
+    if amount <= 0:
+        return None
+
+    try:
+        update_balance(db, user.id, amount)
+        # Sovg'aning yechib bo'lmaydigan qismini belgilaymiz.
+        balance = get_or_create_balance(db, user.id)
+        balance.bonus_balance = Decimal(str(balance.bonus_balance or 0)) + Decimal(str(amount))
+        db.commit()
+        return create_transaction(
+            db,
+            user_id=user.id,
+            amount=amount,
+            transaction_type=TX_TYPE_BONUS,
+            description=t("tx.signup_bonus", _user_language(db, user.id)),
+            status="completed",
+        )
+    except Exception:
+        # Xato yutiladi, lekin JIM emas: aynan jim `except` tufayli
+        # 'bonus' turi CHECK cheklovidan o'tmayotgani ko'rinmay qolgandi —
+        # balans to'lgan, tranzaksiya esa yozilmagan edi.
+        logging.getLogger(__name__).exception(
+            "ro'yxatdan o'tganlik sovg'asi berilmadi: user_id=%s", getattr(user, "id", None)
+        )
+        db.rollback()
+        return None
+
+
+def withdrawable_balance(balance) -> Decimal:
+    """
+    Kartaga yechish mumkin bo'lgan summa.
+
+    Sovg'a bunga KIRMAYDI: uni ilova ichida ishlatish mumkin, yechib
+    bo'lmaydi. Aks holda har bir yangi SIM kartadan 50 000 chiqib ketardi.
+    """
+    total = Decimal(str(balance.balance or 0))
+    frozen = Decimal(str(balance.frozen_balance or 0))
+    bonus = Decimal(str(balance.bonus_balance or 0))
+    available = total - frozen - bonus
+    return available if available > 0 else Decimal("0")

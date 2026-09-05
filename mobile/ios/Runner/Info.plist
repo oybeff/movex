@@ -39,6 +39,10 @@
 	     tarqatilmaydi — javobni qo'lda bosib o'tirish kerak bo'ladi. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+		<!-- Face ID: PIN o'rniga tezroq kirish uchun. Bu satrsiz
+	     ilova Face ID so'raganda YIQILADI, ogohlantirmaydi. -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Ilovaga kirish uchun Face ID ishlatiladi</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Texnika, e'lon va material rasmlarini olish uchun kamera kerak</string>
 	<key>NSPhotoLibraryUsageDescription</key>

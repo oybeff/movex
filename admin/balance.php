@@ -27,7 +27,7 @@ if (!empty($statusFilter)) {
 
 if (!empty($typeFilter)) {
     if ($typeFilter === 'deposit') {
-        $whereConditions[] = "bt.type IN ('topup', 'income', 'refund')";
+        $whereConditions[] = "bt.type IN ('topup', 'income', 'refund', 'bonus')";
     } elseif ($typeFilter === 'withdrawal') {
         $whereConditions[] = "bt.type = 'payment'";
     }
@@ -82,7 +82,7 @@ $transactions = $stmt->fetchAll();
 $stats = $db->query("
     SELECT
         COUNT(*) as total_transactions,
-        COALESCE(SUM(CASE WHEN type IN ('topup', 'income', 'refund') THEN amount ELSE 0 END), 0) as total_deposits,
+        COALESCE(SUM(CASE WHEN type IN ('topup', 'income', 'refund', 'bonus') THEN amount ELSE 0 END), 0) as total_deposits,
         COALESCE(SUM(CASE WHEN type = 'payment' THEN amount ELSE 0 END), 0) as total_withdrawals,
         COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0) as pending_amount,
         COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count
@@ -221,7 +221,7 @@ include 'includes/header.php';
                             </td>
                             <td>
                                 <?php
-                                $isDeposit = in_array($transaction['type'], ['topup', 'income', 'refund']);
+                                $isDeposit = in_array($transaction['type'], ['topup', 'income', 'refund', 'bonus']);
                                 // Ro'yxat TO'LIQ bo'lishi shart: yetishmagan turda pastdagi
                                 // `?? $transaction['type']` xom kodni chiqaradi. Aynan shunday
                                 // "withdrawal" jadvalda inglizcha bo'lib turardi — qolganlari

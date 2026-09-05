@@ -59,6 +59,12 @@ class Listing(Base):
 
     budget = Column(Numeric(12, 2), nullable=True)
 
+    #: Tasdiqlash paytida kelishilgan summa va platforma ulushi.
+    #: Ko'rsatishda hisoblanmaydi: adminkada stavka o'zgarsa, eski
+    #: e'lonlar tarixi qayta yozilib ketardi.
+    agreed_price = Column(Numeric(12, 2), nullable=True)
+    commission = Column(Numeric(12, 2), nullable=True)
+
     address = Column(Text, nullable=True)
     latitude = Column(Numeric(10, 7), nullable=True)
     longitude = Column(Numeric(10, 7), nullable=True)

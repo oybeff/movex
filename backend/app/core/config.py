@@ -10,7 +10,9 @@ class Settings(BaseSettings):
     # JWT
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 день
+    #: 0 — token muddatsiz. Telefonni PIN kod va barmoq izi himoya qiladi,
+    #: shuning uchun har kuni qaytadan kirishning hojati yo'q.
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 0
 
     # Eskiz SMS Service
     ESKIZ_EMAIL: str

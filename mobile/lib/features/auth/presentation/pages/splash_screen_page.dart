@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../core/services/pin_service.dart';
+import 'pin_page.dart';
+
 class SplashScreenPage extends StatefulWidget {
   const SplashScreenPage({super.key});
 
@@ -66,10 +69,30 @@ class _SplashScreenPageState extends State<SplashScreenPage> with SingleTickerPr
     final role = prefs.getString('role');
 
     if (token != null && role != null) {
+      // Kirish saqlanadi va qaytadan so'ralmaydi, shuning uchun telefonni
+      // PIN kod himoya qiladi. PIN qo'yilmagan bo'lsa — to'g'ridan-to'g'ri
+      // ichkariga: majburlamaymiz.
+      if (await PinService.hasPin()) {
+        if (!mounted) return;
+        final unlocked = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => const PinPage(mode: PinMode.unlock),
+            fullscreenDialog: true,
+          ),
+        );
+        if (unlocked != true) return;
+      }
+
+      if (!mounted) return;
       if (role == 'client') {
-        if (mounted) context.go('/clientHome');
+        context.go('/clientHome');
       } else if (role == 'owner') {
-        if (mounted) context.go('/ownerHome');
+        context.go('/ownerHome');
+      } else {
+        // Noma'lum rol (masalan 'admin' — u faqat panelda ishlaydi):
+        // ilgari bu yerda hech narsa bo'lmasdi va ekran sakrash ekranida
+        // abadiy qotib qolardi.
+        context.go('/');
       }
     } else {
       if (mounted) context.go('/');

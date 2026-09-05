@@ -18,6 +18,10 @@ class BalanceRead(BaseModel):
     user_id: int
     balance: float
     frozen_balance: float
+    #: Sovg'aning ishlatilmagan qismi. Ilova ichida ishlatiladi, kartaga
+    #: yechilmaydi — shuning uchun ilovaga ham ayta olishimiz kerak, aks
+    #: holda u yechish ekranida yechib bo'lmaydigan pulni ko'rsatardi.
+    bonus_balance: float = 0
     created_at: datetime
     updated_at: Optional[datetime] = None
 

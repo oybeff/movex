@@ -294,20 +294,29 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('equipment.my_equipment'.tr()),
+        title: Text(
+          'equipment.my_equipment'.tr(),
+          overflow: TextOverflow.ellipsis,
+        ),
         backgroundColor: AppColors.white,
         elevation: 0,
         actions: [
           // Materiallar shu yerda: ega uchun bu ham "sotadigan narsam",
           // faqat ijaraga emas, sotuvga. Alohida bo'limga yashirilsa,
           // sotuvchi uni umuman topmaydi.
-          IconButton(
-            icon: const Text('🧱', style: TextStyle(fontSize: 20)),
+          // Yozuv bilan, faqat ikonka emas: ilgari bu yerda yolg'iz 🧱
+          // turardi va bo'lim nomi faqat uzoq bosganda chiqardi — ega
+          // g'ishtni ko'rib, bu butun "qurilish materiallari" bo'limi
+          // ekanini bilmasdi.
+          TextButton(
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MyMaterialsPage()),
             ),
-            tooltip: 'materials.my_products'.tr(),
+            child: Text(
+              'materials.title'.tr(),
+              style: const TextStyle(fontSize: 12),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.add),

@@ -230,6 +230,10 @@
     "no_transactions": "Tranzaksiyalar yo'q",
     "transaction_type_topup": "To'ldirish",
     "transaction_type_payment": "To'lov",
+    "transaction_type_bonus": "Bonus",
+    "transaction_type_income": "Daromad",
+    "transaction_type_refund": "Qaytarish",
+    "transaction_type_withdrawal": "Pul yechish",
     "min_amount": "Minimal summa: 10,000 so'm",
     "max_amount": "Maksimal summa: 10,000,000 so'm",
     "invalid_amount": "Noto'g'ri summa",
@@ -745,7 +749,9 @@
     "to_card": "Kartaga tushadi",
     "commission_note_fixed": "Pul yechishda {amount} {currency} ushlab qolinadi",
     "commission_note_percent": "Pul yechishda summaning {percent}% i ushlab qolinadi",
-    "commission_too_big": "Ushlanma so'ralgan summadan kam emas. Kattaroq summa kiriting"
+    "commission_too_big": "Ushlanma so'ralgan summadan kam emas. Kattaroq summa kiriting",
+    "bonus_note": "Sovg'a puli",
+    "bonus_hint": "faqat ilova ichida ishlatiladi, kartaga yechilmaydi"
   },
   "requests": {
     "accept_confirm": "Shu taklif tanlansinmi? Buyurtma yaratiladi va pul muzlatiladi.",
@@ -844,6 +850,8 @@
     "rejected": "E'lon yana ochiq",
     "finish": "Yakunlash",
     "finish_confirm": "Ish bajarildimi? E'lon yopiladi.",
+    "confirm_money_warning": "Tasdiqlansa, {amount} balansingizda muzlatiladi va ish yakunlangach ijrochiga o'tadi. Davom etamizmi?",
+    "confirm_money_warning_no_budget": "Tasdiqlansa, kelishilgan summa balansingizda muzlatiladi va ish yakunlangach ijrochiga o'tadi. Davom etamizmi?",
     "finished": "E'lon yopildi",
     "cancel": "Olib tashlash",
     "cancel_confirm": "E'lonni olib tashlaysizmi?",
@@ -945,5 +953,30 @@
     "field_address": "Ombor manzili",
     "field_required": "Maydonni to'ldiring",
     "field_number": "Son kiriting"
+  },
+  "pin": {
+    "unlock_title": "PIN kodni kiriting",
+    "create_title": "Yangi PIN kod o'ylab toping",
+    "repeat_title": "PIN kodni takrorlang",
+    "current_title": "Joriy PIN kodni kiriting",
+    "hint": "4 ta raqam",
+    "wrong": "PIN kod noto'g'ri",
+    "mismatch": "Kodlar mos kelmadi, boshidan urinib ko'ring",
+    "biometric_reason": "MoveX GO ga kirish",
+    "settings_title": "PIN kod",
+    "settings_desc_on": "Yoqilgan",
+    "settings_desc_off": "O'chirilgan — ilova hech narsa so'ramaydi",
+    "biometric_title": "Barmoq izi yoki yuz",
+    "biometric_desc": "PIN o'rniga tezroq kirish",
+    "turn_on": "PIN kodni o'rnatish",
+    "turn_off": "PIN kodni o'chirish",
+    "change": "PIN kodni almashtirish",
+    "turn_off_confirm": "PIN kod o'chirilsinmi? Ilova ochilganda hech narsa so'ralmaydi",
+    "saved": "PIN kod saqlandi",
+    "removed": "PIN kod o'chirildi",
+    "offer_title": "PIN kod o'rnatasizmi?",
+    "offer_body": "Kirish endi saqlanadi va qaytadan so'ralmaydi. Telefon boshqa qo'lga tushsa, hisobingizni PIN kod himoya qiladi",
+    "offer_later": "Keyinroq",
+    "offer_set": "O'rnatish"
   }
 }

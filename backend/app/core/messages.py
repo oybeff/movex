@@ -265,6 +265,24 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "ru": "Вывод средств #{request_id} — карта {card}. "
               "На карту {net} сум, комиссия {commission} сум",
     },
+    # E'lon bo'yicha pul harakati. Buyurtmadagidek, lekin e'lon raqami bilan.
+    "tx.listing_payment": {
+        "uz": "E'lon #{listing_id} uchun to'lov — {title}",
+        "ru": "Оплата по объявлению #{listing_id} — {title}",
+    },
+    "tx.listing_income": {
+        "uz": "E'lon #{listing_id} bo'yicha daromad — {title}",
+        "ru": "Доход по объявлению #{listing_id} — {title}",
+    },
+    "tx.listing_commission": {
+        "uz": "E'lon #{listing_id} ulushi — {title}",
+        "ru": "Комиссия по объявлению #{listing_id} — {title}",
+    },
+    # Ro'yxatdan o'tgan texnika egasiga beriladigan sovg'a.
+    "tx.signup_bonus": {
+        "uz": "Ro'yxatdan o'tganlik uchun bonus",
+        "ru": "Бонус за регистрацию",
+    },
     # Faqat OTP_TEST_MODE da ko'rinadi, prodda hech qachon chiqmaydi.
     "test_mode.code": {
         "uz": "TEST REJIMI: tasdiqlash kodi {code}",
