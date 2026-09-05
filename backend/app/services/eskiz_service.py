@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models.eskiz_token import EskizToken
 import logging
+from app.utils.phone_utils import to_db_phone
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +98,7 @@ class EskizService:
             token = await self.get_valid_token()
             
             # Clean phone number (remove + and spaces)
-            clean_phone = phone.replace("+", "").replace(" ", "").replace("(", "").replace(")", "").replace("-", "")
+            clean_phone = to_db_phone(phone)
             
             # Send SMS
             async with httpx.AsyncClient() as client:

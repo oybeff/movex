@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.services.eskiz_service import EskizService
 from app.services import telegram_auth_service
 import logging
+from app.utils.phone_utils import to_db_phone
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ class OTPService:
         """
         try:
             # Clean phone number
-            clean_phone = phone.replace("+", "").replace(" ", "").replace("(", "").replace(")", "").replace("-", "")
+            clean_phone = to_db_phone(phone)
             
             # Check if phone is blocked
             existing_otp = self.db.query(OTPVerification).filter(
@@ -239,7 +240,7 @@ class OTPService:
         """
         try:
             # Clean phone number
-            clean_phone = phone.replace("+", "").replace(" ", "").replace("(", "").replace(")", "").replace("-", "")
+            clean_phone = to_db_phone(phone)
             
             # Check if phone is blocked
             blocked_otp = self.db.query(OTPVerification).filter(
@@ -327,7 +328,7 @@ class OTPService:
         Returns:
             True if verified, False otherwise
         """
-        clean_phone = phone.replace("+", "").replace(" ", "").replace("(", "").replace(")", "").replace("-", "")
+        clean_phone = to_db_phone(phone)
         
         verified_otp = self.db.query(OTPVerification).filter(
             OTPVerification.phone == clean_phone,

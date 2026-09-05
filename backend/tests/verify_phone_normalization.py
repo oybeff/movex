@@ -75,6 +75,39 @@ def db_phone(user_id):
         db.close()
 
 
+
+def otp_rows(canonical_phone):
+    """Kanonik raqamga tegishli OTP yozuvlari soni."""
+    from sqlalchemy import text
+    from app.db.session import SessionLocal
+    db = SessionLocal()
+    try:
+        return db.execute(text("SELECT count(*) FROM otp_verifications WHERE phone = :p"),
+                          {"p": canonical_phone}).scalar()
+    finally:
+        db.close()
+
+
+def foreign_otp_rows(canonical_phone):
+    """
+    Kanonik bo'lmagan ko'rinishda yozilgan yozuvlar: "+998...", "00998..."
+    va hokazo. Ular BO'LMASLIGI kerak — aks holda bitta odam uchun bir
+    nechta hisob paydo bo'ladi.
+    """
+    from sqlalchemy import text
+    from app.db.session import SessionLocal
+    db = SessionLocal()
+    try:
+        tail = canonical_phone[3:]
+        return db.execute(
+            text("SELECT count(*) FROM otp_verifications "
+                 "WHERE phone LIKE :like AND phone <> :exact"),
+            {"like": f"%{tail}", "exact": canonical_phone},
+        ).scalar()
+    finally:
+        db.close()
+
+
 def cleanup():
     from sqlalchemy import text
     from app.db.session import SessionLocal
@@ -84,6 +117,9 @@ def cleanup():
             db.execute(text("DELETE FROM users WHERE phone = ANY(:ps)"), {"ps": created_phones})
             db.execute(text("DELETE FROM otp_verifications WHERE phone = ANY(:ps)"),
                        {"ps": created_phones})
+            for ph in created_phones:
+                db.execute(text("DELETE FROM otp_verifications WHERE phone LIKE :like"),
+                           {"like": f"%{ph[3:]}"})
             db.commit()
     finally:
         db.close()
@@ -103,12 +139,19 @@ def main():
             "xalqaro 00 bilan": f"00{phone}",
         }
         for label, value in forms.items():
-            r = requests.post(f"{API}/auth/send-otp", json={"phone": value})
-            body = r.text.lower()
-            # Muvaffaqiyat yoki "kod allaqachon yuborilgan" — ikkalasi ham
-            # raqam TOPILGANINI bildiradi. Xato bo'lsa boshqa matn chiqadi.
-            found = r.status_code == 200 or "soniya" in body
-            check(f"{label}: raqam tanildi", found, f"{r.status_code} {r.text[:110]}")
+            before = otp_rows(phone)
+            requests.post(f"{API}/auth/send-otp", json={"phone": value})
+            # 200 javobining O'ZI yetarli emas: notanish raqam uchun ham 200
+            # qaytadi — shunchaki YANGI yozuv yaratiladi. Shuning uchun
+            # bazadagi yozuv AYNAN kanonik raqamga tegishli ekanini
+            # tekshiramiz. Aynan shu joyda tekshiruv meni aldab, "00998"
+            # uchun soxta OK bergan edi.
+            after = otp_rows(phone)
+            others = foreign_otp_rows(phone)
+            check(f"{label}: kanonik raqamga yozildi", after > before or others == 0,
+                  f"kanonik {before}->{after}, begona yozuvlar: {others}")
+            check(f"{label}: begona yozuv yaratilmadi", others == 0,
+                  f"begona: {others}")
 
         head("Profilga + bilan yozilgan raqam bazani buzmaydi")
         me = requests.get(f"{API}/users/me", headers=hdr).json()

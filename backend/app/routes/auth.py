@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 # ========================
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from app.utils.phone_utils import to_db_phone
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -70,7 +71,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Telefon raqam majburiy")
 
     # Clean phone number
-    clean_phone = user_in.phone.replace("+", "").replace(" ", "").replace("(", "").replace(")", "").replace("-", "")
+    clean_phone = to_db_phone(user_in.phone)
 
     # Check if phone is verified
     otp_service = OTPService(db)
@@ -158,7 +159,7 @@ def verify_otp(request: OTPVerifyRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=result["message"])
 
     # Clean phone number
-    clean_phone = request.phone.replace("+", "").replace(" ", "").replace("(", "").replace(")", "").replace("-", "")
+    clean_phone = to_db_phone(request.phone)
 
     # Hisob bor-yo'qligi, bloklanganlik va token — hammasi bitta joyda,
     # Telegram orqali kirish bilan umumiy.
