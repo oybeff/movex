@@ -126,6 +126,10 @@ class Settings(BaseSettings):
     # ADMIN raqami bu ro'yxatga qo'shilsa ham kod javobda qaytmaydi —
     # tekshiruv quyida, send_otp ichida.
     OTP_TEST_PHONES: str = ""
+    #: Sinov raqamlari uchun O'ZGARMAS kod. Bo'sh bo'lsa — tasodifiy, ya'ni
+    #: har safar yangi. Google Play tekshiruvchisiga o'zgarmas kerak: ular
+    #: formada bitta parol so'raydi va uni qayta kiritadi.
+    OTP_DEMO_CODE: str = ""
 
     # Push-bildirishnomalar (Firebase Cloud Messaging, HTTP v1).
     #

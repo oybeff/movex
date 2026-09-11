@@ -81,9 +81,12 @@ class OTPService:
                 OTPVerification.created_at >= window_start,
             ).order_by(OTPVerification.created_at.desc()).all()
 
-            # Yuborish chastotasi. Test rejimida cheklov yo'q — u yerda kod
-            # javobning o'zida qaytadi va SMS umuman yuborilmaydi.
-            if not settings.OTP_TEST_MODE:
+            # Yuborish chastotasi. Test rejimida va sinov raqamlari uchun
+            # cheklov yo'q — u yerda kod javobning o'zida qaytadi va SMS
+            # umuman yuborilmaydi. Sinov raqamlari uchun bu ataylab:
+            # Google Play tekshiruvchisi tugmani bir necha marta bosishi
+            # mumkin, va "60 soniya kuting" uni to'xtatib qo'yardi.
+            if not settings.OTP_TEST_MODE and clean_phone not in _test_phones():
                 if recent:
                     since_last = (now - recent[0].created_at).total_seconds()
                     if since_last < settings.OTP_RESEND_COOLDOWN_SECONDS:
@@ -115,7 +118,14 @@ class OTPService:
             self.db.commit()
 
             # Generate new OTP code
-            otp_code = self.generate_otp_code()
+            # Sinov raqamlari uchun kod O'ZGARMAS bo'lishi mumkin: Google
+            # Play formasi bitta "parol" so'raydi, har safar yangi kod u
+            # yerga sig'maydi. Haqiqiy raqamlarga bu tegmaydi.
+            demo_code = (getattr(settings, "OTP_DEMO_CODE", "") or "").strip()
+            if demo_code and clean_phone in _test_phones():
+                otp_code = demo_code
+            else:
+                otp_code = self.generate_otp_code()
             
             # Create OTP record
             otp_record = OTPVerification(
