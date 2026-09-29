@@ -1,10 +1,22 @@
+"""
+Balans: to'ldirish, tarix va Rahmat (Multicard) callback'lari.
+
+Callback manzillari OCHIQ (tokensiz) — ularga to'lov tizimi murojaat
+qiladi. Shuning uchun har birida imzo tekshiriladi va summa
+tranzaksiyadagi summa bilan solishtiriladi. Imzosiz manzil = istalgan
+odam istalgan balansni to'ldirib olishi.
+"""
+import logging
+from typing import Any, Dict, List
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
-from app.schemas import balance as balance_schema
-from app.services import balance_service
-from app.services.click_service import ClickService
+
 from app.dependencies import get_db, get_current_user
+from app.schemas import balance as balance_schema
+from app.services import balance_service, rahmat_payment, rahmat_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -19,6 +31,25 @@ def get_my_balance(
     return balance
 
 
+@router.get("/methods", response_model=List[balance_schema.PaymentMethodRead])
+def payment_methods():
+    """
+    Ilova ko'rsatadigan to'lov usullari.
+
+    Ro'yxat SERVERDAN keladi, ilovada yozib qo'yilmaydi: yig'ilgan APK'da
+    qotib qolgan ro'yxat sozlamalar o'zgarganda yolg'on bo'lib qolardi.
+    Sozlanmagan tizim ro'yxatga tushmaydi — bosilganda 503 beradigan
+    tugmani ko'rsatishdan ma'no yo'q.
+    """
+    from app.services import payment_providers
+
+    return [
+        balance_schema.PaymentMethodRead(code=provider.code, title=provider.title)
+        for provider in payment_providers.PROVIDERS
+        if provider.is_configured()
+    ]
+
+
 @router.post("/topup", response_model=balance_schema.BalanceTopUpResponse)
 def top_up_balance(
     transaction_data: balance_schema.BalanceTransactionCreate,
@@ -26,30 +57,22 @@ def top_up_balance(
     current_user = Depends(get_current_user)
 ):
     """
-    Hisob to'ldirish
+    Hisob to'ldirish.
 
-    Click to'lov uchun: Transaction yaratish va to'lov URL'ini qaytarish
-    Boshqa to'lov usullari uchun: To'g'ridan-to'g'ri balansni yangilash
+    Tranzaksiya 'pending' holatda yaratiladi va shlyuzda invoys ochiladi.
+    Balans faqat to'lov tasdiqlangandan keyin to'ldiriladi.
     """
     transaction = balance_service.top_up_balance(db, current_user.id, transaction_data)
 
-    # Response yaratish
-    response = {
+    payment_url = balance_service.start_payment(db, transaction)
+
+    return {
         "transaction_id": transaction.id,
         "amount": float(transaction.amount),
         "payment_method": transaction.payment_method,
         "status": transaction.status,
-        "payment_url": None
+        "payment_url": payment_url,
     }
-
-    # Har qanday tashqi to'lov tizimi uchun to'lov havolasi
-    response["payment_url"] = balance_service.generate_payment_url(
-        payment_method=transaction.payment_method,
-        transaction_id=transaction.id,
-        amount=float(transaction.amount),
-    )
-
-    return response
 
 
 @router.get("/transactions", response_model=List[balance_schema.BalanceTransactionRead])
@@ -77,6 +100,32 @@ def get_transaction(
     return transaction
 
 
+@router.post("/transactions/{transaction_id}/sync", response_model=balance_schema.BalanceTransactionRead)
+def sync_transaction(
+    transaction_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Holatni to'lov tizimidan so'rab aniqlash.
+
+    Ilova to'lov sahifasidan qaytgach shuni chaqiradi. Callback yo'lda
+    kechikishi yoki tunnel uzilib, umuman kelmasligi mumkin — bunda odam
+    pulini to'lagan, ekranda esa "kutilmoqda" turardi. Haqiqatning manbasi
+    shlyuz, shuning uchun so'rab olamiz.
+
+    E'tibor: bu yo'l "/transactions/{id}" dan KEYIN, lekin oxirida "/sync"
+    borligi uchun ular chalkashmaydi.
+    """
+    transaction = balance_service.get_transaction(db, transaction_id, current_user.id)
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    rahmat_payment.sync_transaction(db, transaction)
+    db.refresh(transaction)
+    return transaction
+
+
 @router.put("/transactions/{transaction_id}", response_model=balance_schema.BalanceTransactionRead)
 def update_transaction(
     transaction_id: int,
@@ -93,84 +142,163 @@ def update_transaction(
     return transaction
 
 
-# ============================================
-# Click to'lov tizimi callback endpoint'lari
-# ============================================
+# ============================================================
+# Rahmat (Multicard) callback'lari
+# ============================================================
+#
+# Ikkisi ham OCHIQ manzil: murojaat qiluvchi — to'lov tizimi, unda
+# bizning tokenimiz yo'q. Himoya imzoda.
+#
+# Javob shakli hujjat talabiga bo'ysunadi va bu muhim:
+#   callback (success) — HTTP 200 va success=true bo'lmasa, Multicard
+#   TO'LOVNI BEKOR QILADI (pul plateljchiga qaytadi). Ya'ni bizning
+#   xatomiz odamning to'lovini buzadi, shuning uchun har qanday
+#   kutilmagan holatda ham aniq javob qaytaramiz.
+#   webhook — 2xx bo'lmasa, so'rov 5 marta qaytariladi.
 
-@router.post("/click/prepare")
-async def click_prepare(request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
+
+async def _json_body(request: Request) -> Dict[str, Any]:
     """
-    Click Prepare - To'lovni tayyorlash
-
-    Click bu endpoint'ga quyidagi ma'lumotlarni yuboradi:
-    - click_trans_id: Click transaction ID
-    - service_id: Service ID
-    - click_paydoc_id: Click paydoc ID
-    - merchant_trans_id: Bizning transaction ID
-    - amount: To'lov summasi
-    - action: 0 (prepare) yoki 1 (complete)
-    - error: Xato kodi
-    - error_note: Xato matni
-    - sign_time: Vaqt
-    - sign_string: Signature
-    """
-    try:
-        # Form data'ni olish
-        form_data = await request.form()
-        data = dict(form_data)
-
-        # Click service orqali prepare qilish
-        result = ClickService.prepare(
-            db=db,
-            click_trans_id=int(data.get('click_trans_id', 0)),
-            merchant_trans_id=int(data.get('merchant_trans_id', 0)),
-            amount=float(data.get('amount', 0)),
-            action=int(data.get('action', 0)),
-            sign_time=data.get('sign_time', ''),
-            sign_string=data.get('sign_string', ''),
-            error=int(data.get('error', 0)),
-            error_note=data.get('error_note', 'Success')
-        )
-
-        return result
-
-    except Exception as e:
-        return {
-            "error": -8,
-            "error_note": f"Error in request from click: {str(e)}"
-        }
-
-
-@router.post("/click/complete")
-async def click_complete(request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """
-    Click Complete - To'lovni yakunlash va balansni yangilash
-
-    Click bu endpoint'ga prepare'dagi kabi ma'lumotlarni yuboradi
+    Tanani o'qish. Multicard JSON yuboradi, lekin forma ko'rinishida
+    kelib qolsa ham tushunamiz: tanani o'qiy olmaslik tufayli to'lovni
+    bekor qilib yuborishdan ko'ra, ikkinchi ko'rinishni ham qabul
+    qilish arzonga tushadi.
     """
     try:
-        # Form data'ni olish
-        form_data = await request.form()
-        data = dict(form_data)
+        body = await request.json()
+        if isinstance(body, dict):
+            return body
+    except Exception:
+        pass
+    try:
+        form = await request.form()
+        return dict(form)
+    except Exception:
+        return {}
 
-        # Click service orqali complete qilish
-        result = ClickService.complete(
-            db=db,
-            click_trans_id=int(data.get('click_trans_id', 0)),
-            merchant_trans_id=int(data.get('merchant_trans_id', 0)),
-            amount=float(data.get('amount', 0)),
-            action=int(data.get('action', 1)),
-            sign_time=data.get('sign_time', ''),
-            sign_string=data.get('sign_string', ''),
-            error=int(data.get('error', 0)),
-            error_note=data.get('error_note', 'Success')
+
+def _int_or_none(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+@router.post("/rahmat/callback")
+async def rahmat_callback(request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Muvaffaqiyatli to'lov: pulni balansga yozamiz.
+
+    Imzo: md5({store_id}{invoice_id}{amount}{secret}).
+
+    Multicard bu so'rovni QAYTA yuborishi mumkin (bizdan timeout yoki 500
+    kelgan bo'lsa). Takroriy so'rovda ham success=true qaytaradi va pul
+    ikkinchi marta yozilmaydi — idempotentlik apply_gateway_state ichida.
+    """
+    data = await _json_body(request)
+
+    store_id = data.get("store_id")
+    invoice_id = data.get("invoice_id")
+    amount = _int_or_none(data.get("amount"))
+    uuid = data.get("uuid")
+
+    if amount is None:
+        return {"success": False, "message": "amount yo'q"}
+
+    if not rahmat_service.verify_callback_sign(
+        store_id=store_id,
+        invoice_id=invoice_id,
+        amount_tiyin=amount,
+        sign=data.get("sign"),
+    ):
+        logger.warning("Rahmat callback: imzo mos kelmadi, invoice_id=%s", invoice_id)
+        return {"success": False, "message": "Imzo mos kelmadi"}
+
+    transaction = rahmat_payment.find_transaction(db, uuid=uuid, invoice_id=invoice_id)
+    if transaction is None:
+        logger.warning("Rahmat callback: tranzaksiya topilmadi, invoice_id=%s", invoice_id)
+        return {"success": False, "message": "Tranzaksiya topilmadi"}
+
+    try:
+        status = rahmat_payment.apply_gateway_state(
+            db,
+            transaction,
+            gateway_status=rahmat_service.STATUS_SUCCESS,
+            amount_tiyin=amount,
+            uuid=uuid,
+            card_pan=data.get("card_pan"),
+            ps=data.get("ps"),
+            billing_id=data.get("billing_id"),
+            receipt_url=data.get("receipt_url"),
+            payment_time=data.get("payment_time"),
         )
+    except ValueError as exc:
+        # Summa mos kelmadi. success=false qaytarish TO'G'RI javob: pul
+        # plateljchiga qaytadi, biz esa noto'g'ri summani hisoblamaymiz.
+        logger.error("Rahmat callback: %s (invoice_id=%s)", exc, invoice_id)
+        return {"success": False, "message": "Summa mos kelmadi"}
+    except Exception:
+        logger.exception("Rahmat callback ichki xato: invoice_id=%s", invoice_id)
+        # 500 qaytarish tranzaksiyani muzlatadi va so'rov qaytariladi —
+        # hujjat shunday deydi, va bu bizga kerak: xatoni tuzatib,
+        # takroriy so'rovda to'lovni qabul qilamiz.
+        raise HTTPException(status_code=500, detail="internal error")
 
-        return result
+    return {"success": True, "message": f"Qabul qilindi: {status}"}
 
-    except Exception as e:
-        return {
-            "error": -8,
-            "error_note": f"Error in request from click: {str(e)}"
-        }
 
+@router.post("/rahmat/webhook")
+async def rahmat_webhook(request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Holat o'zgarishi: draft / progress / success / error / revert / hold.
+
+    Imzo: sha1({uuid}{invoice_id}{amount}{secret}).
+
+    Nega callback yetmaydi: callback FAQAT muvaffaqiyatli to'lovda keladi.
+    Rad etilgan yoki qaytarilgan to'lov haqida bizga hech kim aytmasa,
+    tranzaksiya abadiy 'pending' da qolib ketardi, qaytarilgan pul esa
+    balansda turib qolardi.
+    """
+    data = await _json_body(request)
+
+    uuid = data.get("uuid")
+    invoice_id = data.get("invoice_id")
+    amount = _int_or_none(data.get("amount"))
+
+    if amount is None or not uuid:
+        return {"success": False, "message": "uuid yoki amount yo'q"}
+
+    if not rahmat_service.verify_webhook_sign(
+        uuid=uuid,
+        invoice_id=invoice_id,
+        amount_tiyin=amount,
+        sign=data.get("sign"),
+    ):
+        logger.warning("Rahmat webhook: imzo mos kelmadi, uuid=%s", uuid)
+        return {"success": False, "message": "Imzo mos kelmadi"}
+
+    transaction = rahmat_payment.find_transaction(db, uuid=uuid, invoice_id=invoice_id)
+    if transaction is None:
+        # 2xx qaytaramiz: tranzaksiya bizda yo'q bo'lsa, so'rovni 5 marta
+        # qaytarishdan foyda yo'q.
+        logger.warning("Rahmat webhook: tranzaksiya topilmadi, uuid=%s", uuid)
+        return {"success": True, "message": "Tranzaksiya topilmadi"}
+
+    try:
+        status = rahmat_payment.apply_gateway_state(
+            db,
+            transaction,
+            gateway_status=data.get("status"),
+            amount_tiyin=amount,
+            uuid=uuid,
+            card_pan=data.get("card_pan"),
+            ps=data.get("ps"),
+            billing_id=data.get("billing_id"),
+            receipt_url=data.get("receipt_url"),
+            payment_time=data.get("payment_time"),
+        )
+    except ValueError as exc:
+        logger.error("Rahmat webhook: %s (uuid=%s)", exc, uuid)
+        return {"success": False, "message": "Summa mos kelmadi"}
+
+    return {"success": True, "status": status}

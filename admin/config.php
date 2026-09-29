@@ -40,22 +40,30 @@ date_default_timezone_set('Asia/Tashkent');
 $movexDb = ['host' => 'localhost', 'port' => '5432',
             'name' => 'movex_go', 'user' => get_current_user(), 'pass' => ''];
 
+// Butun .env bir marta o'qiladi: ilgari bu yerda faqat DATABASE_URL
+// satri izlanardi, va keyin kerak bo'lgan har bir qiymat uchun fayl
+// yana bir marta ko'rib chiqilishi kerak bo'lardi.
+$movexEnv = [];
 $movexEnvFile = dirname(__DIR__) . '/backend/.env';
 if (is_readable($movexEnvFile)) {
     foreach (file($movexEnvFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-        if (strpos(ltrim($line), 'DATABASE_URL=') !== 0) {
+        $line = ltrim($line);
+        if ($line === '' || $line[0] === '#' || strpos($line, '=') === false) {
             continue;
         }
-        $url = trim(substr(ltrim($line), strlen('DATABASE_URL=')), " \t\"'");
-        $parts = parse_url($url);
-        if ($parts !== false) {
-            if (!empty($parts['host'])) $movexDb['host'] = $parts['host'];
-            if (!empty($parts['port'])) $movexDb['port'] = (string)$parts['port'];
-            if (!empty($parts['user'])) $movexDb['user'] = urldecode($parts['user']);
-            if (isset($parts['pass'])) $movexDb['pass'] = urldecode($parts['pass']);
-            if (!empty($parts['path'])) $movexDb['name'] = ltrim($parts['path'], '/');
-        }
-        break;
+        [$key, $value] = explode('=', $line, 2);
+        $movexEnv[trim($key)] = trim($value, " \t\"'");
+    }
+}
+
+if (!empty($movexEnv['DATABASE_URL'])) {
+    $parts = parse_url($movexEnv['DATABASE_URL']);
+    if ($parts !== false) {
+        if (!empty($parts['host'])) $movexDb['host'] = $parts['host'];
+        if (!empty($parts['port'])) $movexDb['port'] = (string)$parts['port'];
+        if (!empty($parts['user'])) $movexDb['user'] = urldecode($parts['user']);
+        if (isset($parts['pass'])) $movexDb['pass'] = urldecode($parts['pass']);
+        if (!empty($parts['path'])) $movexDb['name'] = ltrim($parts['path'], '/');
     }
 }
 
@@ -66,8 +74,17 @@ define('DB_USER', getenv('POSTGRES_USER') ?: $movexDb['user']);
 define('DB_PASSWORD', getenv('POSTGRES_PASSWORD') ?: $movexDb['pass']);
 
 // API Configuration
-define('API_BASE_URL', 'http://localhost:8000');
-define('API_TIMEOUT', 30);
+//
+// Panel asosan bazaga TO'G'RIDAN-TO'G'RI boradi, lekin bitta narsa uchun
+// backend kerak: kartaga pul o'tkazish. U Multicard shlyuzi orqali
+// bajariladi, ya'ni mantiq BITTA joyda — payout_service da — turishi
+// kerak. Ilgari payouts.php pul harakatini o'zi takrorlardi va ikkisi
+// ajralib ketishi mumkin edi.
+define('API_BASE_URL', $movexEnv['INTERNAL_API_URL'] ?? 'http://127.0.0.1:8000');
+define('API_TIMEOUT', 45);
+//: Bo'sh bo'lsa ichki manzillar 404 qaytaradi va panel pul o'tkaza olmaydi —
+//: bu himoya, nosozlik emas. Kalit backend/.env da.
+define('ADMIN_INTERNAL_SECRET', $movexEnv['ADMIN_INTERNAL_SECRET'] ?? '');
 
 // Admin Panel Configuration
 define('ADMIN_SESSION_NAME', 'movex_admin_session');
@@ -330,6 +347,68 @@ function deliveryVehicleName($code) {
         'howo'  => 'Howo (25 t)',
     ];
     return $vehicles[$code] ?? ($code ?? '—');
+}
+
+/**
+ * Backend'ning ichki manziliga murojaat.
+ *
+ * Faqat pul harakati uchun ishlatiladi (kartaga o'tkazish): u Multicard
+ * shlyuzi orqali o'tadi va uni bajaradigan kod BITTA bo'lishi kerak.
+ * Qolgan hamma joyda panel bazaga o'zi boradi — bu tezroq va oddiyroq.
+ *
+ * Qaytaradi: ['ok' => bool, 'data' => array|null, 'error' => string].
+ * Xato matni foydalanuvchiga ko'rsatiladi, shuning uchun u tushunarli
+ * bo'lishi kerak: "javob kelmadi" degan xabar admin nima qilishini
+ * bilmay qolishiga olib keladi.
+ */
+function internalApiPost(string $path, array $payload = []): array {
+    if (ADMIN_INTERNAL_SECRET === '') {
+        return [
+            'ok' => false,
+            'data' => null,
+            'error' => 'ADMIN_INTERNAL_SECRET backend/.env da to\'ldirilmagan — '
+                     . 'panel pul o\'tkaza olmaydi',
+        ];
+    }
+
+    $ch = curl_init(rtrim(API_BASE_URL, '/') . $path);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => API_TIMEOUT,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'X-Admin-Secret: ' . ADMIN_INTERNAL_SECRET,
+        ],
+    ]);
+    $body = curl_exec($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($body === false) {
+        // Javob kelmadi. Bu holat ALOHIDA muhim: pul ketgan bo'lishi
+        // MUMKIN. Shuning uchun "qayta bosing" deb aytmaymiz — holatni
+        // sverka qilishni taklif qilamiz.
+        return [
+            'ok' => false,
+            'data' => null,
+            'error' => 'Backend javob bermadi (' . $curlError . '). '
+                     . 'Qayta bosmang — "Holatni tekshirish" tugmasidan foydalaning',
+        ];
+    }
+
+    $decoded = json_decode($body, true);
+    if ($status >= 200 && $status < 300) {
+        return ['ok' => true, 'data' => is_array($decoded) ? $decoded : null, 'error' => ''];
+    }
+
+    $detail = is_array($decoded) && isset($decoded['detail'])
+        ? (is_string($decoded['detail']) ? $decoded['detail'] : json_encode($decoded['detail']))
+        : ('HTTP ' . $status);
+
+    return ['ok' => false, 'data' => null, 'error' => $detail];
 }
 
 /**

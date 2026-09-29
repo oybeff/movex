@@ -9,7 +9,6 @@ Test IDEMPOTENT — bazani tozalamasdan qayta ishga tushirsa bo'ladi.
 Ishga tushirish (server ishlab turgan holda):
     venv/bin/python tests/verify_payouts.py
 """
-import hashlib
 import os
 import sys
 import re
@@ -17,15 +16,19 @@ from datetime import datetime
 
 import requests
 
+from _topup import topup as _rahmat_topup
+
 API = "http://127.0.0.1:8000"
 
 OWNER_PHONE = "998901110001"
 ADMIN_PHONE = "998900000000"
 CLIENT_PHONE = "998901110002"
 
-CARD = "8600123412341234"
-CLICK_SERVICE_ID = "111111"
-CLICK_SECRET_KEY = "local_dev_click_secret"
+# Multicard sinov kartasi (hujjatdan). Bu MUHIM: pul endi haqiqatan
+# shlyuz orqali ketadi, va o'ylab topilgan raqam ERROR_CARD_NOT_FOUND
+# beradi. Jangovar muhitda testni bu ko'rinishda ishga tushirmaydi —
+# u faqat sinov stendi uchun.
+CARD = "8600533364098829"
 
 ok_count = 0
 fail_count = 0
@@ -60,25 +63,15 @@ def balance_of(hdr):
     return float(b["balance"]), float(b["frozen_balance"])
 
 
-def topup_via_click(hdr, amount, click_id):
-    """Egasining hisobini to'ldirish — to'liq Click yo'li bilan."""
-    tx = requests.post(f"{API}/balance/topup", headers=hdr,
-                       json={"amount": amount, "payment_method": "click"}).json()
-    tx_id, amt = tx["transaction_id"], float(tx["amount"])
+def topup_via_gateway(hdr, amount):
+    """
+    Hisob to'ldirish — Rahmat (Multicard) orqali.
 
-    def cb(path, action, extra=None):
-        st = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        raw = f"{click_id}{CLICK_SERVICE_ID}{CLICK_SECRET_KEY}{tx_id}{amt}{action}{st}"
-        body = {"click_trans_id": click_id, "service_id": CLICK_SERVICE_ID,
-                "merchant_trans_id": tx_id, "amount": amt, "action": action,
-                "error": 0, "error_note": "Success", "sign_time": st,
-                "sign_string": hashlib.md5(raw.encode()).hexdigest()}
-        if extra:
-            body.update(extra)
-        return requests.post(f"{API}/balance/{path}", data=body).json()
-
-    prep = cb("click/prepare", 0)
-    cb("click/complete", 1, {"merchant_prepare_id": prep.get("merchant_prepare_id", tx_id)})
+    Mantiq _topup.py da: ilgari bu funksiya har bir testda o'z nusxasi
+    bilan turardi va to'lov tizimi almashganda oltita joyni tuzatish
+    kerak bo'ldi.
+    """
+    return _rahmat_topup(hdr, amount, API)
 
 
 owner = token(OWNER_PHONE)
@@ -86,7 +79,7 @@ admin = token(ADMIN_PHONE)
 client = token(CLIENT_PHONE)
 
 # Egasida yetarli pul bo'lishi uchun hisobini to'ldiramiz
-topup_via_click(owner, 1_000_000, 950000 + int(datetime.now().timestamp()) % 10000)
+topup_via_gateway(owner, 1_000_000)
 start_balance, start_frozen = balance_of(owner)
 print(f"баланс владельца: {money(start_balance)}, заморожено {money(start_frozen)}")
 
@@ -118,7 +111,8 @@ req = r.json()
 req_id = req["id"]
 
 check("статус pending", req["status"] == "pending", str(req.get("status")))
-check("номер карты замаскирован", req["card_masked"] == "•••• 1234", str(req.get("card_masked")))
+check("номер карты замаскирован", req["card_masked"] == f"•••• {CARD[-4:]}",
+      str(req.get("card_masked")))
 check("полный номер карты НЕ возвращается", CARD not in r.text, "номер утёк в ответе")
 
 bal, frozen = balance_of(owner)

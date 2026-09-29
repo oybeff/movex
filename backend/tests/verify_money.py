@@ -8,18 +8,16 @@ shuning uchun bazani tozalamasdan qayta-qayta ishga tushirsa bo'ladi.
 Ishga tushirish (server ishlab turgan holda):
     venv/bin/python tests/verify_money.py
 """
-import hashlib
 import random
 import re
 from datetime import datetime, timedelta
 
 import requests
 
+import _topup
+
 API = "http://127.0.0.1:8000"
 
-# .env dagi mahalliy sinov kalitlari bilan bir xil bo'lishi kerak
-CLICK_SERVICE_ID = "111111"
-CLICK_SECRET_KEY = "local_dev_click_secret"
 
 CLIENT_PHONE = "998901110002"
 OWNER_PHONE = "998901110001"
@@ -58,27 +56,6 @@ def token(phone):
 def balance_of(hdr):
     b = requests.get(f"{API}/balance/me", headers=hdr).json()
     return float(b["balance"]), float(b["frozen_balance"])
-
-
-def click_callback(path, click_trans_id, merchant_trans_id, amount, action, extra=None):
-    """Click tomonidan yuboriladigan callback'ni imzosi bilan taqlid qilish."""
-    sign_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    raw = (f"{click_trans_id}{CLICK_SERVICE_ID}{CLICK_SECRET_KEY}"
-           f"{merchant_trans_id}{amount}{action}{sign_time}")
-    payload = {
-        "click_trans_id": click_trans_id,
-        "service_id": CLICK_SERVICE_ID,
-        "merchant_trans_id": merchant_trans_id,
-        "amount": amount,
-        "action": action,
-        "error": 0,
-        "error_note": "Success",
-        "sign_time": sign_time,
-        "sign_string": hashlib.md5(raw.encode()).hexdigest(),
-    }
-    if extra:
-        payload.update(extra)
-    return requests.post(f"{API}/balance/{path}", data=payload).json()
 
 
 def free_dates(days=1, equipment_id=None, headers=None):
@@ -123,18 +100,17 @@ print(f"стартовые балансы — клиент {money(client_start)}
 
 head("1. ПОПОЛНЕНИЕ ТРЕБУЕТ ПОДТВЕРЖДЁННОЙ ОПЛАТЫ")
 
-# 'card' va 'cash' uchun to'lovni tasdiqlaydigan integratsiya yo'q, shuning
-# uchun ular balansni to'ldira olmaydi. Click va Payme esa ruxsat etilgan.
-for method in ("card", "cash"):
+# Подтверждения оплаты нет ни у 'card', ни у 'cash', ни у убранных
+# 'click'/'payme' — балансу они недоступны. Единственный разрешённый
+# способ — 'rahmat': по нему приходит подтверждение от шлюза.
+for method in ("card", "cash", "click", "payme"):
     r = requests.post(f"{API}/balance/topup", headers=client,
                       json={"amount": TOPUP, "payment_method": method})
     check(f"'{method}' без подтверждения оплаты отклонён", r.status_code == 400,
           f"вернулось {r.status_code}")
 
-r = requests.post(f"{API}/balance/topup", headers=client,
-                  json={"amount": TOPUP, "payment_method": "click"})
-top = r.json()
-check("заявка через Click создана", r.status_code == 200, r.text[:150])
+top = _topup.start_topup(client, TOPUP, API)
+check("заявка через Rahmat создана", bool(top.get("transaction_id")), str(top))
 check("транзакция в статусе pending", top.get("status") == "pending", str(top.get("status")))
 check("ссылка на оплату сгенерирована", bool(top.get("payment_url")))
 
@@ -142,22 +118,48 @@ bal, _ = balance_of(client)
 check("до подтверждения баланс не изменился", bal == client_start,
       f"было {money(client_start)}, стало {money(bal)}")
 
-head("2. КОЛБЭК CLICK ЗАЧИСЛЯЕТ ДЕНЬГИ")
+head("2. КОЛБЭК RAHMAT ЗАЧИСЛЯЕТ ДЕНЬГИ")
 
 tx_id = top["transaction_id"]
 amount = float(top["amount"])
-click_id = 900000 + tx_id
 
-prep = click_callback("click/prepare", click_id, tx_id, amount, 0)
-check("prepare принят", prep.get("error") == 0, str(prep))
+# Колбэк без подписи не должен зачислять ничего: этот адрес открытый,
+# и без проверки подписи любой пополнил бы себе баланс запросом.
+unsigned = requests.post(f"{API}/balance/rahmat/callback", json={
+    "store_id": 6, "invoice_id": str(tx_id),
+    "amount": _topup.to_tiyin(amount), "sign": "0" * 32,
+}).json()
+check("колбэк с неверной подписью отклонён", unsigned.get("success") is False,
+      str(unsigned))
 
-comp = click_callback("click/complete", click_id, tx_id, amount, 1,
-                      extra={"merchant_prepare_id": prep.get("merchant_prepare_id", tx_id)})
-check("complete принят", comp.get("error") == 0, str(comp))
+bal, _ = balance_of(client)
+check("после неверной подписи баланс не изменился", bal == client_start,
+      f"стало {money(bal)}")
+
+cb = _topup.send_callback(tx_id, amount, API)
+check("колбэк принят", cb.get("success") is True, str(cb))
 
 bal, _ = balance_of(client)
 check("баланс вырос ровно на сумму платежа", bal == client_start + TOPUP,
       f"ожидалось {money(client_start + TOPUP)}, получено {money(bal)}")
+
+# Multicard повторяет колбэк после таймаута или HTTP 500 — документация
+# прямо требует идемпотентности. Повтор не должен зачислить второй раз.
+repeat = _topup.send_callback(tx_id, amount, API)
+check("повторный колбэк принят", repeat.get("success") is True, str(repeat))
+
+bal, _ = balance_of(client)
+check("повтор колбэка НЕ зачислил деньги второй раз", bal == client_start + TOPUP,
+      f"ожидалось {money(client_start + TOPUP)}, получено {money(bal)}")
+
+# Сумма из колбэка сверяется с транзакцией: иначе на заявку 5 000 000
+# можно было бы записать любую сумму.
+wrong = _topup.send_callback(tx_id, amount * 3, API)
+check("колбэк с чужой суммой отклонён", wrong.get("success") is False, str(wrong))
+
+bal, _ = balance_of(client)
+check("чужая сумма баланс не тронула", bal == client_start + TOPUP,
+      f"получено {money(bal)}")
 
 head("3. ЦЕНУ СЧИТАЕТ СЕРВЕР, А НЕ КЛИЕНТ")
 
@@ -224,7 +226,7 @@ check("владелец получил сумму за вычетом комис
 
 # Sistema bo'yicha pul saqlanishi: kirim (topup) = balanslar o'sishi + komissiya
 system_delta = (client_after - client_start) + (owner_after - owner_start) + commission
-print(f"\n  внесено через Click:            {money(TOPUP):>12}")
+print(f"\n  внесено через Rahmat:           {money(TOPUP):>12}")
 print(f"  прирост балансов + комиссия:    {money(system_delta):>12}")
 check("деньги не создаются и не исчезают", abs(system_delta - TOPUP) < 0.01,
       f"расхождение {money(system_delta - TOPUP)}")

@@ -33,8 +33,17 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
 
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  String _selectedPaymentMethod = 'click';
+  /// Loyihada to'lov tizimi bitta — Rahmat (Multicard). Uning chekaut
+  /// sahifasida Payme, Click, Uzum, Anorbank, Oson, Alif, Xazna, Beepul,
+  /// Trastpay va karta orqali to'lash bor.
+  String _selectedPaymentMethod = 'rahmat';
   int? _pendingTransactionId;
+
+  /// Serverdan keladigan ro'yxat (`/balance/methods`). Quyidagisi — javob
+  /// kelmasa ishlatiladigan zaxira.
+  List<PaymentMethodModel> _paymentMethods = const [
+    PaymentMethodModel(code: 'rahmat', title: 'Rahmat'),
+  ];
 
   final List<int> _quickAmounts = [10000, 50000, 100000, 500000, 1000000];
 
@@ -46,6 +55,18 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
     _loadBalance();
     _loadTransactions();
     _loadUserData();
+    _loadPaymentMethods();
+  }
+
+  Future<void> _loadPaymentMethods() async {
+    final methods = await _balanceService.getPaymentMethods();
+    if (!mounted || methods.isEmpty) return;
+    setState(() {
+      _paymentMethods = methods;
+      if (!methods.any((m) => m.code == _selectedPaymentMethod)) {
+        _selectedPaymentMethod = methods.first.code;
+      }
+    });
   }
 
   @override
@@ -179,35 +200,10 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
       return;
     }
 
-    // Click to'lov uchun telefon raqam majburiy
-    String? phoneNumber;
-    if (_selectedPaymentMethod == 'click') {
-      phoneNumber = _phoneController.text.trim();
-      if (phoneNumber.isEmpty) {
-        toastification.show(
-          context: context,
-          type: ToastificationType.warning,
-          style: ToastificationStyle.flatColored,
-          title: Text('messages.phone_not_found'.tr()),
-          autoCloseDuration: const Duration(seconds: 3),
-          alignment: Alignment.topCenter,
-        );
-        return;
-      }
-
-      final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
-      if (cleanPhone.length < 9) {
-        toastification.show(
-          context: context,
-          type: ToastificationType.warning,
-          style: ToastificationStyle.flatColored,
-          title: Text('messages.invalid_phone'.tr()),
-          autoCloseDuration: const Duration(seconds: 3),
-          alignment: Alignment.topCenter,
-        );
-        return;
-      }
-    }
+    // Telefon MAJBURIY EMAS: u faqat to'lov havolasini SMS bilan
+    // yuborish uchun ishlatiladi.
+    final phoneText = _phoneController.text.trim();
+    final String? phoneNumber = phoneText.isEmpty ? null : phoneText;
 
     setState(() => _isProcessing = true);
 
@@ -220,7 +216,7 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
 
       setState(() => _isProcessing = false);
 
-      if (_selectedPaymentMethod == 'click' && result.paymentUrl != null) {
+      if (result.paymentUrl != null) {
         setState(() => _pendingTransactionId = result.transactionId);
 
         final uri = Uri.parse(result.paymentUrl!);
@@ -232,27 +228,26 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
               context: context,
               type: ToastificationType.info,
               style: ToastificationStyle.flatColored,
-              title: Text('messages.complete_payment_in_click'.tr()),
+              title: Text('messages.complete_payment_in_gateway'.tr()),
               autoCloseDuration: const Duration(seconds: 3),
               alignment: Alignment.topCenter,
             );
           }
         } else {
-          throw Exception('errors.cannot_open_click'.tr());
+          throw Exception('messages.cannot_open_payment_page'.tr());
         }
       } else {
+        // Havola yo'q — to'lov boshlanmadi. "To'ldirildi" deb
+        // ko'rsatish mumkin emas: pul hech qayerdan kelmagan.
         if (mounted) {
           toastification.show(
             context: context,
-            type: ToastificationType.success,
+            type: ToastificationType.error,
             style: ToastificationStyle.flatColored,
-            title: Text('balance.topup_success'.tr()),
+            title: Text('messages.cannot_open_payment_page'.tr()),
             autoCloseDuration: const Duration(seconds: 3),
             alignment: Alignment.topCenter,
           );
-          _amountController.clear();
-          _loadBalance();
-          _loadTransactions();
         }
       }
     } catch (e) {
@@ -557,7 +552,9 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
           ),
           const SizedBox(height: 8),
           Text(
-            'Tizimda ro\'yxatdan o\'tgan telefon raqamingiz avtomatik ishlatiladi',
+            // Matn KODDA yozilmaydi: ruscha interfeysda o'zbekcha satr
+            // qolib ketardi — QA aynan shunday xatolarni topgan.
+            'balance.phone_auto_used'.tr(),
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.shade600,
@@ -575,11 +572,16 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
             ),
           ),
           const SizedBox(height: 12),
-          _PaymentMethodCard(
-            title: 'balance.click'.tr(),
-            icon: Icons.credit_card_rounded,
-            isSelected: _selectedPaymentMethod == 'click',
-            onTap: () => setState(() => _selectedPaymentMethod = 'click'),
+          ..._paymentMethods.map(
+            (method) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _PaymentMethodCard(
+                title: method.title,
+                icon: Icons.credit_card_rounded,
+                isSelected: _selectedPaymentMethod == method.code,
+                onTap: () => setState(() => _selectedPaymentMethod = method.code),
+              ),
+            ),
           ),
           const SizedBox(height: 32),
 

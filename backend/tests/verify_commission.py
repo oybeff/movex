@@ -18,7 +18,6 @@ Test IDEMPOTENT. Rejimni o'zgartiradi, lekin oxirida qaytaradi.
 Ishga tushirish (server ishlab turgan holda):
     venv/bin/python tests/verify_commission.py
 """
-import hashlib
 import os
 import re
 import sys
@@ -26,6 +25,8 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 import requests
+
+from _topup import topup as _rahmat_topup
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _auth import token  # noqa: E402
@@ -36,8 +37,6 @@ sys.path.insert(0, BACKEND)
 API = "http://127.0.0.1:8000"
 OWNER_PHONE = "998901110001"
 CLIENT_PHONE = "998901110002"
-CLICK_SERVICE_ID = "111111"
-CLICK_SECRET_KEY = "local_dev_click_secret"
 
 ok_count = 0
 fail_count = 0
@@ -90,28 +89,15 @@ def balances(hdr):
     return Decimal(str(b["balance"])), Decimal(str(b["frozen_balance"]))
 
 
-def topup(hdr, amount, click_id):
-    tx = requests.post(
-        f"{API}/balance/topup", headers=hdr,
-        json={"amount": amount, "payment_method": "click"},
-    ).json()
-    tx_id, amt = tx["transaction_id"], float(tx["amount"])
+def topup(hdr, amount):
+    """
+    Hisob to'ldirish — Rahmat (Multicard) orqali.
 
-    def cb(path, action, extra=None):
-        st = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        raw = f"{click_id}{CLICK_SERVICE_ID}{CLICK_SECRET_KEY}{tx_id}{amt}{action}{st}"
-        body = {
-            "click_trans_id": click_id, "service_id": CLICK_SERVICE_ID,
-            "merchant_trans_id": tx_id, "amount": amt, "action": action,
-            "error": 0, "error_note": "Success", "sign_time": st,
-            "sign_string": hashlib.md5(raw.encode()).hexdigest(),
-        }
-        if extra:
-            body.update(extra)
-        return requests.post(f"{API}/balance/{path}", data=body).json()
-
-    prep = cb("click/prepare", 0)
-    cb("click/complete", 1, {"merchant_prepare_id": prep.get("merchant_prepare_id", tx_id)})
+    Mantiq _topup.py da: ilgari bu funksiya har bir testda o'z nusxasi
+    bilan turardi va to'lov tizimi almashganda oltita joyni tuzatish
+    kerak bo'ldi.
+    """
+    return _rahmat_topup(hdr, amount, API)
 
 
 def free_dates(days=1):
@@ -121,7 +107,7 @@ def free_dates(days=1):
 
 client = token(CLIENT_PHONE)
 owner = token(OWNER_PHONE)
-topup(client, 10_000_000, 930000 + int(datetime.now().timestamp()) % 10000)
+topup(client, 10_000_000)
 
 equipment = requests.get(
     f"{API}/equipment/", headers=owner, params={"owner_only": True, "limit": 50}

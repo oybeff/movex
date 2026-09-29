@@ -225,14 +225,20 @@ include 'includes/header.php';
                                 // Ro'yxat TO'LIQ bo'lishi shart: yetishmagan turda pastdagi
                                 // `?? $transaction['type']` xom kodni chiqaradi. Aynan shunday
                                 // "withdrawal" jadvalda inglizcha bo'lib turardi — qolganlari
-                                // o'zbekcha bo'lgani holda. Bazada 5 tur bor: topup, refund,
-                                // income, payment, withdrawal.
+                                // o'zbekcha bo'lgani holda. Bazada 6 tur bor: topup, refund,
+                                // income, payment, withdrawal, bonus.
+                                //
+                                // 'bonus' uzoq vaqt shu ro'yxatdan tushib qolgan edi va buni
+                                // hech kim sezmagan: bazada bironta ham sovg'a tranzaksiyasi
+                                // yo'q edi. Eski egalarga sovg'a berilishi bilanoq
+                                // verify_tx_language.py buni darhol topdi.
                                 $typeLabel = [
                                     'topup' => '📥 To\'ldirish',
                                     'income' => '💰 Daromad',
                                     'payment' => '📤 To\'lov',
                                     'refund' => '↩️ Qaytarish',
-                                    'withdrawal' => '🏧 Pul yechish'
+                                    'withdrawal' => '🏧 Pul yechish',
+                                    'bonus' => '🎁 Sovg\'a'
                                 ];
                                 ?>
                                 <?php if ($isDeposit): ?>
@@ -249,10 +255,16 @@ include 'includes/header.php';
                             </td>
                             <td>
                                 <?php
+                                // 'rahmat' — hozirgi yagona tizim. Qolganlari
+                                // TARIXDA qolgan qiymatlar: eski satrlarni
+                                // qayta yozish pul qayerdan kelganini yolg'on
+                                // ko'rsatish bo'lardi, shuning uchun ular
+                                // shundayligicha ko'rsatiladi.
                                 $methodLabels = [
-                                    'payme' => 'Payme',
-                                    'click' => 'Click',
-                                    'uzum' => 'Uzum',
+                                    'rahmat' => 'Rahmat',
+                                    'payme' => 'Payme (arxiv)',
+                                    'click' => 'Click (arxiv)',
+                                    'uzum' => 'Uzum (arxiv)',
                                     'cash' => 'Naqd',
                                     'card' => 'Karta'
                                 ];

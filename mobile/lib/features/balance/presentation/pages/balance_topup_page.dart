@@ -32,11 +32,17 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
   UserModel? _currentUser;
   bool _isLoading = false;
   bool _isLoadingBalance = true;
-  String _selectedPaymentMethod = 'click'; // Default: click
-  int? _pendingTransactionId; // Click to'lov uchun pending transaction ID
+  /// Standart usul. Loyihada to'lov tizimi bitta — Rahmat (Multicard),
+  /// uning chekaut sahifasida esa Payme, Click, Uzum, Anorbank, Oson,
+  /// Alif, Xazna, Beepul, Trastpay va karta bor.
+  String _selectedPaymentMethod = 'rahmat';
+  int? _pendingTransactionId; // to'lov kutilayotgan tranzaksiya
 
-  final List<Map<String, dynamic>> _paymentMethods = [
-    {'id': 'click', 'name': 'Click', 'icon': Icons.payment},
+  /// Ro'yxat SERVERDAN keladi (`/balance/methods`). Bu — javob kelmasa
+  /// ishlatiladigan zaxira: to'ldirish imkoniyati butunlay yo'qolib
+  /// qolmasligi kerak.
+  List<PaymentMethodModel> _paymentMethods = const [
+    PaymentMethodModel(code: 'rahmat', title: 'Rahmat'),
   ];
 
   final List<int> _quickAmounts = [10000, 50000, 100000, 500000, 1000000];
@@ -47,6 +53,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
     WidgetsBinding.instance.addObserver(this);
     _loadBalance();
     _loadUserData();
+    _loadPaymentMethods();
 
     // Agar buyurtmadan kerakli summa berilgan bo'lsa, uni avtomatik to'ldirish
     if (widget.requiredAmount != null) {
@@ -84,6 +91,19 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
         showErrorDialog(context, e);
       }
     }
+  }
+
+  Future<void> _loadPaymentMethods() async {
+    final methods = await _balanceService.getPaymentMethods();
+    if (!mounted || methods.isEmpty) return;
+    setState(() {
+      _paymentMethods = methods;
+      // Tanlangan usul ro'yxatda qolmagan bo'lsa — birinchisiga o'tamiz,
+      // aks holda tugma bosilganda "noma'lum usul" xatosi chiqardi.
+      if (!methods.any((m) => m.code == _selectedPaymentMethod)) {
+        _selectedPaymentMethod = methods.first.code;
+      }
+    });
   }
 
   Future<void> _loadUserData() async {
@@ -128,36 +148,11 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
       return;
     }
 
-    // Click to'lov uchun telefon raqam majburiy
-    String? phoneNumber;
-    if (_selectedPaymentMethod == 'click') {
-      phoneNumber = _phoneController.text.trim();
-      if (phoneNumber.isEmpty) {
-        toastification.show(
-          context: context,
-          type: ToastificationType.warning,
-          style: ToastificationStyle.flatColored,
-          title: Text('messages.phone_not_found'.tr()),
-          autoCloseDuration: const Duration(seconds: 3),
-          alignment: Alignment.topCenter,
-        );
-        return;
-      }
-
-      // Telefon raqam validatsiyasi (oddiy)
-      final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
-      if (cleanPhone.length < 9) {
-        toastification.show(
-          context: context,
-          type: ToastificationType.warning,
-          style: ToastificationStyle.flatColored,
-          title: Text('messages.invalid_phone'.tr()),
-          autoCloseDuration: const Duration(seconds: 3),
-          alignment: Alignment.topCenter,
-        );
-        return;
-      }
-    }
+    // Telefon MAJBURIY EMAS: u faqat to'lov havolasini SMS bilan
+    // yuborish uchun. Ilgari u majburiy edi va bo'sh profil tufayli
+    // to'ldirish umuman boshlanmasdi.
+    final phoneText = _phoneController.text.trim();
+    final String? phoneNumber = phoneText.isEmpty ? null : phoneText;
 
     setState(() => _isLoading = true);
 
@@ -170,11 +165,11 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
 
       setState(() => _isLoading = false);
 
-      // Agar Click to'lov bo'lsa, URL launcher orqali ochish
-      if (_selectedPaymentMethod == 'click' && response.paymentUrl != null) {
+      // Chekaut sahifasini tashqi brauzerda ochamiz
+      if (response.paymentUrl != null) {
         _pendingTransactionId = response.transactionId;
 
-        // Click to'lov URL'ini ochish
+        // Chekaut sahifasini ochamiz
         final url = Uri.parse(response.paymentUrl!);
         if (await canLaunchUrl(url)) {
           await launchUrl(url, mode: LaunchMode.externalApplication);
@@ -184,7 +179,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
               context: context,
               type: ToastificationType.info,
               style: ToastificationStyle.flatColored,
-              title: Text('messages.click_payment_opened'.tr()),
+              title: Text('messages.payment_page_opened'.tr()),
               autoCloseDuration: const Duration(seconds: 3),
               alignment: Alignment.topCenter,
             );
@@ -202,24 +197,18 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
           }
         }
       } else {
-        // Boshqa to'lov usullari uchun - to'g'ridan-to'g'ri completed
+        // Havola yo'q — to'lov boshlanmadi. MUVAFFAQIYAT deb
+        // ko'rsatmaymiz: ilgari shu shoxda "balans to'ldirildi" yozilardi
+        // va odam pul tushdi deb o'ylardi.
         if (mounted) {
           toastification.show(
             context: context,
-            type: ToastificationType.success,
+            type: ToastificationType.error,
             style: ToastificationStyle.flatColored,
-            title: Text('messages.balance_topup_success'.tr()),
+            title: Text('messages.cannot_open_payment_page'.tr()),
             autoCloseDuration: const Duration(seconds: 3),
             alignment: Alignment.topCenter,
           );
-
-          // Balansni yangilash
-          await _loadBalance();
-
-          // Orqaga qaytish
-          if (mounted) {
-            context.pop();
-          }
         }
       }
     } on DioException catch (e) {
@@ -243,7 +232,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
     }
   }
 
-  /// Click to'lov statusini tekshirish
+  /// To'lov holatini tekshirish — server to'lov tizimidan so'raydi
   Future<void> _checkPaymentStatus() async {
     if (_pendingTransactionId == null) return;
 
@@ -324,12 +313,13 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
                     const SizedBox(height: 16),
                     _buildQuickAmounts(),
                     const SizedBox(height: 24),
-                    _buildPaymentMethods(),
-                    // Click to'lov uchun telefon raqam
-                    if (_selectedPaymentMethod == 'click') ...[
-                      const SizedBox(height: 24),
-                      _buildPhoneInput(),
+                    // Usul bittagina bo'lsa, tanlash ro'yxatini
+                    // ko'rsatishdan ma'no yo'q.
+                    if (_paymentMethods.length > 1) ...[
+                      _buildPaymentMethods(),
                     ],
+                    const SizedBox(height: 24),
+                    _buildPhoneInput(),
                     const SizedBox(height: 32),
                     _buildTopUpButton(),
                   ],
@@ -542,13 +532,13 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
         ),
         const SizedBox(height: 12),
         ..._paymentMethods.map((method) {
-          final isSelected = _selectedPaymentMethod == method['id'];
+          final isSelected = _selectedPaymentMethod == method.code;
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
             child: InkWell(
               onTap: () {
                 setState(() {
-                  _selectedPaymentMethod = method['id'];
+                  _selectedPaymentMethod = method.code;
                 });
               },
               child: Container(
@@ -564,12 +554,12 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
                 child: Row(
                   children: [
                     Icon(
-                      method['icon'],
+                      Icons.payment,
                       color: isSelected ? AppColors.primaryGreen : Colors.grey,
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      method['name'],
+                      method.title,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,

@@ -16,6 +16,12 @@ class Payment(Base):
 
     __table_args__ = (
         CheckConstraint("amount > 0", name="check_payment_amount"),
-        CheckConstraint("payment_method IN ('Payme','Click','Card') OR payment_method IS NULL", name="check_payment_method"),
+        # 'Rahmat' — hozirgi yagona tizim. 'Payme' va 'Click' tarixda
+        # qolgan satrlar uchun: eski buyurtmalarni qayta yozish tarixni
+        # buzish bo'lardi.
+        CheckConstraint(
+            "payment_method IN ('Rahmat','Payme','Click','Card') OR payment_method IS NULL",
+            name="check_payment_method",
+        ),
         CheckConstraint("status IN ('pending','completed','failed')", name="check_payment_status"),
     )

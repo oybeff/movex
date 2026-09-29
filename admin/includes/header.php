@@ -94,6 +94,29 @@ $adminUser = getAdminUser();
                         </a>
                     </li>
                     <li>
+                        <a href="equipment.php" class="<?= ($currentPage ?? '') === 'equipment' ? 'active' : '' ?>">
+                            <span>🚜</span>
+                            Texnika
+                            <?php
+                            // Koordinatasiz texnika. U xaritada KO'RINMAYDI va
+                            // radius bo'yicha qidiruvga ham tushmaydi, ya'ni
+                            // egasi uni qo'ygan, lekin uni hech kim topmaydi.
+                            try {
+                                $noCoords = getDbConnection()->query("
+                                    SELECT COUNT(*) FROM equipment
+                                     WHERE deleted_at IS NULL
+                                       AND (latitude IS NULL OR longitude IS NULL)
+                                ")->fetchColumn();
+                            } catch (Throwable $e) {
+                                $noCoords = 0;
+                            }
+                            if ($noCoords > 0):
+                            ?>
+                                <span class="badge badge-warning" style="margin-left:auto;"><?= $noCoords ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                    <li>
                         <a href="materials.php" class="<?= ($currentPage ?? '') === 'materials' ? 'active' : '' ?>">
                             <span>🧱</span>
                             Materiallar

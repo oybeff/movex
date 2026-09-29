@@ -102,9 +102,10 @@ def top_up_balance(
     Hisob to'ldirish.
 
     Tranzaksiya HAR DOIM 'pending' holatda yaratiladi. Balans faqat to'lov
-    tizimidan tasdiq kelganda to'ldiriladi (Click uchun — /balance/click/complete).
+    tizimidan tasdiq kelganda to'ldiriladi (Rahmat uchun —
+    /balance/rahmat/callback yoki /balance/rahmat/webhook).
 
-    Ilgari 'click'dan boshqa har qanday usul balansni darhol to'ldirar edi,
+    Ilgari to'lov tizimidan boshqa har qanday usul balansni darhol to'ldirar edi,
     hech qanday to'lovni tekshirmasdan: bitta so'rov bilan 10 000 000 so'm
     olish mumkin edi. Shuning uchun tasdiqlanmagan usullar endi rad etiladi.
     """
@@ -143,18 +144,23 @@ def top_up_balance(
     return transaction
 
 
-def generate_payment_url(payment_method: str, transaction_id: int, amount: float) -> str:
+def start_payment(db: Session, transaction) -> str:
     """
-    Tanlangan to'lov tizimining to'lov sahifasiga havola.
+    To'lov sahifasini boshlash va unga havola qaytarish.
+
+    Ilgari bu funksiya faqat satr yasardi (`generate_payment_url`), chunki
+    Click havolasini parametrlardan yig'ish kifoya edi. Rahmat esa shlyuzda
+    invoys yaratadi va javobdagi uuid'ni tranzaksiyaga yozib qo'yishi
+    kerak — shuning uchun endi db ham uzatiladi.
 
     Kalitlar sozlanmagan bo'lsa, ishlamaydigan havola qaytarish o'rniga aniq
     xato beramiz: aks holda mijoz to'lov tizimining bo'sh sahifasiga tushardi.
     """
-    provider = payment_providers.get(payment_method)
+    provider = payment_providers.get(transaction.payment_method)
     if provider is None:
         raise HTTPException(
             status_code=400,
-            detail=f"Noma'lum to'lov usuli: {payment_method}"
+            detail=f"Noma'lum to'lov usuli: {transaction.payment_method}"
         )
 
     if not provider.is_configured():
@@ -163,12 +169,7 @@ def generate_payment_url(payment_method: str, transaction_id: int, amount: float
             detail=f"{provider.title} to'lov tizimi sozlanmagan. Administratorga murojaat qiling."
         )
 
-    return provider.build_checkout_url(transaction_id, amount)
-
-
-def generate_click_payment_url(transaction_id: int, amount: float) -> str:
-    """Eski nom — mos kelishi uchun qoldirilgan."""
-    return generate_payment_url("click", transaction_id, amount)
+    return provider.start_payment(db, transaction)
 
 
 def get_transaction(db: Session, transaction_id: int, user_id: int):
@@ -213,7 +214,7 @@ def update_transaction(
 #
 # U hech qayerdan chaqirilmasdi va chaqirilganda 500 xato berardi:
 # payment_method sifatida "balance" yozardi, lekin jadval cheklovi bunday
-# qiymatni qabul qilmaydi (faqat click, payme, uzum, card, cash yoki NULL).
+# qiymatni qabul qilmaydi (faqat rahmat va tarixiy qiymatlar yoki NULL).
 #
 # Buyurtma uchun pul harakati order_service da, escrow mantig'i bilan
 # birga turadi — ikkinchi, yashirin yo'l kerak emas.
@@ -263,6 +264,53 @@ def get_signup_bonus_amount(db: Session) -> Decimal:
     return amount if amount >= 0 else DEFAULT_SIGNUP_BONUS
 
 
+def has_signup_bonus(db: Session, user_id: int) -> bool:
+    """
+    Shu odamga sovg'a allaqachon berilganmi.
+
+    Tranzaksiya bo'yicha tekshiriladi, balans bo'yicha emas: sovg'a pulini
+    odam sarflagan bo'lishi mumkin, va balansga qarab "berilmagan" degan
+    xulosa chiqarilsa, sovg'a ikkinchi marta berilardi.
+    """
+    return (
+        db.query(BalanceTransaction.id)
+        .filter(
+            BalanceTransaction.user_id == user_id,
+            BalanceTransaction.type == TX_TYPE_BONUS,
+        )
+        .first()
+        is not None
+    )
+
+
+def credit_bonus(db: Session, user, amount: Decimal):
+    """
+    Sovg'ani balansga qo'shadi va uni YECHIB BO'LMAYDIGAN deb belgilaydi.
+
+    Pul harakatining o'zi SHU YERDA, bitta joyda: uni ro'yxatdan o'tish ham,
+    keyinchalik qo'lda berish (scripts/grant_bonus_to_existing_owners.py) ham
+    shu funksiya orqali qiladi. Ikkinchi nusxa bo'lsa, birida
+    `bonus_balance` ni oshirish unutilardi — va sovg'a kartaga yechilib
+    ketardi, aynan shundan himoyalanmoqchi edik.
+
+    Xatoni YUTMAYDI: chaqiruvchi o'zi hal qiladi. Ro'yxatdan o'tishda xato
+    yutiladi (odam ilovaga kira olishi shart), skriptda esa — yo'q, u xatoni
+    ko'rsatishi kerak.
+    """
+    update_balance(db, user.id, amount)
+    balance = get_or_create_balance(db, user.id)
+    balance.bonus_balance = Decimal(str(balance.bonus_balance or 0)) + Decimal(str(amount))
+    db.commit()
+    return create_transaction(
+        db,
+        user_id=user.id,
+        amount=amount,
+        transaction_type=TX_TYPE_BONUS,
+        description=t("tx.signup_bonus", _user_language(db, user.id)),
+        status="completed",
+    )
+
+
 def grant_signup_bonus(db: Session, user):
     """
     Yangi texnika egasiga sovg'a beradi. Faqat 'owner' uchun.
@@ -281,19 +329,7 @@ def grant_signup_bonus(db: Session, user):
         return None
 
     try:
-        update_balance(db, user.id, amount)
-        # Sovg'aning yechib bo'lmaydigan qismini belgilaymiz.
-        balance = get_or_create_balance(db, user.id)
-        balance.bonus_balance = Decimal(str(balance.bonus_balance or 0)) + Decimal(str(amount))
-        db.commit()
-        return create_transaction(
-            db,
-            user_id=user.id,
-            amount=amount,
-            transaction_type=TX_TYPE_BONUS,
-            description=t("tx.signup_bonus", _user_language(db, user.id)),
-            status="completed",
-        )
+        return credit_bonus(db, user, amount)
     except Exception:
         # Xato yutiladi, lekin JIM emas: aynan jim `except` tufayli
         # 'bonus' turi CHECK cheklovidan o'tmayotgani ko'rinmay qolgandi —

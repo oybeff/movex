@@ -192,15 +192,24 @@ TELEGRAM_BOT_USERNAME=
 TELEGRAM_POLLING=false
 TELEGRAM_WEBHOOK_SECRET=$(openssl rand -hex 32)
 
-# --- Приём платежей. Боевых ключей нет, см. docs/backend/PAYMENTS.md
-CLICK_MERCHANT_ID=
-CLICK_SERVICE_ID=
-CLICK_SECRET_KEY=
-CLICK_MERCHANT_USER_ID=
-PAYME_MERCHANT_ID=
-PAYME_KEY=
-PAYME_ACCOUNT_FIELD=transaction_id
-SPLIT_MODE=escrow
+# --- Приём платежей: Rahmat (Multicard), единственный шлюз.
+# Click и Payme со своими интеграциями убраны — на странице оплаты
+# Multicard они уже есть как способы оплаты. См. docs/backend/PAYMENTS.md
+RAHMAT_APPLICATION_ID=
+RAHMAT_SECRET=
+RAHMAT_STORE_ID=
+# true — песочница dev-mesh, false — бой mesh.multicard.uz
+RAHMAT_TEST_MODE=false
+# Публичный адрес ЭТОГО сервера: сюда придут callback и вебхуки.
+# Пусто = ссылка на оплату не создаётся вообще.
+RAHMAT_CALLBACK_BASE_URL=https://movexgo.uz
+RAHMAT_RETURN_URL=movexgo://payment/success
+RAHMAT_RETURN_ERROR_URL=movexgo://payment/failed
+
+# --- Слово, которым PHP-панель обращается к API: перевод денег на карту
+# делает только backend (payout_service), панель его лишь запускает.
+ADMIN_INTERNAL_SECRET=$(openssl rand -hex 32)
+INTERNAL_API_URL=http://127.0.0.1:8000
 ENVEOF
     ok "создан, пароль базы и ключи сгенерированы"
 fi

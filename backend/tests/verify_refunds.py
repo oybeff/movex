@@ -6,6 +6,8 @@ import re
 
 import requests
 
+from _topup import topup
+
 API = "http://127.0.0.1:8000"
 ok = fail = 0
 
@@ -39,32 +41,7 @@ def bal(hdr):
 client, owner = token("998901110002"), token("998901110001")
 
 
-def topup_via_click(hdr, amount, click_id):
-    """Пополнение полным путём Click: заявка -> prepare -> complete."""
-    import hashlib
-    from datetime import datetime
-
-    SERVICE_ID, SECRET = "111111", "local_dev_click_secret"
-    tx = requests.post(f"{API}/balance/topup", headers=hdr,
-                       json={"amount": amount, "payment_method": "click"}).json()
-    tx_id, amt = tx["transaction_id"], float(tx["amount"])
-
-    def cb(path, action, extra=None):
-        st = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        raw = f"{click_id}{SERVICE_ID}{SECRET}{tx_id}{amt}{action}{st}"
-        body = {"click_trans_id": click_id, "service_id": SERVICE_ID,
-                "merchant_trans_id": tx_id, "amount": amt, "action": action,
-                "error": 0, "error_note": "Success", "sign_time": st,
-                "sign_string": hashlib.md5(raw.encode()).hexdigest()}
-        if extra:
-            body.update(extra)
-        return requests.post(f"{API}/balance/{path}", data=body).json()
-
-    prep = cb("click/prepare", 0)
-    cb("click/complete", 1, {"merchant_prepare_id": prep.get("merchant_prepare_id", tx_id)})
-
-
-topup_via_click(client, 10000000, 900100)
+topup(client, 10000000, API)
 print(f"баланс клиента для тестов: {money(bal(client)[0])} сум")
 
 

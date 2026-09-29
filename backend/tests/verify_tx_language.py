@@ -82,7 +82,7 @@ check("тип техники в узбекском описании — по-у�
 check("процента в доходе нет ни в одном языке",
       "%" not in ru and "%" not in uz, f"{ru} | {uz}")
 
-ru_topup = t("tx.topup", "ru", method="click")
+ru_topup = t("tx.topup", "ru", method="Rahmat")
 check("пополнение по-русски", "Пополнение" in ru_topup, ru_topup)
 
 # Til noma'lum bo'lsa — sukut bo'yicha o'zbekcha, kalitning o'zi emas

@@ -40,6 +40,16 @@ class PayoutRequestRead(BaseModel):
     card_holder: Optional[str] = None
     comment: Optional[str] = None
     admin_comment: Optional[str] = None
+
+    # Shlyuzdagi o'tkazma holati. Bizning `status` dan alohida: 'progress'
+    # va 'draft' ikkalasi ham bizda 'pending' ga tushadi, lekin adminda
+    # farqi ko'rinishi kerak — biri yo'lda, ikkinchisi hali yo'lga
+    # chiqmagan.
+    rahmat_status: Optional[str] = None
+    rahmat_receipt_url: Optional[str] = None
+    #: Oxirgi xato. Ariza 'pending' da qoladi, sabab ko'rinib turishi kerak.
+    rahmat_error: Optional[str] = None
+
     processed_at: Optional[datetime] = None
     created_at: datetime
 
@@ -51,6 +61,10 @@ class PayoutRequestResolve(BaseModel):
     """Admin arizani hal qiladi."""
 
     admin_comment: Optional[str] = Field(None, max_length=500)
+    #: FAQAT ichki (adminka) manzillari uchun: amalni kim bajargani.
+    #: Ochiq manzillarda e'tiborsiz qoldiriladi — u yerda admin tokendan
+    #: aniqlanadi, aks holda har kim boshqa admin nomidan ish qilardi.
+    admin_id: Optional[int] = None
 
 
 class PayoutSettingsRead(BaseModel):

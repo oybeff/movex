@@ -18,7 +18,6 @@ qaytaradi.
 Ishga tushirish (server ishlab turgan holda):
     venv/bin/python tests/verify_listing_money.py
 """
-import hashlib
 import os
 import sys
 import time
@@ -27,6 +26,8 @@ from decimal import Decimal
 
 import requests
 
+from _topup import topup as _rahmat_topup
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _auth import otp_code  # noqa: E402
 
@@ -34,8 +35,6 @@ BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BACKEND)
 
 API = "http://127.0.0.1:8000"
-CLICK_SERVICE_ID = "111111"
-CLICK_SECRET_KEY = "local_dev_click_secret"
 
 ok_count = 0
 fail_count = 0
@@ -103,24 +102,15 @@ def new_account(role="client"):
     return {"Authorization": f"Bearer {login['access_token']}"}
 
 
-def topup(hdr, amount, click_id):
-    tx = requests.post(f"{API}/balance/topup", headers=hdr,
-                       json={"amount": amount, "payment_method": "click"}).json()
-    tx_id, amt = tx["transaction_id"], float(tx["amount"])
+def topup(hdr, amount):
+    """
+    Hisob to'ldirish — Rahmat (Multicard) orqali.
 
-    def cb(path, action, extra=None):
-        st = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        raw = f"{click_id}{CLICK_SERVICE_ID}{CLICK_SECRET_KEY}{tx_id}{amt}{action}{st}"
-        body = {"click_trans_id": click_id, "service_id": CLICK_SERVICE_ID,
-                "merchant_trans_id": tx_id, "amount": amt, "action": action,
-                "error": 0, "error_note": "Success", "sign_time": st,
-                "sign_string": hashlib.md5(raw.encode()).hexdigest()}
-        if extra:
-            body.update(extra)
-        return requests.post(f"{API}/balance/{path}", data=body).json()
-
-    prep = cb("click/prepare", 0)
-    cb("click/complete", 1, {"merchant_prepare_id": prep.get("merchant_prepare_id", tx_id)})
+    Mantiq _topup.py da: ilgari bu funksiya har bir testda o'z nusxasi
+    bilan turardi va to'lov tizimi almashganda oltita joyni tuzatish
+    kerak bo'ldi.
+    """
+    return _rahmat_topup(hdr, amount, API)
 
 
 def balances(hdr):
@@ -128,17 +118,24 @@ def balances(hdr):
     return Decimal(str(b["balance"])), Decimal(str(b["frozen_balance"]))
 
 
-def make_listing(hdr, budget):
+def make_listing_raw(hdr, budget):
+    """E'lon yaratish so'rovi — javobni qaytaradi (xato ham tekshiriladi)."""
     start = datetime.now() + timedelta(days=1)
-    r = requests.post(f"{API}/listings/", headers=hdr, json={
+    payload = {
         "title": "Sinov e'loni",
         "description": "pul tekshiruvi",
-        "budget": str(budget),
         "address": "Toshkent",
         "needed_from": start.strftime("%Y-%m-%d"),
         "needed_to": (start + timedelta(days=2)).strftime("%Y-%m-%d"),
         "contact_phone": "998901110002",
-    })
+    }
+    if budget is not None:
+        payload["budget"] = str(budget)
+    return requests.post(f"{API}/listings/", headers=hdr, json=payload)
+
+
+def make_listing(hdr, budget):
+    r = make_listing_raw(hdr, budget)
     if r.status_code not in (200, 201):
         raise RuntimeError(f"e'lon yaratilmadi: {r.status_code} {r.text}")
     return r.json()["id"]
@@ -182,28 +179,36 @@ def main():
         author = new_account("client")
         taker = new_account("client")
 
-        head("1. Balansda pul bo'lmasa — tasdiqlab bo'lmaydi")
-        lid = make_listing(author, 100000)
-        requests.post(f"{API}/listings/{lid}/take", headers=taker)
-        r = requests.post(f"{API}/listings/{lid}/confirm", headers=author)
-        check("nol balansda tasdiqlash rad etildi", r.status_code == 400,
+        head("1. Balansda pul bo'lmasa — byudjetli e'lon JOYLAB bo'lmaydi")
+        # Yangi qoida: byudjet e'lon joylanganda muzlatiladi. Puli yo'q odam
+        # byudjetli e'lon joylay olmaydi — buyurtma va materiallardagi bilan
+        # bir xil. Ilgari e'lon joylanardi, kimdir olardi, muallif esa
+        # tasdiqlay olmasdi — ijrochi bekorga kutardi.
+        r = make_listing_raw(author, 100000)
+        check("nol balansda byudjetli e'lon rad etildi", r.status_code == 400,
               f"status={r.status_code} {r.text[:120]}")
-        bal, frozen = balances(author)
+        _, frozen = balances(author)
         check("hech narsa muzlatilmadi", frozen == 0, f"frozen={frozen}")
 
-        head("2. Pul bor — tasdiqlashda muzlaydi")
-        topup(author, 200000, 940000 + int(time.time()) % 10000)
+        head("2. Pul bor — JOYLANGANDA muzlaydi")
+        topup(author, 200000)
+        lid = make_listing(author, 100000)
+        bal, frozen = balances(author)
+        check("byudjet joylashda muzlatildi", frozen == Decimal("100000"), f"frozen={frozen}")
+        check("balansdan yechilmadi", bal == Decimal("200000"), f"balans={bal}")
+
+        # "olish" pulga tegmaydi, tasdiqlash ham qayta muzlatmaydi
+        requests.post(f"{API}/listings/{lid}/take", headers=taker)
+        _, frozen_after_take = balances(author)
+        check("olishda muzlatish o'zgarmadi", frozen_after_take == Decimal("100000"),
+              f"frozen={frozen_after_take}")
         r = requests.post(f"{API}/listings/{lid}/confirm", headers=author)
         check("tasdiqlandi", r.status_code == 200, f"status={r.status_code} {r.text[:120]}")
         bal, frozen = balances(author)
-        check("byudjet muzlatildi", frozen == Decimal("100000"), f"frozen={frozen}")
-        check("balans o'zgarmadi", bal == Decimal("200000"), f"balans={bal}")
+        check("tasdiqlashda qayta muzlatilmadi", frozen == Decimal("100000"), f"frozen={frozen}")
 
-        head("3. Rad etishda pul muallifda qoladi")
-        # rad etish faqat "taken" holatida — avval yangi e'lon bilan tekshiramiz
+        head("3. Bekor qilishda pul muallifda qoladi")
         lid2 = make_listing(author, 50000)
-        requests.post(f"{API}/listings/{lid2}/take", headers=taker)
-        requests.post(f"{API}/listings/{lid2}/confirm", headers=author)
         _, frozen_before = balances(author)
         requests.post(f"{API}/listings/{lid2}/cancel", headers=author)
         bal_after, frozen_after = balances(author)
@@ -229,11 +234,47 @@ def main():
         check("ulush budjetga yozildi", len(rows) == 1 and Decimal(str(rows[0][0])) == Decimal("5000"),
               str(rows))
 
-        head("5. Foiz rejimi ham ishlaydi")
+        head("5. Rad etishda pul band turadi (e'lon yana ochiq)")
+        # reject_taker e'lonni "open" ga qaytaradi — byudjet band turishi
+        # kerak, boshqa ijrochi olishi mumkin.
+        topup(author, 100000)
+        lid_r = make_listing(author, 60000)
+        _, frozen_before = balances(author)
+        requests.post(f"{API}/listings/{lid_r}/take", headers=taker)
+        requests.post(f"{API}/listings/{lid_r}/reject", headers=author)
+        _, frozen_after = balances(author)
+        check("rad etishda muzlatish saqlanib qoldi",
+              frozen_after == frozen_before, f"{frozen_before} -> {frozen_after}")
+        requests.post(f"{API}/listings/{lid_r}/cancel", headers=author)  # tozalash
+
+        head("6. Muddat tugaganda muzlatish qaytadi")
+        # Byudjet joylashda muzlatiladi; e'lon olinmasdan muddati tugasa,
+        # pul abadiy band bo'lib qolmasligi kerak. Muddatni bazadan
+        # o'tmishga suramiz va lentani so'raganda expire_stale ishga tushadi.
+        topup(author, 70000)
+        lid_exp = make_listing(author, 70000)
+        _, frozen_before = balances(author)
+        from sqlalchemy import text as _text
+        from app.db.session import SessionLocal as _Session
+        db = _Session()
+        try:
+            db.execute(
+                _text("UPDATE listings SET expires_at = NOW() - INTERVAL '1 day' WHERE id = :i"),
+                {"i": lid_exp},
+            )
+            db.commit()
+        finally:
+            db.close()
+        requests.get(f"{API}/listings/feed", headers=taker)   # expire_stale chaqiradi
+        _, frozen_after = balances(author)
+        check("muddat tugaganda muzlatish qaytdi",
+              frozen_after == frozen_before - Decimal("70000"),
+              f"{frozen_before} -> {frozen_after}")
+
+        head("7. Foiz rejimi ham ishlaydi")
         set_commission("percent", percent=10)
         lid3 = make_listing(author, 100000)
         requests.post(f"{API}/listings/{lid3}/take", headers=taker)
-        topup(author, 100000, 950000 + int(time.time()) % 10000)
         requests.post(f"{API}/listings/{lid3}/confirm", headers=author)
         taker_before, _ = balances(taker)
         requests.post(f"{API}/listings/{lid3}/finish", headers=author)

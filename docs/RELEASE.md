@@ -73,7 +73,7 @@ psql movex_go -c "SELECT key, value FROM app_settings WHERE key LIKE 'signup_bon
 Пустой ответ — это нормально: значения по умолчанию (50 000, включено)
 берутся из кода, а строки появятся после первого сохранения в админке.
 
-Миграции прежних релизов: типы техники, Payme, заявки на вывод, уведомления,
+Миграции прежних релизов: типы техники, заявки на вывод, уведомления,
 индексы. Миграция типов техники **меняет данные** в `equipment.type` — исходный
 текст сохраняется в `equipment.type_legacy`, откатить можно через
 `alembic downgrade`.
@@ -95,19 +95,23 @@ ESKIZ_EMAIL=
 ESKIZ_PASSWORD=
 OTP_TEST_MODE=false              # true отдаёт код прямо в ответе — только для разработки
 
-# Click
-CLICK_MERCHANT_ID=
-CLICK_SERVICE_ID=
-CLICK_SECRET_KEY=
-CLICK_MERCHANT_USER_ID=
+# Rahmat (Multicard) — единственный платёжный шлюз
+RAHMAT_APPLICATION_ID=
+RAHMAT_SECRET=
+RAHMAT_STORE_ID=
+RAHMAT_TEST_MODE=false           # true — песочница dev-mesh
+RAHMAT_CALLBACK_BASE_URL=https://movexgo.uz   # пусто = оплата не создаётся
+RAHMAT_RETURN_URL=movexgo://payment/success
+RAHMAT_RETURN_ERROR_URL=movexgo://payment/failed
 
-# Payme
-PAYME_MERCHANT_ID=
-PAYME_KEY=
-PAYME_ACCOUNT_FIELD=transaction_id
-
-SPLIT_MODE=escrow                # см. docs/backend/PAYMENTS.md
+# Слово, которым PHP-панель вызывает API. Перевод денег на карту делает
+# только backend; пусто = внутренние адреса отдают 404.
+ADMIN_INTERNAL_SECRET=           # openssl rand -hex 32
+INTERNAL_API_URL=http://127.0.0.1:8000
 ```
+
+`SPLIT_MODE` больше нет: он читался только интеграцией Payme и после её
+удаления ни на что не влиял. Деньги идут строго по escrow.
 
 **Проверьте после старта:** при `APP_ENV=production` и `CORS_ORIGINS=*`
 приложение не запустится намеренно — это защита от открытого API.
@@ -152,17 +156,26 @@ cd backend && venv/bin/python scripts/create_admin.py
 
 ## 2. Платёжные системы
 
-1. Получить мерчант-аккаунты в Click и Payme, вписать ключи в `.env`.
-2. В кабинете **Payme** указать адрес вебхука:
-   `https://movex.004.uz/payments/payme`
-   и имя поля счёта — оно должно совпадать с `PAYME_ACCOUNT_FIELD`.
-3. В кабинете **Click** указать `prepare` и `complete`:
-   `https://movex.004.uz/balance/click/prepare`
-   `https://movex.004.uz/balance/click/complete`
-4. Пройти сертификацию Payme. Сценарии, которые там проверяют, покрыты
-   тестом `backend/tests/verify_payme.py`.
+Система одна — **Rahmat (Multicard)**. Click и Payme со своими
+интеграциями убраны: на странице оплаты Multicard они уже есть как способы
+оплаты, вместе с Uzum, Anorbank, Oson, Alif, Xazna, Beepul, Trastpay,
+Paynet и картой.
 
-Подробности и режимы сплита — `docs/backend/PAYMENTS.md`.
+1. Получить боевые `application_id`, `secret` и `store_id`, вписать в `.env`
+   и поставить `RAHMAT_TEST_MODE=false`.
+2. `RAHMAT_CALLBACK_BASE_URL` — **публичный адрес этого сервера**
+   (`https://movexgo.uz`). Адрес callback шлюзу передаётся в каждом
+   инвойсе, отдельно в кабинете его прописывать не нужно.
+3. В кабинете Multicard включить вебхуки на смену статуса, если нужны
+   `revert` и `error` — иначе о возврате никто не сообщит и деньги
+   останутся на балансе.
+4. Проверить боевой оплатой на маленькую сумму и сверить:
+   транзакция `completed`, баланс вырос ровно на сумму.
+
+Выплаты на карту идут из депозита (кошелька) приложения в Multicard —
+его нужно пополнить, иначе `POST /payment/credit` вернёт ошибку.
+
+Подробности — `docs/backend/PAYMENTS.md`.
 
 ---
 
@@ -231,14 +244,18 @@ flutter run --dart-define=API_BASE_URL=http://<ваш-ip>:8000
 bash backend/tests/run_all.sh
 ```
 
-Деньги, возвраты, Payme, выплаты, права доступа, уведомления, объявления,
+Деньги, возвраты, Rahmat, выплаты, права доступа, уведомления, объявления,
 материалы, защита OTP, вебхук Telegram и смоук по всем GET-эндпоинтам.
 Скрипт заканчивается строкой `BARCHA TEKSHIRUVLAR MUVAFFAQIYATLI` — любая
 другая означает провал.
 
 Отдельно руками:
 
-- [ ] Реальное пополнение через Click и через Payme на небольшую сумму
+- [ ] Бонус владельцам, зарегистрированным до 05.09.2026, если решено
+      доначислить: `venv/bin/python scripts/grant_bonus_to_existing_owners.py`
+      (сначала без флагов — покажет список и сумму, затем `--apply`)
+- [ ] Реальное пополнение через Rahmat на небольшую сумму
+- [ ] Вывод на карту: заявка → «Картаga o'tkazish» в панели → деньги пришли
 - [ ] Заказ целиком: создать → подтвердить → завершить, сверить балансы
 - [ ] Отмена заказа — деньги вернулись клиенту
 - [ ] Заявка на вывод и её обработка в админке

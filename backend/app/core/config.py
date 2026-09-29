@@ -51,53 +51,91 @@ class Settings(BaseSettings):
     # shu yerga yoziladi — kodga tegmasdan.
     ESKIZ_SENDER: str = "4546"
 
-    # Click to'lov tizimi.
-    # Ilgari bu qiymatlar click_service ichida os.getenv orqali o'qilardi, ya'ni
-    # .env fayldan KELMASDI (pydantic-settings faylni o'qiydi, lekin os.environ'ga
-    # yozmaydi) — Click faqat systemd EnvironmentFile bilan ishga tushganda ishlardi.
-    CLICK_MERCHANT_ID: str = ""
-    CLICK_SERVICE_ID: str = ""
-    CLICK_SECRET_KEY: str = ""
-    CLICK_MERCHANT_USER_ID: str = ""
-    CLICK_RETURN_URL: str = "movexgo://payment/success"
+    # ------------------------------------------------- Rahmat (Multicard)
+    #
+    # LOYIHADAGI YAGONA to'lov tizimi. Click va Payme o'z integratsiyalari
+    # bilan OLIB TASHLANGAN: Multicard shlyuzining o'z chekaut sahifasida
+    # Payme, Click, Uzum, Anorbank, Oson, Alif, Xazna, Beepul va Trastpay
+    # allaqachon bor. Ikkinchi marta o'zimiz yozish — bir xil pulni ikki
+    # xil yo'l bilan hisoblash, ya'ni ertami-kechmi ikki xil natija.
+    #
+    # Kalitlar Multicard kabinetidan olinadi. Ular .env da e'lon qilinishi
+    # SHART: servis ularni faqat settings orqali o'qiydi, os.getenv .env
+    # faylini KO'RMAYDI — aynan shu narsa Click bilan uzoq vaqt sezilmay
+    # turgan xato edi.
+    RAHMAT_APPLICATION_ID: str = ""
+    RAHMAT_SECRET: str = ""
+    #: Kassa (store) raqami yoki UUID'i — Multicard beradi
+    RAHMAT_STORE_ID: str = ""
+    #: true — sinov stendi (dev-mesh), false — jangovar (mesh).
+    #: Stend manzili KODDA emas, shu tumblerda: sinovdan jangga o'tish
+    #: kalitlarni almashtirish bilan cheklanishi kerak.
+    RAHMAT_TEST_MODE: bool = True
+    RAHMAT_SANDBOX_URL: str = "https://dev-mesh.multicard.uz"
+    RAHMAT_PRODUCTION_URL: str = "https://mesh.multicard.uz"
+
+    #: Multicard callback va webhook yuboradigan OCHIQ manzilimiz, sxemasi
+    #: bilan va oxirida "/" siz. Mahalliy ishda bu tunnel manzili
+    #: (ngrok/cloudflared), jangda — https://movexgo.uz.
+    #: Bo'sh bo'lsa to'lov havolasi yasalmaydi: Multicard to'lov haqida
+    #: xabar bera olmasa, pul kartadan yechilib, balans to'lmay qolardi.
+    RAHMAT_CALLBACK_BASE_URL: str = ""
+
+    #: To'lovdan keyin odam qaytadigan manzil. Ilova sxemasi — shuning
+    #: uchun brauzer ilovaga qaytaradi.
+    RAHMAT_RETURN_URL: str = "movexgo://payment/success"
+    RAHMAT_RETURN_ERROR_URL: str = "movexgo://payment/failed"
+
+    #: So'rovlar uchun kutish vaqti. Multicard javob bermasa, biz ham
+    #: cheksiz kutmasligimiz kerak — uvicorn ishchisi band bo'lib qoladi.
+    RAHMAT_TIMEOUT_SECONDS: int = 30
 
     @property
-    def click_configured(self) -> bool:
-        """Click bilan ishlash uchun barcha kerakli kalitlar bormi."""
-        return bool(self.CLICK_SERVICE_ID and self.CLICK_SECRET_KEY and self.CLICK_MERCHANT_ID)
-
-    # Payme (Paycom) Merchant API.
-    # PAYME_KEY — kassa kaliti, Payme kabinetidan olinadi. Payme bizga
-    # murojaat qilganda "Authorization: Basic base64('Paycom:' + PAYME_KEY)"
-    # sarlavhasini yuboradi.
-    PAYME_MERCHANT_ID: str = ""
-    PAYME_KEY: str = ""
-    # Payme test rejimida boshqa kalit ishlatiladi
-    PAYME_TEST_KEY: str = ""
-    PAYME_TEST_MODE: bool = False
-    # Payme kabinetida sozlangan hisob maydonining nomi
-    PAYME_ACCOUNT_FIELD: str = "transaction_id"
-    PAYME_CHECKOUT_URL: str = "https://checkout.paycom.uz"
-    PAYME_RETURN_URL: str = "movexgo://payment/success"
+    def rahmat_base_url(self) -> str:
+        """Sinov yoki jangovar stend — tumblerga qarab."""
+        url = self.RAHMAT_SANDBOX_URL if self.RAHMAT_TEST_MODE else self.RAHMAT_PRODUCTION_URL
+        return url.rstrip("/")
 
     @property
-    def payme_active_key(self) -> str:
-        """Test rejimida test kaliti, aks holda asosiy kalit."""
-        if self.PAYME_TEST_MODE and self.PAYME_TEST_KEY:
-            return self.PAYME_TEST_KEY
-        return self.PAYME_KEY
+    def rahmat_configured(self) -> bool:
+        """
+        Kalitlar ham, ochiq manzil ham bormi.
 
-    @property
-    def payme_configured(self) -> bool:
-        return bool(self.PAYME_MERCHANT_ID and self.payme_active_key)
+        Callback manzili ham SHARTLAR ro'yxatida: usiz to'lov o'tadi, lekin
+        balans to'lmaydi — foydalanuvchi uchun bu "pulim yo'qoldi" degani.
+        """
+        return bool(
+            self.RAHMAT_APPLICATION_ID
+            and self.RAHMAT_SECRET
+            and self.RAHMAT_STORE_ID
+            and self.RAHMAT_CALLBACK_BASE_URL
+        )
 
-    # To'lovni bo'lish (split).
-    #   escrow     — pul to'liq platformaga tushadi, buyurtma yakunlangach
-    #                texnika egasiga o'tkaziladi. Mijoz uchun xavfsizroq.
-    #   on_payment — Payme to'lovni darhol bo'ladi: egasiga 90%, platformaga 10%.
-    #                Pul platformada turmaydi, lekin escrow himoyasi yo'qoladi.
-    # Batafsil: docs/backend/PAYMENTS.md
-    SPLIT_MODE: str = "escrow"
+    #: Adminka (PHP) bilan backend orasidagi maxfiy so'z.
+    #:
+    #: Kartaga pul o'tkazish endi Multicard orqali o'tadi, ya'ni buni
+    #: bajaradigan kod BITTA bo'lishi kerak — payout_service. Panel shu
+    #: so'z bilan backend'ga murojaat qiladi va o'zi pul harakatlantirmaydi.
+    #: Bo'sh bo'lsa ichki manzil YO'Q (404): imzosiz manzil orqali
+    #: istalgan odam chet kartaga pul jo'natishni buyurgan bo'lardi.
+    ADMIN_INTERNAL_SECRET: str = ""
+
+    #: Panel backend'ga qanday manzildan boradi. Bir mashinada turadi,
+    #: shuning uchun localhost yetarli.
+    INTERNAL_API_URL: str = "http://127.0.0.1:8000"
+
+    # SPLIT_MODE olib tashlandi.
+    #
+    # U faqat Payme integratsiyasida ishlatilardi: 'on_payment' rejimida
+    # to'lov darhol bo'linib, egasiga 90% ketardi. Payme ketgach sozlama
+    # HECH QAYERDA o'qilmay qoldi — ya'ni .env dagi qiymat hech narsaga
+    # ta'sir qilmasdi. Bunday sozlama eng yomoni: uni o'zgartirgan odam
+    # tizim boshqacha ishlaydi deb o'ylaydi.
+    #
+    # Pul hozir FAQAT escrow bo'yicha yuradi: to'liq summa platformaga
+    # tushadi, buyurtma yakunlangach egasiga o'tkaziladi. Multicard'da
+    # split bor (splitRequest), kerak bo'lsa alohida ish sifatida
+    # qo'shiladi — batafsil docs/backend/PAYMENTS.md.
 
     # OTP Settings
     # Kodni qayta so'rash oralig'i va soatiga eng ko'p yuborish soni.

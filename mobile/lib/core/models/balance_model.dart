@@ -74,8 +74,11 @@ class BalanceTransactionModel {
   final double amount;
   final String type; // 'topup' or 'payment'
   final String status; // 'pending', 'completed', 'failed'
-  final String? paymentMethod; // 'click', 'payme', etc.
+  final String? paymentMethod; // hozir 'rahmat'; eskilarida 'click', 'payme'
   final String? description;
+  /// Fiskal chek havolasi — to'lov tizimi beradi. Bo'sh bo'lishi normal:
+  /// chek faqat muvaffaqiyatli to'lovda paydo bo'ladi.
+  final String? receiptUrl;
   final DateTime createdAt;
 
   BalanceTransactionModel({
@@ -86,6 +89,7 @@ class BalanceTransactionModel {
     required this.status,
     this.paymentMethod,
     this.description,
+    this.receiptUrl,
     required this.createdAt,
   });
 
@@ -98,6 +102,7 @@ class BalanceTransactionModel {
       status: json['status'] as String,
       paymentMethod: json['payment_method'] as String?,
       description: json['description'] as String?,
+      receiptUrl: json['rahmat_receipt_url'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -111,12 +116,13 @@ class BalanceTransactionModel {
       'status': status,
       'payment_method': paymentMethod,
       'description': description,
+      'rahmat_receipt_url': receiptUrl,
       'created_at': createdAt.toIso8601String(),
     };
   }
 }
 
-/// Click to'lov uchun response model
+/// Hisob to'ldirish javobi — chekaut sahifasiga havola bilan
 class BalanceTopUpResponse {
   final int transactionId;
   final double amount;
@@ -153,3 +159,23 @@ class BalanceTopUpResponse {
   }
 }
 
+
+
+/// To'lov usuli — server beradigan ro'yxatning bir elementi.
+///
+/// Ilovada usullar YOZIB QO'YILMAYDI: sozlanmagan tizim ro'yxatga
+/// tushmaydi, va bosilganda 503 beradigan tugmani ko'rsatishdan ma'no
+/// yo'q. Ilgari "Click" tugmasi kodda turardi va u har doim ko'rinardi.
+class PaymentMethodModel {
+  final String code;
+  final String title;
+
+  const PaymentMethodModel({required this.code, required this.title});
+
+  factory PaymentMethodModel.fromJson(Map<String, dynamic> json) {
+    return PaymentMethodModel(
+      code: json['code'] as String,
+      title: json['title'] as String,
+    );
+  }
+}

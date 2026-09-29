@@ -13,11 +13,6 @@ class User(Base):
     password_hash = Column(Text, nullable=False)
     role = Column(String(20), nullable=False)
 
-    # To'lovni bo'lish (split) uchun texnika egasining Payme'dagi qabul
-    # qiluvchi identifikatori. Bo'sh bo'lsa — bo'lish o'tkazib yuboriladi,
-    # pul odatdagidek platformaga tushadi va keyin qo'lda o'tkaziladi.
-    payme_receiver_id = Column(String(50), nullable=True)
-
     # Qidiruv va xabarnoma radiusi.
     #
     # Egasi uchun: shu nuqtadan radius ichidagi zayavkalar haqida xabar

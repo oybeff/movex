@@ -77,7 +77,7 @@ class TelegramService:
         phone_number: str,
         amount: float,
         transaction_id: int,
-        payment_method: str = "Click"
+        payment_method: str = "Rahmat"
     ) -> bool:
         """
         To'lov haqida xabar yuborish

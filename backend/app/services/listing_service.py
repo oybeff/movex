@@ -80,6 +80,11 @@ def expire_stale(db: Session) -> int:
         .all()
     )
     for listing in stale:
+        # Byudjet joylashda muzlatilgan — muddat tugaganda uni QAYTARAMIZ,
+        # aks holda pul abadiy band bo'lib qolardi. _unfreeze_listing
+        # muzlatilmagan (agreed_price = None) e'lonlar uchun hech narsa
+        # qilmaydi, shuning uchun eski e'lonlar ham xavfsiz.
+        _unfreeze_listing(db, listing)
         listing.status = "expired"
     if stale:
         db.commit()
@@ -145,6 +150,18 @@ def create_listing(db: Session, client: User, data) -> Listing:
     db.add(listing)
     db.flush()
 
+    # Byudjet KO'RSATILGAN bo'lsa — uni darhol muzlatamiz. Ilgari pul faqat
+    # tasdiqlashda muzlatilardi, ya'ni puli yo'q odam ham byudjetli e'lon
+    # joylay olardi: kimdir uni olardi, muallif esa tasdiqlay olmasdi
+    # (balansida pul yo'q) — ijrochi bekorga kutib qolardi. Buyurtma va
+    # materiallarda pul YARATILGANDA tekshiriladi; e'lon ham shunday
+    # bo'lishi kerak edi, aks holda uch joyda uch xil qoida.
+    #
+    # Byudjetsiz e'lon ("narxni ayting") muzlatilmaydi: unda summa faqat
+    # taklif tanlanganda paydo bo'ladi.
+    if listing.budget is not None and Decimal(str(listing.budget)) > 0:
+        _reserve_for_listing(db, listing, listing.budget)
+
     for url in photos:
         db.add(ListingPhoto(listing_id=listing.id, url=url))
 
@@ -185,18 +202,20 @@ def _lock_balance(db: Session, user_id: int) -> Balance:
     return balance
 
 
-def _freeze_for_listing(db: Session, listing: Listing, amount: Decimal) -> None:
+def _reserve_for_listing(db: Session, listing: Listing, amount) -> None:
     """
-    Muallifning balansida summani muzlatadi va kelishuvni e'longa yozadi.
+    Muallifning balansida summani muzlatadi va uni `agreed_price` ga yozadi.
 
-    Pul yetmasa — 400. Ilgari tekshiruv umuman yo'q edi: balansi nol bo'lgan
-    odam ham ijrochini tasdiqlay olardi, ya'ni ish boshlanardi, to'lov esa
-    hech qayerdan kelmasdi.
+    `agreed_price` — "shu e'lon uchun hozir muzlatilgan summa". E'lon
+    joylanganda u byudjetga teng, taklif tanlanganda esa taklif narxiga
+    o'zgaradi (`_adjust_reservation`). Yakunlashda shu summa balansdan
+    yechiladi, bekor/muddat tugashida qaytariladi.
+
+    Pul yetmasa — 400. Komissiya BU YERDA hisoblanmaydi: u faqat tasdiqlash
+    paytida yoziladi (adminkada stavka keyin o'zgarsa, e'lon eski shart
+    bo'yicha yopilishi kerak).
     """
     if amount is None or Decimal(str(amount)) <= 0:
-        # Byudjetsiz e'lon ham bo'ladi ("narxni ayting"). Unda summa faqat
-        # taklif orqali paydo bo'ladi, "olaman" yo'li bilan tasdiqlab
-        # bo'lmaydi — muzlatadigan summa yo'q.
         raise HTTPException(
             400,
             "E'londa byudjet ko'rsatilmagan. Ijrochi narx taklif qilsin, "
@@ -215,8 +234,48 @@ def _freeze_for_listing(db: Session, listing: Listing, amount: Decimal) -> None:
 
     balance.frozen_balance = Decimal(str(balance.frozen_balance)) + amount
     listing.agreed_price = amount
-    # Ulush TASDIQLASH paytida hisoblanadi va yoziladi: adminkada stavka
-    # keyin o'zgarsa, bu e'lon eski shart bo'yicha yopilishi kerak.
+
+
+def _adjust_reservation(db: Session, listing: Listing, new_amount) -> None:
+    """
+    Muzlatilgan summani `new_amount` ga keltiradi (taklif tanlanganda).
+
+    E'lon joylanganda byudjet muzlatilgan bo'ladi, lekin qabul qilingan
+    taklif narxi byudjetdan farq qilishi mumkin — ana o'sha farqni tuzatadi.
+    Byudjetsiz e'londa muzlatilgan summa yo'q edi, shuning uchun to'liq
+    narx muzlatiladi. Yetishmasa — 400.
+    """
+    new_amount = Decimal(str(new_amount))
+    if new_amount <= 0:
+        raise HTTPException(400, "Taklif narxi noto'g'ri")
+
+    already = Decimal(str(listing.agreed_price or 0))
+    delta = new_amount - already
+    balance = _lock_balance(db, listing.client_id)
+
+    if delta > 0:
+        available = Decimal(str(balance.balance)) - Decimal(str(balance.frozen_balance))
+        if available < delta:
+            raise HTTPException(
+                400,
+                f"Hisobingizda yetarli mablag' yo'q. "
+                f"Mavjud: {float(available)} so'm, "
+                f"qo'shimcha kerak: {float(delta)} so'm",
+            )
+
+    new_frozen = Decimal(str(balance.frozen_balance)) + delta
+    balance.frozen_balance = new_frozen if new_frozen > 0 else Decimal("0")
+    listing.agreed_price = new_amount
+
+
+def _fix_commission(db: Session, listing: Listing) -> None:
+    """
+    Ulushni tasdiqlash paytida hisoblab yozadi.
+
+    Alohida: muzlatish e'lon joylanganda bo'ladi, ulush esa faqat
+    tasdiqlashda — keyin adminkada stavka o'zgarsa, bu e'lon o'zgarmaydi.
+    """
+    amount = Decimal(str(listing.agreed_price or 0))
     listing.commission = pricing_service.calculate_commission(db, amount, amount)
 
 
@@ -331,9 +390,13 @@ def confirm_listing(db: Session, listing_id: int, client: User) -> Listing:
     if listing.status != "taken":
         raise HTTPException(400, "Tasdiqlash uchun avval kimdir e'lonni olishi kerak")
 
-    # Pul TASDIQLASHDA muzlatiladi, "olaman"da emas: aks holda tasodifiy
-    # bosilgan tugma begona odamning pulini bog'lab qo'yardi.
-    _freeze_for_listing(db, listing, listing.budget)
+    # Byudjet e'lon JOYLANGANDA muzlatilgan. Eski e'lonlarda (fiksdan
+    # oldin joylangan) muzlatish bo'lmagan bo'lishi mumkin — o'shanda
+    # hozir muzlatamiz. Ulush esa har doim shu yerda, tasdiqlashda
+    # yoziladi.
+    if listing.agreed_price is None:
+        _reserve_for_listing(db, listing, listing.budget)
+    _fix_commission(db, listing)
 
     listing.status = "confirmed"
     listing.confirmed_at = _now()
@@ -363,7 +426,10 @@ def reject_taker(db: Session, listing_id: int, client: User) -> Listing:
         raise HTTPException(400, "E'lon hozir olinmagan")
 
     rejected_owner = listing.taken_by
-    _unfreeze_listing(db, listing)
+    # Pul MUZLATILGANICHA qoladi: e'lon yana ochiq bo'ladi va byudjet o'sha
+    # e'lon uchun band turishi kerak — boshqa ijrochi olishi mumkin. Ilgari
+    # bu yerda muzlatish olib tashlanardi, chunki pul faqat tasdiqlashda
+    # muzlatilardi; endi u joylashdayoq muzlatiladi.
     listing.status = "open"
     listing.taken_by = None
     listing.taken_at = None
@@ -555,7 +621,11 @@ def accept_offer(db: Session, listing_id: int, offer_id: int, author: User) -> L
     )
 
     listing.taken_by = offer.user_id
-    _freeze_for_listing(db, listing, offer.price)
+    # Byudjet joylashda muzlatilgan bo'lishi mumkin; qabul qilingan taklif
+    # narxiga keltiramiz (byudjetsiz e'londa noldan muzlatiladi). Ulush
+    # ham shu narxdan hisoblanadi.
+    _adjust_reservation(db, listing, offer.price)
+    _fix_commission(db, listing)
 
     listing.status = "confirmed"
     listing.taken_at = _now()

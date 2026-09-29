@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Column, Integer, Numeric, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, Numeric, String, DateTime, ForeignKey
 from decimal import Decimal
 
 from sqlalchemy import event
@@ -36,34 +36,53 @@ class BalanceTransaction(Base):
     amount = Column(Numeric(12,2), nullable=False)
     type = Column(String(20), nullable=False)  # 'topup', 'payment', 'income', 'refund'
     status = Column(String(20), nullable=False)  # 'pending', 'completed', 'failed'
-    payment_method = Column(String(50))  # 'click', 'payme', etc.
+    #: Hozir yangi to'lovlarda faqat 'rahmat'. Qolganlari tarixda qolgan
+    #: qiymatlar (payment_providers.LEGACY_PAYMENT_METHODS) — o'chirilmaydi,
+    #: chunki o'sha pul haqiqatan o'sha tizim orqali kelgan.
+    payment_method = Column(String(50))
     description = Column(String(500))
     order_id = Column(Integer, ForeignKey("orders.id", ondelete="SET NULL"), nullable=True)  # Buyurtma bilan bog'lash
 
-    # Click to'lov tizimi uchun qo'shimcha ustunlar
-    click_trans_id = Column(Integer, nullable=True)  # Click transaction ID
-    click_prepare_id = Column(Integer, nullable=True)  # Click prepare ID
-    phone_number = Column(String(20), nullable=True)  # Telefon raqam (Click uchun)
+    #: To'lov haqida xabar beriladigan telefon (SMS bilan invoys havolasi).
+    phone_number = Column(String(20), nullable=True)
 
-    # Payme (Paycom) Merchant API uchun.
-    # Payme protokoli tranzaksiyaning o'z holatini talab qiladi:
-    #   1 — yaratilgan, 2 — o'tkazilgan, -1 — bekor qilingan,
-    #   -2 — o'tkazilgandan keyin bekor qilingan
-    # Vaqtlar Payme talabi bo'yicha millisekundlarda saqlanadi.
-    payme_transaction_id = Column(String(50), nullable=True, index=True)
-    payme_state = Column(Integer, nullable=True)
-    payme_create_time = Column(BigInteger, nullable=True)
-    payme_perform_time = Column(BigInteger, nullable=True)
-    payme_cancel_time = Column(BigInteger, nullable=True)
-    payme_reason = Column(Integer, nullable=True)
+    # ------------------------------------------------- Rahmat (Multicard)
+    #
+    # `rahmat_uuid` — shlyuzdagi tranzaksiya raqami. U invoys yaratilganda
+    # DARHOL yoziladi: vebhukda faqat uuid bo'lishi mumkin, va usiz qaysi
+    # to'lov ekanini aniqlashning yo'li yo'q.
+    #
+    # `rahmat_status` — shlyuzning O'Z holati (draft/progress/success/...).
+    # Bizning `status` dan alohida turadi ataylab: ularni bitta ustunga
+    # siqib bo'lmaydi, chunki 'hold' va 'billing' bizda ikkalasi ham
+    # 'pending' ga tushadi, lekin adminkada farqi ko'rinishi kerak.
+    rahmat_uuid = Column(String(64), nullable=True, index=True)
+    rahmat_status = Column(String(20), nullable=True)
+    rahmat_checkout_url = Column(String(500), nullable=True)
+    rahmat_card_pan = Column(String(32), nullable=True)
+    rahmat_ps = Column(String(20), nullable=True)
+    rahmat_billing_id = Column(String(64), nullable=True)
+    rahmat_receipt_url = Column(String(500), nullable=True)
+    rahmat_payment_time = Column(String(32), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # DIQQAT: bu yerdagi ro'yxatlar bazadagi haqiqiy cheklov bilan bir xil
+    # bo'lishi kerak. Schema Alembic bilan yuritiladi, shuning uchun
+    # o'zgartirish migratsiyada bo'ladi — bu satrlar esa o'qiyotgan odamni
+    # chalg'itmasligi uchun yangilanib turadi.
     __table_args__ = (
         CheckConstraint("amount > 0", name="check_transaction_amount"),
-        CheckConstraint("type IN ('topup','payment','income','refund')", name="check_transaction_type"),
+        CheckConstraint(
+            "type IN ('topup','payment','income','refund','withdrawal','bonus')",
+            name="check_transaction_type",
+        ),
         CheckConstraint("status IN ('pending','completed','failed','canceled')", name="check_transaction_status"),
-        CheckConstraint("payment_method IN ('click','payme','uzum','card','cash') OR payment_method IS NULL", name="check_transaction_payment_method"),
+        CheckConstraint(
+            "payment_method IN ('rahmat','click','payme','uzum','card','cash') "
+            "OR payment_method IS NULL",
+            name="check_transaction_payment_method",
+        ),
     )
 
 

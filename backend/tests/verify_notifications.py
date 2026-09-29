@@ -9,12 +9,13 @@ Test IDEMPOTENT — bazani tozalamasdan qayta ishga tushirsa bo'ladi.
 Ishga tushirish (server ishlab turgan holda):
     venv/bin/python tests/verify_notifications.py
 """
-import hashlib
 import random
 import re
 from datetime import datetime, timedelta
 
 import requests
+
+from _topup import topup as _rahmat_topup
 
 API = "http://127.0.0.1:8000"
 
@@ -22,8 +23,6 @@ OWNER_PHONE = "998901110001"
 CLIENT_PHONE = "998901110002"
 EQUIPMENT_ID = 1
 
-CLICK_SERVICE_ID = "111111"
-CLICK_SECRET_KEY = "local_dev_click_secret"
 
 ok_count = 0
 fail_count = 0
@@ -54,24 +53,15 @@ def notifications(hdr, **params):
     return requests.get(f"{API}/notifications/", headers=hdr, params=params).json()
 
 
-def topup_via_click(hdr, amount, click_id):
-    tx = requests.post(f"{API}/balance/topup", headers=hdr,
-                       json={"amount": amount, "payment_method": "click"}).json()
-    tx_id, amt = tx["transaction_id"], float(tx["amount"])
+def topup_via_gateway(hdr, amount):
+    """
+    Hisob to'ldirish — Rahmat (Multicard) orqali.
 
-    def cb(path, action, extra=None):
-        st = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        raw = f"{click_id}{CLICK_SERVICE_ID}{CLICK_SECRET_KEY}{tx_id}{amt}{action}{st}"
-        body = {"click_trans_id": click_id, "service_id": CLICK_SERVICE_ID,
-                "merchant_trans_id": tx_id, "amount": amt, "action": action,
-                "error": 0, "error_note": "Success", "sign_time": st,
-                "sign_string": hashlib.md5(raw.encode()).hexdigest()}
-        if extra:
-            body.update(extra)
-        return requests.post(f"{API}/balance/{path}", data=body).json()
-
-    prep = cb("click/prepare", 0)
-    cb("click/complete", 1, {"merchant_prepare_id": prep.get("merchant_prepare_id", tx_id)})
+    Mantiq _topup.py da: ilgari bu funksiya har bir testda o'z nusxasi
+    bilan turardi va to'lov tizimi almashganda oltita joyni tuzatish
+    kerak bo'ldi.
+    """
+    return _rahmat_topup(hdr, amount, API)
 
 
 def free_dates(days=1, equipment_id=None, headers=None):
@@ -110,7 +100,7 @@ def free_dates(days=1, equipment_id=None, headers=None):
 client = token(CLIENT_PHONE)
 owner = token(OWNER_PHONE)
 
-topup_via_click(client, 10_000_000, 970000 + int(datetime.now().timestamp()) % 10000)
+topup_via_gateway(client, 10_000_000)
 
 def newest_id(hdr):
     """

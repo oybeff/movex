@@ -15,8 +15,9 @@ Ulush ariza summasidan ICHIDAN ushlanadi: 100 000 so'radi — balansidan
 oxirgi so'migacha yecha oladi; ustiga qo'shilganda esa to'liq balansni
 yechishning iloji bo'lmasdi.
 """
+import logging
 from decimal import Decimal, ROUND_HALF_UP
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -30,6 +31,20 @@ from app.schemas.payout import PayoutRequestCreate
 from app.services.balance_service import get_or_create_balance, withdrawable_balance
 
 MIN_PAYOUT_SUM = Decimal("50000")
+
+# --------------------------------------------------- avtomatik o'tkazish
+#
+# Pul kartaga Multicard orqali o'tadi (POST /payment/credit). Savol faqat
+# shunda: o'tkazishni KIM boshlaydi.
+#
+#   o'chirilgan (standart) — arizani admin ko'radi va tugmani bosadi,
+#                            o'tkazmani tizim bajaradi;
+#   yoqilgan               — ariza berilishi bilanoq pul ketadi.
+#
+# Standart holda o'chirilgan ataylab: o'tkazma QAYTARILMAYDI, va yangi
+# tizimni birinchi kunlarda odam ko'zi bilan kuzatish arzonga tushadi.
+# Tumbler adminkada (commission.php), kodda emas.
+AUTO_PAYOUT_KEY = "payout_auto_enabled"
 
 # ------------------------------------------------------------- komissiya
 #
@@ -52,6 +67,12 @@ DEFAULT_PAYOUT_COMMISSION_PERCENT = Decimal("10")
 def _setting(db: Session, key: str) -> Optional[str]:
     row = db.query(AppSettings).filter(AppSettings.key == key).first()
     return None if row is None or row.value is None else str(row.value)
+
+
+def is_auto_payout_enabled(db: Session) -> bool:
+    """Ariza berilishi bilanoq pul ketsinmi. Sozlama yo'q bo'lsa — yo'q."""
+    raw = (_setting(db, AUTO_PAYOUT_KEY) or "").strip().lower()
+    return raw in ("1", "true", "yes", "on")
 
 
 def get_commission_mode(db: Session) -> str:
@@ -187,6 +208,21 @@ def create_request(db: Session, user_id: int, data: PayoutRequestCreate) -> Payo
     db.add(request)
     db.commit()
     db.refresh(request)
+
+    if is_auto_payout_enabled(db):
+        # Xato ariza berishni BUZMAYDI: pul muzlatilgan, ariza 'pending'
+        # da qoladi va admin uni qo'lda o'tkazadi. Aks holda o'tkazma
+        # xatosi "ariza berilmadi" ga aylanib, ega qayta-qayta yuborar
+        # va har safar yangi muzlatish paydo bo'lardi.
+        try:
+            send_to_card(db, request)
+        except HTTPException as exc:
+            logging.getLogger(__name__).warning(
+                "avtomatik o'tkazma o'tmadi, ariza qo'lda ko'riladi: id=%s detail=%s",
+                request.id, exc.detail,
+            )
+        db.refresh(request)
+
     return request
 
 
@@ -206,6 +242,14 @@ def list_all(db: Session, status: Optional[str] = None, skip: int = 0, limit: in
     return query.order_by(PayoutRequest.created_at.desc()).offset(skip).limit(limit).all()
 
 
+def get_request(db: Session, request_id: int) -> PayoutRequest:
+    """Arizani holatiga qaramasdan olish — holatni sverka qilish uchun."""
+    request = db.query(PayoutRequest).filter(PayoutRequest.id == request_id).first()
+    if request is None:
+        raise HTTPException(status_code=404, detail="Ariza topilmadi")
+    return request
+
+
 def _load_pending(db: Session, request_id: int) -> PayoutRequest:
     request = db.query(PayoutRequest).filter(PayoutRequest.id == request_id).first()
     if request is None:
@@ -218,11 +262,156 @@ def _load_pending(db: Session, request_id: int) -> PayoutRequest:
     return request
 
 
-def mark_paid(db: Session, request_id: int, admin_id: int, admin_comment: Optional[str] = None) -> PayoutRequest:
-    """Pul o'tkazildi: balansdan yechamiz va muzlatishni olib tashlaymiz."""
+#: Multicard'dagi o'tkazma raqamining boshi. Kabinetda ariza bo'yicha
+#: qidirish uchun kerak — aynan shu satr `store_invoice_id` ga tushadi.
+PAYOUT_INVOICE_PREFIX = "payout-"
+
+
+def payout_invoice_id(request_id: int) -> str:
+    return f"{PAYOUT_INVOICE_PREFIX}{request_id}"
+
+
+def pay(db: Session, request_id: int, admin_id: Optional[int], admin_comment: Optional[str] = None) -> PayoutRequest:
+    """
+    Arizani to'lash: pul kartaga MULTICARD orqali o'tadi.
+
+    Ilgari bu funksiya faqat hisobni yuritardi — pulni admin bank
+    ilovasida qo'lda o'tkazardi va keyin "to'landi" deb belgilardi.
+    Endi o'tkazmani tizim bajaradi, ya'ni balansdan yechish faqat
+    shlyuz "success" deganidan KEYIN bo'ladi. Tartib muhim: teskarisida
+    o'tkazma o'tmasa ham egadan pul yechilgan bo'lardi.
+    """
+    request = _load_pending(db, request_id)
+    if admin_comment:
+        request.admin_comment = admin_comment
+        db.commit()
+    return send_to_card(db, request, admin_id=admin_id)
+
+
+def send_to_card(db: Session, request: PayoutRequest, admin_id: Optional[int] = None) -> PayoutRequest:
+    """
+    Kartaga o'tkazish so'rovi va natijani arizaga tushirish.
+
+    Kartaga ariza summasining KOMISSIYASIZ qismi ketadi
+    (`payout_amount`), balansdan esa to'liq summa yechiladi — farqi
+    platformada qoladi.
+    """
+    from app.services import rahmat_service
+    from app.services.rahmat_service import RahmatError
+
+    if request.status != "pending":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Ariza allaqachon ko'rib chiqilgan: {request.status}",
+        )
+
+    # O'tkazma allaqachon boshlangan bo'lsa, IKKINCHI marta yubormaymiz:
+    # holatini so'raymiz. Aks holda bir arizaga pul ikki marta ketardi.
+    if request.rahmat_uuid:
+        return sync_with_gateway(db, request)
+
+    try:
+        data = rahmat_service.create_payout(
+            pan=request.card_number,
+            amount_sum=request.payout_amount,
+            invoice_id=payout_invoice_id(request.id),
+        )
+    except RahmatError as exc:
+        # ERROR_UNKNOWN yoki timeout — natija NOMA'LUM. Pulni balansdan
+        # yechmaymiz va so'rovni QAYTARMAYMIZ: hujjat holatni tekshirishni
+        # talab qiladi, lekin uuid bizga kelmagan, shuning uchun tekshirish
+        # Multicard kabinetida invoice_id bo'yicha qo'lda bo'ladi.
+        request.rahmat_error = (
+            f"{exc.code}: {exc.details}"
+            + (
+                f" | natija noma'lum, kabinetda {payout_invoice_id(request.id)} "
+                f"bo'yicha tekshiring"
+                if exc.is_unknown
+                else ""
+            )
+        )
+        db.commit()
+        logging.getLogger(__name__).error(
+            "kartaga o'tkazma xatosi: ariza=%s code=%s details=%s",
+            request.id, exc.code, exc.details,
+        )
+        raise HTTPException(status_code=502, detail=f"{exc.code}: {exc.details}")
+
+    return _apply_gateway_payout(db, request, data, admin_id=admin_id)
+
+
+def sync_with_gateway(db: Session, request: PayoutRequest) -> PayoutRequest:
+    """
+    O'tkazma holatini shlyuzdan so'rab aniqlash.
+
+    Kerak bo'ladigan joy: so'rov timeout bilan tugagan yoki holat
+    'draft'/'progress' da qolgan. Hujjat aynan shuni talab qiladi —
+    so'rovni qaytarmaslik, holatni so'rash.
+    """
+    from app.services import rahmat_service
+    from app.services.rahmat_service import RahmatError
+
+    if not request.rahmat_uuid:
+        raise HTTPException(status_code=400, detail="O'tkazma hali boshlanmagan")
+
+    try:
+        data = rahmat_service.get_payout(request.rahmat_uuid)
+    except RahmatError as exc:
+        raise HTTPException(status_code=502, detail=f"{exc.code}: {exc.details}")
+
+    return _apply_gateway_payout(db, request, data, admin_id=request.processed_by)
+
+
+def _apply_gateway_payout(
+    db: Session,
+    request: PayoutRequest,
+    data: Dict[str, Any],
+    admin_id: Optional[int] = None,
+) -> PayoutRequest:
+    """Shlyuz javobini arizaga tushiradi va kerak bo'lsa balansni yopadi."""
+    from app.services import rahmat_service
+
+    status = str(data.get("status") or "").strip().lower()
+    request.rahmat_uuid = data.get("uuid") or request.rahmat_uuid
+    request.rahmat_status = status or request.rahmat_status
+    request.rahmat_receipt_url = data.get("receipt_url") or request.rahmat_receipt_url
+
+    if status == rahmat_service.STATUS_SUCCESS:
+        request.rahmat_error = None
+        db.commit()
+        return _settle(db, request, admin_id)
+
+    if status == rahmat_service.STATUS_ERROR:
+        # O'tkazma o'tmadi: pul egasida QOLADI (muzlatilgan holda), ariza
+        # 'pending' da turadi. Rad etish emas: xato vaqtinchalik bo'lishi
+        # mumkin, va rad etish egadan so'ramasdan qaror qilish bo'lardi.
+        request.rahmat_error = str(
+            data.get("ps_response_msg") or data.get("ps_response_code") or "o'tkazma rad etildi"
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=502,
+            detail=f"Kartaga o'tkazilmadi: {request.rahmat_error}",
+        )
+
+    # draft / progress — pul yo'lda. Balansga TEGMAYMIZ: natija hali
+    # aniq emas, va "yechib qo'yib keyin ko'ramiz" degan yo'l aynan
+    # shunday holatlarda pulni yo'qotadi.
+    db.commit()
+    db.refresh(request)
+    return request
+
+
+def _settle(db: Session, request: PayoutRequest, admin_id: Optional[int] = None) -> PayoutRequest:
+    """
+    Pul kartaga o'tdi: balansdan yechamiz va muzlatishni olib tashlaymiz.
+
+    FAQAT shlyuz "success" deganda chaqiriladi — `_apply_gateway_payout`
+    dan. Boshqa yo'l yo'q: ikkinchi chaqiruv joyi paydo bo'lishi bilan
+    o'tkazmasiz pul yechish imkoni ham paydo bo'lardi.
+    """
     from datetime import datetime, timezone
 
-    request = _load_pending(db, request_id)
     amount = Decimal(str(request.amount))
 
     balance = (
@@ -232,14 +421,26 @@ def mark_paid(db: Session, request_id: int, admin_id: int, admin_comment: Option
         .one()
     )
 
-    if Decimal(str(balance.frozen_balance)) < amount or Decimal(str(balance.balance)) < amount:
-        raise HTTPException(
-            status_code=400,
-            detail="Balansdagi ma'lumot arizaga mos kelmaydi, qo'lda tekshiring",
+    frozen = Decimal(str(balance.frozen_balance))
+    total = Decimal(str(balance.balance))
+
+    if frozen < amount or total < amount:
+        # Pul KARTAGA ALLAQACHON KETDI — bu yerda to'xtab, xato qaytarish
+        # mumkin emas: ariza 'pending' da qolib, keyin qayta o'tkazilardi.
+        # Shuning uchun bor pulni yechamiz, arizani 'paid' deb yopamiz va
+        # farqni logga yozamiz — bu qo'lda hal qilinadigan holat.
+        logging.getLogger(__name__).error(
+            "o'tkazma o'tdi, lekin balans arizaga mos kelmadi: ariza=%s user=%s "
+            "ariza summasi=%s balans=%s muzlatilgan=%s",
+            request.id, request.user_id, amount, total, frozen,
+        )
+        request.rahmat_error = (
+            "Pul kartaga o'tdi, lekin balansdagi summa arizaga mos kelmadi — "
+            "qo'lda tekshiring"
         )
 
-    balance.frozen_balance = Decimal(str(balance.frozen_balance)) - amount
-    balance.balance = Decimal(str(balance.balance)) - amount
+    balance.frozen_balance = frozen - amount if frozen >= amount else Decimal("0")
+    balance.balance = total - amount if total >= amount else Decimal("0")
 
     # Balansdan to'liq summa yechiladi, kartaga esa komissiyasiz qismi
     # o'tkaziladi — farqi platformada qoladi. Izohda ikkalasi ham
@@ -279,7 +480,6 @@ def mark_paid(db: Session, request_id: int, admin_id: int, admin_comment: Option
     request.status = "paid"
     request.processed_by = admin_id
     request.processed_at = datetime.now(timezone.utc)
-    request.admin_comment = admin_comment
 
     db.commit()
     db.refresh(request)

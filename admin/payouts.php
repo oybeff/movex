@@ -3,11 +3,21 @@
  * Pul yechish arizalari.
  *
  * Texnika egasi ilovada ariza beradi, admin shu yerda ko'rib chiqadi.
- * Pul o'tkazish qo'lda bajariladi (karta orqali), bu sahifa faqat hisobni
- * yuritadi: to'landi deb belgilanganda summa balansdan yechiladi.
+ * Pul kartaga MULTICARD orqali o'tadi (POST /payment/credit) — admin bank
+ * ilovasida qo'lda o'tkazmaydi.
  *
- * MUHIM: pul harakati bilan bog'liq mantiq backend'dagi payout_service
- * bilan bir xil bo'lishi shart — u yerda ham xuddi shunday yoziladi.
+ * MUHIM: bu sahifa pulni O'ZI HARAKATLANTIRMAYDI. Ilgari harakatlantirardi
+ * va payout_service dagi mantiqni takrorlardi — ikkisi ajralib ketishi
+ * mumkin edi. Endi panel backend'ning ichki manziliga murojaat qiladi
+ * (internalApiPost), ya'ni pul harakati BITTA joyda: payout_service.
+ *
+ * Uchta amal:
+ *   pay    — kartaga o'tkazish (balansdan yechish faqat shlyuz
+ *            tasdiqlaganidan keyin);
+ *   reject — rad etish, pul egasida qoladi;
+ *   sync   — holatni shlyuzdan so'rash. Javob kelmagan holat uchun:
+ *            so'rovni QAYTARISH man etilgan, aks holda bir arizaga pul
+ *            ikki marta ketardi.
  */
 require_once 'config.php';
 requireAdmin();
@@ -20,90 +30,44 @@ $db = getDbConnection();
 $message = '';
 $messageType = '';
 
-// Arizani hal qilish
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['request_id'])) {
     $requestId = intval($_POST['request_id']);
     $action = $_POST['action'];
     $adminComment = sanitizeInput($_POST['admin_comment'] ?? '');
 
-    try {
-        $db->beginTransaction();
+    $endpoints = [
+        'paid'     => ['/payouts/internal/' . $requestId . '/pay',
+                       'Pul kartaga o\'tkazildi, balansdan yechildi'],
+        'rejected' => ['/payouts/internal/' . $requestId . '/reject',
+                       'Ariza rad etildi, pul egasida qoldi'],
+        'sync'     => ['/payouts/internal/' . $requestId . '/sync',
+                       'Holat shlyuzdan yangilandi'],
+    ];
 
-        // Arizani va balansni bloklab olamiz: bir vaqtda ikki admin
-        // bir arizani ikki marta o'tkazib yubormasligi kerak
-        $stmt = $db->prepare("SELECT * FROM payout_requests WHERE id = ? FOR UPDATE");
-        $stmt->execute([$requestId]);
-        $request = $stmt->fetch();
-
-        if (!$request) {
-            throw new Exception('Ariza topilmadi');
-        }
-        if ($request['status'] !== 'pending') {
-            throw new Exception('Ariza allaqachon ko\'rib chiqilgan: ' . $request['status']);
-        }
-
-        $stmt = $db->prepare("SELECT * FROM balances WHERE user_id = ? FOR UPDATE");
-        $stmt->execute([$request['user_id']]);
-        $balance = $stmt->fetch();
-
-        if (!$balance) {
-            throw new Exception('Foydalanuvchi balansi topilmadi');
-        }
-
-        $amount = $request['amount'];
-
-        if ($action === 'paid') {
-            if ($balance['frozen_balance'] < $amount || $balance['balance'] < $amount) {
-                throw new Exception('Balansdagi ma\'lumot arizaga mos kelmaydi, qo\'lda tekshiring');
-            }
-
-            // To'landi: balansdan yechamiz va muzlatishni olib tashlaymiz
-            $stmt = $db->prepare(
-                "UPDATE balances SET balance = balance - ?, frozen_balance = frozen_balance - ?
-                 WHERE user_id = ?"
-            );
-            $stmt->execute([$amount, $amount, $request['user_id']]);
-
-            $stmt = $db->prepare(
-                "INSERT INTO balance_transactions (user_id, amount, type, status, description, created_at)
-                 VALUES (?, ?, 'withdrawal', 'completed', ?, NOW())"
-            );
-            $stmt->execute([
-                $request['user_id'],
-                $amount,
-                'Pul yechish #' . $requestId,
-            ]);
-
-            $newStatus = 'paid';
-            $message = 'Ariza to\'langan deb belgilandi';
-        } elseif ($action === 'rejected') {
-            // Rad etildi: faqat muzlatishni olib tashlaymiz, pul egasida qoladi
-            $stmt = $db->prepare(
-                "UPDATE balances
-                 SET frozen_balance = GREATEST(frozen_balance - ?, 0)
-                 WHERE user_id = ?"
-            );
-            $stmt->execute([$amount, $request['user_id']]);
-
-            $newStatus = 'rejected';
-            $message = 'Ariza rad etildi, pul egasida qoldi';
-        } else {
-            throw new Exception('Noma\'lum amal');
-        }
-
-        $stmt = $db->prepare(
-            "UPDATE payout_requests
-             SET status = ?, admin_comment = ?, processed_by = ?, processed_at = NOW(), updated_at = NOW()
-             WHERE id = ?"
-        );
-        $stmt->execute([$newStatus, $adminComment ?: null, $_SESSION['admin_user_id'], $requestId]);
-
-        $db->commit();
-        $messageType = 'success';
-    } catch (Exception $e) {
-        $db->rollBack();
-        $message = $e->getMessage();
+    if (!isset($endpoints[$action])) {
+        $message = 'Noma\'lum amal';
         $messageType = 'error';
+    } else {
+        [$path, $successMessage] = $endpoints[$action];
+        $result = internalApiPost($path, [
+            'admin_comment' => $adminComment ?: null,
+            'admin_id' => $_SESSION['admin_user_id'] ?? null,
+        ]);
+
+        if ($result['ok']) {
+            $status = $result['data']['status'] ?? '';
+            $gateway = $result['data']['rahmat_status'] ?? '';
+            $message = $successMessage;
+            if ($action === 'sync' || ($status === 'pending' && $gateway !== '')) {
+                // Pul yo'lda (draft/progress). Bu xato emas, lekin admin
+                // "to'landi" deb o'ylab qolmasligi kerak.
+                $message .= ' — holat: ' . ($gateway ?: $status);
+            }
+            $messageType = 'success';
+        } else {
+            $message = $result['error'];
+            $messageType = 'error';
+        }
     }
 }
 
@@ -146,6 +110,7 @@ $query = "
     SELECT
         pr.id, pr.amount, pr.commission, pr.payout_amount,
         pr.status, pr.card_number, pr.card_holder,
+        pr.rahmat_uuid, pr.rahmat_status, pr.rahmat_receipt_url, pr.rahmat_error,
         pr.comment, pr.admin_comment, pr.created_at, pr.processed_at,
         u.full_name, u.phone,
         b.balance, b.frozen_balance
@@ -271,7 +236,7 @@ include 'includes/header.php';
                         <th>#</th>
                         <th>Texnika egasi</th>
                         <th>Balansidan</th>
-                        <th>Kartaga o'tkazing</th>
+                        <th>Kartaga o'tkaziladi</th>
                         <th>Karta</th>
                         <th>Balans</th>
                         <th>Sana</th>
@@ -333,6 +298,26 @@ include 'includes/header.php';
                             [$badgeClass, $badgeText] = $badges[$r['status']] ?? ['', $r['status']];
                             ?>
                             <span class="badge badge-<?= $badgeClass ?>"><?= $badgeText ?></span>
+                            <?php if (!empty($r['rahmat_status'])): ?>
+                                <!-- Shlyuzning o'z holati. Bizning holatdan
+                                     alohida ko'rsatiladi: 'progress' — pul
+                                     yo'lda, 'draft' — hali yo'lga chiqmagan,
+                                     bizda esa ikkalasi 'pending'. -->
+                                <br><small style="color:#6b7280;">
+                                    shlyuz: <?= htmlspecialchars($r['rahmat_status']) ?>
+                                </small>
+                            <?php endif; ?>
+                            <?php if (!empty($r['rahmat_receipt_url'])): ?>
+                                <br><small>
+                                    <a href="<?= htmlspecialchars($r['rahmat_receipt_url']) ?>"
+                                       target="_blank" rel="noopener">chek</a>
+                                </small>
+                            <?php endif; ?>
+                            <?php if (!empty($r['rahmat_error'])): ?>
+                                <br><small style="color:var(--error-color,#dc2626);">
+                                    <?= htmlspecialchars($r['rahmat_error']) ?>
+                                </small>
+                            <?php endif; ?>
                             <?php if (!empty($r['admin_comment'])): ?>
                                 <br><small style="color:#6b7280;"><?= htmlspecialchars($r['admin_comment']) ?></small>
                             <?php endif; ?>
@@ -344,16 +329,28 @@ include 'includes/header.php';
                                     <input type="hidden" name="request_id" value="<?= (int) $r['id'] ?>">
                                     <input type="text" name="admin_comment" placeholder="Izoh"
                                            style="width:120px; padding:4px 8px; font-size:13px;">
+                                    <!-- Tugma pulni HOZIR jo'natadi. Ilgari u
+                                         "men qo'lda o'tkazdim" degani edi,
+                                         shuning uchun matni ham o'zgardi. -->
                                     <button type="submit" name="action" value="paid"
                                             class="btn btn-primary" style="padding:4px 10px; font-size:13px;"
-                                            onclick="return confirm('Kartaga <?= number_format($r['payout_amount'], 0, '.', ' ') ?> so\'m o\'tkazildimi? Egasining balansidan <?= number_format($r['amount'], 0, '.', ' ') ?> so\'m yechiladi.')">
-                                        To'landi
+                                            onclick="return confirm('Kartaga <?= number_format($r['payout_amount'], 0, '.', ' ') ?> so\'m HOZIR o\'tkaziladi. Egasining balansidan <?= number_format($r['amount'], 0, '.', ' ') ?> so\'m yechiladi. Davom etasizmi?')">
+                                        Kartaga o'tkazish
                                     </button>
                                     <button type="submit" name="action" value="rejected"
                                             class="btn" style="padding:4px 10px; font-size:13px;"
                                             onclick="return confirm('Arizani rad etasizmi?')">
                                         Rad etish
                                     </button>
+                                    <?php if (!empty($r['rahmat_uuid']) || !empty($r['rahmat_error'])): ?>
+                                        <!-- O'tkazma boshlangan, lekin natija
+                                             aniq emas. Qayta jo'natish MAN
+                                             ETILGAN — holatni so'raymiz. -->
+                                        <button type="submit" name="action" value="sync"
+                                                class="btn" style="padding:4px 10px; font-size:13px;">
+                                            Holatni tekshirish
+                                        </button>
+                                    <?php endif; ?>
                                 </form>
                             <?php else: ?>
                                 <small style="color:#6b7280;">

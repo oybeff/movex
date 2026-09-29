@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <circle cx="9" cy="50" r="6" fill="#23282E"/>
+  <circle cx="9" cy="50" r="2.7" fill="#B9C0C6"/>
+  <circle cx="46" cy="50" r="6" fill="#23282E"/>
+  <circle cx="46" cy="50" r="2.7" fill="#B9C0C6"/>
+  <circle cx="58" cy="50" r="6" fill="#23282E"/>
+  <circle cx="58" cy="50" r="2.7" fill="#B9C0C6"/>
+  <rect x="5" y="30" width="55" height="5" rx="2" fill="#F2B10A" stroke="#23282E" stroke-width="0.9"/>
+  <rect x="40" y="17" width="20" height="14" rx="2" fill="#F2B10A" stroke="#23282E" stroke-width="0.9"/>
+  <rect x="43" y="9" width="14" height="9" rx="2" fill="#F2B10A" stroke="#23282E" stroke-width="0.9"/>
+  <rect x="44.6" y="10.6" width="10.8" height="4.5" rx="1" fill="#5B87AD"/>
+  <rect x="45.2" y="11.2" width="4.32" height="3.3" rx="0.6" fill="#8FBCDC"/>
+  <polygon points="15,37 40,37 37,49 12,49" fill="#8A939B" stroke="#23282E" stroke-width="0.9"/>
+  <line x1="26" y1="33" x2="26" y2="40" stroke="#5E666D" stroke-width="2.6" stroke-linecap="round"/>
+</svg>

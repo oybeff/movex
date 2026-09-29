@@ -88,12 +88,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fixed = trim((string)($_POST['fixed'] ?? '5000'));
     $percent = trim((string)($_POST['percent'] ?? '10'));
 
-    // Sovg'a shaklida rejim va foiz maydonlari yo'q — ularni tekshirish shart emas.
-    $error = ($_POST['form'] ?? 'order') === 'bonus'
+    // Sovg'a va Rahmat shakllarida rejim va foiz maydonlari yo'q —
+    // ularni tekshirish shart emas.
+    $error = in_array($form, ['bonus', 'rahmat'], true)
         ? null
         : validateCommission($mode, $fixed, $percent);
 
-    if ($form === 'bonus') {
+    if ($form === 'rahmat') {
+        $ofdVatInput = trim((string)($_POST['ofd_vat'] ?? '0'));
+        $ofdMxikInput = preg_replace('/\D/', '', (string)($_POST['ofd_mxik'] ?? ''));
+        $ofdPackageInput = preg_replace('/\D/', '', (string)($_POST['ofd_package_code'] ?? ''));
+
+        if (!is_numeric($ofdVatInput) || (float)$ofdVatInput < 0 || (float)$ofdVatInput > 100) {
+            $error = 'QQS 0 va 100 orasida bo\'lishi kerak';
+        } elseif ($ofdMxikInput === '' || $ofdPackageInput === '') {
+            // Bo'sh kod bilan chek shakllanmaydi, va invoys yaratishda
+            // xato beradi — bu yerda to'xtatish arzonroq.
+            $error = 'ИКПУ va qadoq kodi to\'ldirilishi shart';
+        } else {
+            saveSetting($db, 'payout_auto_enabled', isset($_POST['auto_payout']) ? '1' : '0');
+            saveSetting($db, 'rahmat_ofd_mxik', $ofdMxikInput);
+            saveSetting($db, 'rahmat_ofd_package_code', $ofdPackageInput);
+            saveSetting($db, 'rahmat_ofd_vat', $ofdVatInput);
+            $message = 'Saqlandi. Yangi to\'lovlar va arizalarga qo\'llaniladi.';
+        }
+    } elseif ($form === 'bonus') {
         // Sovg'a — alohida shakl, ulush tekshiruviga bog'liq emas.
         $bonusAmount = trim((string)($_POST['bonus_amount'] ?? '50000'));
         if (!is_numeric($bonusAmount) || (float)$bonusAmount < 0) {
@@ -123,6 +142,14 @@ $percent = settingValue($db, 'commission_percent', '10');
 // Ro'yxatdan o'tganlik uchun sovg'a — faqat texnika egalari uchun.
 $bonusEnabled = settingValue($db, 'signup_bonus_enabled', '1') === '1';
 $bonusAmount = settingValue($db, 'signup_bonus_amount', '50000');
+
+// Rahmat: avtomatik o'tkazma va fiskal chek kodlari.
+// Standart qiymatlar rahmat_service.py dagilar bilan bir xil bo'lishi
+// kerak — u yerda ular DEFAULT_OFD_* deb yozilgan.
+$autoPayout = settingValue($db, 'payout_auto_enabled', '0') === '1';
+$ofdMxik = settingValue($db, 'rahmat_ofd_mxik', '10204001001000000');
+$ofdPackageCode = settingValue($db, 'rahmat_ofd_package_code', '1500169');
+$ofdVat = settingValue($db, 'rahmat_ofd_vat', '0');
 
 // Pul yechish ulushi — alohida sozlama, buyurtma ulushiga bog'liq emas.
 $payoutMode = settingValue($db, 'payout_commission_mode', 'fixed');
@@ -387,6 +414,64 @@ include 'includes/header.php';
                            style="max-width: 220px; margin-top: 6px;">
                     <small class="text-muted">so'm</small>
                 </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
+                    💾 Saqlash
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-3" style="margin-top: 24px;">
+        <div class="card-header">
+            <h3 class="card-title">Rahmat (Multicard)</h3>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info" style="margin-bottom: 18px;">
+                Pul kartaga <strong>shlyuz orqali</strong> o'tkaziladi. Savol faqat
+                shunda: o'tkazishni kim boshlaydi. O'chirilgan bo'lsa — siz,
+                arizani ko'rib chiqib; yoqilgan bo'lsa — tizim, ariza berilishi
+                bilanoq. <strong>O'tkazma qaytarilmaydi</strong>, shuning uchun
+                standart holda o'chirilgan.
+            </div>
+
+            <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                <input type="hidden" name="form" value="rahmat">
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="auto_payout" value="1"
+                               <?= $autoPayout ? 'checked' : '' ?>>
+                        <strong>Arizalar avtomatik o'tkazilsin</strong>
+                    </label>
+                </div>
+
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+                <!-- Fiskal chek. Kodlar tasnif.soliq.uz dan olinadi va SHU
+                     YERDA turadi: ma'lumotnomadagi kod o'zgarsa, yangi
+                     versiya chiqarish kerak bo'lmasin. -->
+                <p class="text-muted" style="margin-bottom: 14px;">
+                    Fiskal chek uchun kodlar — <code>tasnif.soliq.uz</code> ma'lumotnomasidan.
+                </p>
+                <div class="form-group">
+                    <label>ИКПУ (MXIK)</label><br>
+                    <input type="text" name="ofd_mxik"
+                           value="<?= htmlspecialchars($ofdMxik) ?>"
+                           style="max-width: 280px; margin-top: 6px;">
+                </div>
+                <div class="form-group" style="margin-top: 14px;">
+                    <label>Qadoq kodi (package_code)</label><br>
+                    <input type="text" name="ofd_package_code"
+                           value="<?= htmlspecialchars($ofdPackageCode) ?>"
+                           style="max-width: 280px; margin-top: 6px;">
+                </div>
+                <div class="form-group" style="margin-top: 14px;">
+                    <label>QQS (%)</label><br>
+                    <input type="number" name="ofd_vat" min="0" max="100" step="1"
+                           value="<?= htmlspecialchars($ofdVat) ?>"
+                           style="max-width: 120px; margin-top: 6px;">
+                </div>
+
                 <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
                     💾 Saqlash
                 </button>

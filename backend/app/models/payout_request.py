@@ -39,6 +39,20 @@ class PayoutRequest(Base):
     card_number = Column(String(32), nullable=False)
     card_holder = Column(String(100), nullable=True)
 
+    # ------------------------------------------------- Rahmat (Multicard)
+    #
+    # Pul kartaga SHLYUZ orqali o'tadi (POST /payment/credit), qo'lda emas.
+    # `rahmat_uuid` shu o'tkazmaning raqami: so'rov timeout bilan tugasa
+    # yoki ERROR_UNKNOWN qaytsa, hujjat qayta yuborishni emas, HOLATNI
+    # so'rashni talab qiladi — usiz bir arizaga pul ikki marta ketardi.
+    rahmat_uuid = Column(String(64), nullable=True, index=True)
+    #: Shlyuzning o'z holati: draft / progress / success / error / revert
+    rahmat_status = Column(String(20), nullable=True)
+    rahmat_receipt_url = Column(String(500), nullable=True)
+    #: Oxirgi xato. Ariza 'pending' da qoladi, lekin admin nima
+    #: bo'lganini ko'rishi kerak — jim qolgan xato eng yomon holat.
+    rahmat_error = Column(Text, nullable=True)
+
     comment = Column(Text, nullable=True)            # egasining izohi
     admin_comment = Column(Text, nullable=True)      # rad etish sababi
     processed_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

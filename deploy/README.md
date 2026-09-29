@@ -173,7 +173,7 @@ ESKIZ_PASSWORD=
 `DATABASE_URL`, `SECRET_KEY` и `TELEGRAM_WEBHOOK_SECRET` скрипт уже
 сгенерировал — их не трогать.
 
-Click, Payme и FCM остаются пустыми: боевых ключей пока нет
+Ключи Rahmat и FCM остаются пустыми: боевых пока нет
 (`docs/backend/PAYMENTS.md`, `docs/backend/NOTIFICATIONS.md`). Приложение
 с пустыми ключами работает, просто эти способы оплаты и push молчат.
 
@@ -255,7 +255,7 @@ cd /opt/movex/backend && bash tests/run_all.sh
 
 ## Что дальше не делается само
 
-- **Боевые ключи Click и Payme** — приём платежей до них не работает
+- **Боевые ключи Rahmat (Multicard)** — приём платежей до них не работает
 - **Проект Firebase** — без него push молчат, создаётся владельцем Google-аккаунта
 - **Политика конфиденциальности** — Google Play не публикует без ссылки на неё
 - **Пароль от FTP** из `mobile/.vscode/sftp.json` — сменить на сервере,

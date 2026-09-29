@@ -1,5 +1,9 @@
 # 🐛 Bug Fix: Balance Transactions
 
+> **Исторический разбор.** Упоминаемые здесь поля Click из
+> `balance_transactions` удалены 29.09.2026 вместе с интеграцией.
+> Актуальное — `docs/backend/PAYMENTS.md`.
+
 ## ❌ Muammo
 
 **Xato:** `Fatal error: SQLSTATE[42703]: Undefined column: transaction_type`

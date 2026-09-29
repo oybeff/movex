@@ -252,6 +252,12 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "Hisobni to'ldirish — {method}",
         "ru": "Пополнение счёта — {method}",
     },
+    # To'lov tizimi pulni kartaga qaytardi (revert). Balansga tushgan
+    # summa olib tashlanadi — odam nega kamayganini ko'rishi kerak.
+    "tx.topup_reverted": {
+        "uz": "To'lov qaytarildi — tranzaksiya #{transaction_id}",
+        "ru": "Платёж возвращён — транзакция #{transaction_id}",
+    },
     "tx.payout": {
         "uz": "Pul yechish #{request_id} — karta {card}",
         "ru": "Вывод средств #{request_id} — карта {card}",

@@ -37,10 +37,15 @@ class BalanceRead(BaseModel):
 # Balance Transaction Schemas
 class BalanceTransactionBase(BaseModel):
     amount: float = Field(gt=0, description="Amount must be positive")
-    payment_method: str = Field(..., description="Payment method (click, payme, etc.)")
+    #: Ruxsat etilgan qiymatlar ro'yxati payment_providers da — hozir
+    #: bittasi: "rahmat". Tekshiruv balance_service da, chunki xato matni
+    #: mavjud usullarni sanab berishi kerak.
+    payment_method: str = Field("rahmat", description="Payment method code (rahmat)")
 
 class BalanceTransactionCreate(BalanceTransactionBase):
-    phone_number: Optional[str] = Field(None, description="Phone number for Click payment")
+    #: To'lov havolasini SMS bilan yuborish uchun. Majburiy emas —
+    #: berilmasa, profildagi raqam olinadi.
+    phone_number: Optional[str] = Field(None, description="Phone number for the payment SMS")
 
 class BalanceTransactionUpdate(BaseModel):
     status: Optional[str] = None
@@ -54,21 +59,35 @@ class BalanceTransactionRead(BaseModel):
     status: str
     payment_method: Optional[str] = None
     description: Optional[str] = None
+    #: Chek havolasi — to'lov tizimi beradi. Ilovada "chekni ko'rish"
+    #: tugmasi shundan ishlaydi.
+    rahmat_receipt_url: Optional[str] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
 
 
-# Click to'lov uchun response schema
 class BalanceTopUpResponse(BaseModel):
-    """Hisob to'ldirish response - Click URL bilan"""
+    """Hisob to'ldirish javobi — chekaut sahifasiga havola bilan."""
     transaction_id: int
     amount: float
     payment_method: str
     status: str
-    payment_url: Optional[str] = None  # Click to'lov URL'i
+    #: To'lov sahifasi. Ilova uni tashqi brauzerda ochadi.
+    payment_url: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+
+class PaymentMethodRead(BaseModel):
+    """
+    Ilovaga beriladigan to'lov usuli.
+
+    Ro'yxat serverdan keladi: yig'ilgan APK'dagi qotib qolgan ro'yxat
+    sozlama o'zgarganda yolg'on bo'lib qolardi.
+    """
+    code: str
+    title: str
 

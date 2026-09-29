@@ -1,5 +1,9 @@
 # Backend: Hisob to'ldirish uchun kerakli endpoint'lar
 
+> **УСТАРЕЛО (29.09.2026).** Документ описывает схему пополнения через Click,
+> которой больше нет. Актуальное — `docs/backend/PAYMENTS.md`. Оставлен как
+> выгрузка из исходного архива, править его смысла нет.
+
 ## 1. Database Model (SQLAlchemy)
 
 ### Balance Table

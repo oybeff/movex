@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../network/dio_client.dart';
 import '../models/balance_model.dart';
 
@@ -16,7 +17,28 @@ class BalanceService {
     }
   }
 
-  /// Hisob to'ldirish - Click to'lov URL'i bilan
+  /// To'lov usullari — SERVERDAN.
+  ///
+  /// Ilovada yozib qo'yilmaydi: yig'ilgan APK'da qotib qolgan ro'yxat
+  /// sozlama o'zgarganda yolg'on bo'lib qolardi. Xato bo'lsa bo'sh
+  /// ro'yxat qaytadi va ekran standart usulni ko'rsatadi — to'ldirish
+  /// imkoniyati butunlay yo'qolmasligi kerak.
+  Future<List<PaymentMethodModel>> getPaymentMethods() async {
+    try {
+      final response = await _dio.get('/balance/methods');
+      final List<dynamic> data = response.data as List<dynamic>;
+      return data
+          .map((e) => PaymentMethodModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      // debugPrint, print emas: yangi `print` flutter analyze sonini
+      // oshiradi, va u loyihada nazorat ostida turadi.
+      debugPrint('Get payment methods error: $e');
+      return const <PaymentMethodModel>[];
+    }
+  }
+
+  /// Hisob to'ldirish — chekaut sahifasiga havola bilan
   Future<BalanceTopUpResponse> topUpBalance({
     required double amount,
     required String paymentMethod,
@@ -44,11 +66,16 @@ class BalanceService {
     }
   }
 
-  /// Transaction statusini tekshirish
+  /// Tranzaksiya holatini tekshirish.
+  ///
+  /// Server holatni TO'LOV TIZIMIDAN so'rab aniqlaydi, bazadagi qiymatni
+  /// shunchaki qaytarmaydi. Kerak, chunki callback yo'lda kechikishi yoki
+  /// tunnel uzilib umuman kelmasligi mumkin: bunda odam pulini to'lagan,
+  /// ekranda esa "kutilmoqda" turardi.
   Future<String> checkTransactionStatus(int transactionId) async {
     try {
-      final transaction = await getTransaction(transactionId);
-      return transaction.status;
+      final response = await _dio.post('/balance/transactions/$transactionId/sync');
+      return BalanceTransactionModel.fromJson(response.data).status;
     } catch (e) {
       print('Check transaction status error: $e');
       rethrow;

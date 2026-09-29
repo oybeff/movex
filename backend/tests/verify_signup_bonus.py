@@ -14,7 +14,6 @@ sinov hisoblarini o'zi o'chiradi.
 Ishga tushirish (server ishlab turgan holda):
     venv/bin/python tests/verify_signup_bonus.py
 """
-import hashlib
 import os
 import sys
 import time
@@ -23,6 +22,8 @@ from decimal import Decimal
 
 import requests
 
+from _topup import topup as _rahmat_topup
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _auth import otp_code  # noqa: E402
 
@@ -30,8 +31,6 @@ BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BACKEND)
 
 API = "http://127.0.0.1:8000"
-CLICK_SERVICE_ID = "111111"
-CLICK_SECRET_KEY = "local_dev_click_secret"
 
 ok_count = 0
 fail_count = 0
@@ -134,25 +133,15 @@ def cleanup():
 
 
 
-def topup(hdr, amount, click_id):
-    """Balansni Click orqali to'ldiradi — sinov uchun yagona yo'l."""
-    tx = requests.post(f"{API}/balance/topup", headers=hdr,
-                       json={"amount": amount, "payment_method": "click"}).json()
-    tx_id, amt = tx["transaction_id"], float(tx["amount"])
+def topup(hdr, amount):
+    """
+    Hisob to'ldirish — Rahmat (Multicard) orqali.
 
-    def cb(path, action, extra=None):
-        st = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        raw = f"{click_id}{CLICK_SERVICE_ID}{CLICK_SECRET_KEY}{tx_id}{amt}{action}{st}"
-        body = {"click_trans_id": click_id, "service_id": CLICK_SERVICE_ID,
-                "merchant_trans_id": tx_id, "amount": amt, "action": action,
-                "error": 0, "error_note": "Success", "sign_time": st,
-                "sign_string": hashlib.md5(raw.encode()).hexdigest()}
-        if extra:
-            body.update(extra)
-        return requests.post(f"{API}/balance/{path}", data=body).json()
-
-    prep = cb("click/prepare", 0)
-    cb("click/complete", 1, {"merchant_prepare_id": prep.get("merchant_prepare_id", tx_id)})
+    Mantiq _topup.py da: ilgari bu funksiya har bir testda o'z nusxasi
+    bilan turardi va to'lov tizimi almashganda oltita joyni tuzatish
+    kerak bo'ldi.
+    """
+    return _rahmat_topup(hdr, amount, API)
 
 
 def payout_settings(hdr):
@@ -257,14 +246,14 @@ def main():
               r.text[:160])
 
         head("O'z puli yechiladi, sovg'a esa qoladi")
-        topup(owner4, 60000, 960000 + int(time.time()) % 10000)
+        topup(owner4, 60000)
         r = request_payout(owner4, 60000)
         check("o'z puli yechildi", r.status_code in (200, 201),
               f"status={r.status_code} {r.text[:160]}")
 
         head("Sarflaganda avval O'Z puli ketadi")
         phone5, owner5 = register("owner")
-        topup(owner5, 70000, 970000 + int(time.time()) % 10000)
+        topup(owner5, 70000)
         # 120 000 bor: 50 000 sovg'a + 70 000 o'z puli.
         r = request_payout(owner5, 70000)
         check("o'z 70 000 yechishga ruxsat", r.status_code in (200, 201),
