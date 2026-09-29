@@ -5,6 +5,10 @@ from datetime import datetime
 class OTPSendRequest(BaseModel):
     """Request to send OTP to phone number"""
     phone: str
+    #: Ilova tili ('uz'/'ru'). RO'YXATDAN O'TISHDA kerak: foydalanuvchi
+    #: hali bazada yo'q, va SMS tilini faqat ilova aytadi. Mavjud
+    #: foydalanuvchida uning saqlangan tili ustuvor.
+    language: Optional[str] = None
 
 class OTPSendResponse(BaseModel):
     """Response after sending OTP"""

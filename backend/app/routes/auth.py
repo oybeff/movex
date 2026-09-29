@@ -133,7 +133,7 @@ async def send_otp(request: OTPSendRequest, db: Session = Depends(get_db)):
     Send OTP code to phone number
     """
     otp_service = OTPService(db)
-    result = await otp_service.send_otp(request.phone)
+    result = await otp_service.send_otp(request.phone, request.language)
 
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])

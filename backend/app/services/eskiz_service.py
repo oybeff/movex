@@ -161,15 +161,38 @@ class EskizService:
                 "message": f"Error: {str(e)}"
             }
     
-    async def send_otp(self, phone: str, otp_code: str) -> dict:
+    # OTP SMS matni — TILGA qarab. Ikkalasi ham LOTIN yozuvida: kirill
+    # harfi SMSni ikki qismga bo'ladi (70 belgi o'rniga 160), ya'ni ikki
+    # baravar qimmat. Matn Eskiz "Mening matnlarim"dagi tasdiqlangan shablon
+    # bilan AYNAN mos bo'lishi shart — o'zgartirsa, Eskiz yuborishni rad
+    # etadi. Shuning uchun bu ikki satr shablon matni bilan bir xil turishi
+    # kerak (kod o'rnida modrator maska qo'yadi).
+    # DIQQAT: Eskiz qoidasi — kod bo'lgan SMSda RESURS NOMI ("Movex GO") va
+    # kodning MAQSADI ("kirish uchun") ko'rsatilishi SHART, aks holda
+    # operatorlar qabul qilmaydi. Bitta kod ro'yxatdan o'tish, kirish va
+    # PIN tiklashda ishlatiladi — hammasi "ilovaga kirish", shuning uchun
+    # matn umumiy. O'zgartirsang — Eskizdagi tasdiqlangan shablonni ham
+    # o'zgartir, aks holda yuborish rad etiladi.
+    OTP_TEMPLATES = {
+        "uz": "Movex GO ilovasiga kirish uchun tasdiqlash kodi: {code}. Kodni hech kimga bermang!",
+        "ru": "Kod podtverzhdeniya dlya vhoda v Movex GO: {code}. Nikomu ne soobshchayte.",
+    }
+
+    def otp_message(self, otp_code: str, language: str = "uz") -> str:
+        """OTP matni — tilga qarab. Notanish til uchun o'zbekcha."""
+        template = self.OTP_TEMPLATES.get(language, self.OTP_TEMPLATES["uz"])
+        return template.format(code=otp_code)
+
+    async def send_otp(self, phone: str, otp_code: str, language: str = "uz") -> dict:
         """
-        Send OTP code to phone number
+        Send OTP code to phone number.
+
         Args:
             phone: Phone number
-            otp_code: 4-digit OTP code
+            otp_code: verification code
+            language: 'uz' yoki 'ru' — SMS matni shu tilda ketadi
         Returns:
             dict with status and message
         """
-        message = f"Movex GO tasdiqlash kodi: {otp_code}\nKodni hech kimga bermang!"
-        return await self.send_sms(phone, message)
+        return await self.send_sms(phone, self.otp_message(otp_code, language))
 

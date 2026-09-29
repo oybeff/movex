@@ -29,6 +29,14 @@ def _test_phones() -> set:
     return {p.strip() for p in raw.split(",") if p.strip()}
 
 
+def _normalize_lang(value) -> str:
+    """Ilovadan kelgan tilni tekshiradi: faqat 'uz'/'ru', qolgani None."""
+    if not value:
+        return None
+    v = str(value).strip().lower()[:2]
+    return v if v in ("uz", "ru") else None
+
+
 class OTPService:
     """OTP verification service"""
     
@@ -43,11 +51,16 @@ class OTPService:
         """
         return str(random.randint(1000, 9999))
     
-    async def send_otp(self, phone: str) -> dict:
+    async def send_otp(self, phone: str, request_language: str = None) -> dict:
         """
-        Send OTP code to phone number
+        Send OTP code to phone number.
+
         Args:
             phone: Phone number
+            request_language: ilovadan kelgan til ('uz'/'ru'). RO'YXATDAN
+                O'TISHDA kerak: bunda foydalanuvchi hali bazada yo'q, va til
+                faqat ilovadan bilinadi. Mavjud foydalanuvchida esa uning
+                saqlangan tili ustuvor.
         Returns:
             dict with status and message
         """
@@ -201,11 +214,15 @@ class OTPService:
             # lokal deb hisoblaydi — importdan oldin ishlatilsa yiqiladi.
             from app.models.user import User
 
-            language = (
+            # Mavjud foydalanuvchida — uning saqlangan tili; yo'q bo'lsa
+            # (ro'yxatdan o'tish) — ilovadan kelgan til; ikkovi ham yo'q
+            # bo'lsa — o'zbekcha.
+            saved_language = (
                 self.db.query(User.language)
                 .filter(User.phone == clean_phone)
                 .scalar()
-            ) or "uz"
+            )
+            language = saved_language or _normalize_lang(request_language) or "uz"
 
             if await telegram_auth_service.send_code(self.db, clean_phone, otp_code, language):
                 logger.info("OTP Telegram orqali yuborildi: %s", clean_phone)
@@ -216,7 +233,7 @@ class OTPService:
                     "channel": "telegram",
                 }
 
-            sms_result = await self.eskiz_service.send_otp(clean_phone, otp_code)
+            sms_result = await self.eskiz_service.send_otp(clean_phone, otp_code, language)
 
             if not sms_result["success"]:
                 logger.error(f"Failed to send OTP SMS: {sms_result['message']}")
