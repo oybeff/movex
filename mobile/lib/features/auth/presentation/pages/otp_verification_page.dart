@@ -155,7 +155,10 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
     setState(() => _loading = true);
 
     try {
-      await _authRepository.sendOTP(phone: widget.phoneNumber);
+      await _authRepository.sendOTP(
+        phone: widget.phoneNumber,
+        language: context.locale.languageCode,
+      );
       
       if (!mounted) return;
 

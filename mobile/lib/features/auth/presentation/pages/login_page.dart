@@ -29,6 +29,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final result = await _authRepository.sendOTP(
         phone: _phoneCtrl.text.trim(),
+        language: context.locale.languageCode,
       );
 
       if (!mounted) return;

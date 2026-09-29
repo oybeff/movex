@@ -5,6 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/services/pin_service.dart';
+import '../../../../core/services/user_service.dart';
+import '../../../../core/utils/error_handler.dart';
+import '../../data/repositories/auth_repository.dart';
+import 'otp_verification_page.dart';
 
 /// PIN ekrani. Uch vazifani bajaradi, shuning uchun rejim bilan.
 enum PinMode {
@@ -121,6 +125,44 @@ class _PinPageState extends State<PinPage> {
     }
   }
 
+  /// "PIN kodni unutdingizmi?" — SMS OTP orqali tiklash.
+  ///
+  /// Odam allaqachon tizimga kirgan (token bor), faqat PIN bilan
+  /// bloklangan. Shuning uchun: telefonini profildan olamiz, eski PINni
+  /// o'chiramiz, SMS kod yuboramiz va OTP ekraniga o'tamiz. OTP muvaffaqiyatli
+  /// bo'lgach, o'sha ekran yangi PIN o'rnatishni taklif qiladi va ichkariga
+  /// kiritadi — ya'ni tiklashning alohida oxiri kerak emas.
+  Future<void> _forgotPin() async {
+    setState(() => _error = null);
+    // Tilni async chaqiruvdan OLDIN olamiz: keyin context ishlatish
+    // (await'dan so'ng) flutter ogohlantirishi beradi.
+    final language = context.locale.languageCode;
+    try {
+      final user = await UserService().getCurrentUser();
+      final phone = user.phone;
+      if (phone == null || phone.isEmpty) {
+        if (mounted) setState(() => _error = 'pin.reset_no_phone'.tr());
+        return;
+      }
+
+      // Eski PINni O'CHIRAMIZ: OTP o'tgach ekran yangisini so'raydi, va
+      // odam eski unutilgan kod bilan qulflanib qolmaydi.
+      await PinService.clearPin();
+      await AuthRepository().sendOTP(phone: phone, language: language);
+      if (!mounted) return;
+
+      // OTP ekrani login rejimida: kod tasdiqlangach yangi PIN taklif
+      // qilinadi va bosh ekranga o'tkazadi.
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => OTPVerificationPage(phoneNumber: phone),
+        ),
+      );
+    } catch (e) {
+      if (mounted) showErrorDialog(context, e);
+    }
+  }
+
   String get _title {
     switch (widget.mode) {
       case PinMode.create:
@@ -173,6 +215,16 @@ class _PinPageState extends State<PinPage> {
               _dots(),
               const Spacer(),
               _keypad(),
+              // "Unutdingizmi?" faqat qulf rejimida: create/confirm da
+              // odam kodni endigina kiritmoqda, tiklash u yerda ortiqcha.
+              if (widget.mode == PinMode.unlock)
+                TextButton(
+                  onPressed: _forgotPin,
+                  child: Text(
+                    'pin.forgot'.tr(),
+                    style: const TextStyle(fontSize: 14, color: AppColors.primaryGreen),
+                  ),
+                ),
               const SizedBox(height: 12),
             ],
           ),

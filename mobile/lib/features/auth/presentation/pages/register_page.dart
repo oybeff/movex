@@ -29,6 +29,7 @@ class _RegisterPageState extends State<RegisterPage> {
     try {
       final result = await _authRepository.sendOTP(
         phone: _phoneCtrl.text.trim(),
+        language: context.locale.languageCode,
       );
 
       if (!mounted) return;

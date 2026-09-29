@@ -7,14 +7,22 @@ import '../../../../core/models/user_model.dart';
 class AuthRepository {
   final Dio _dio = DioClient.create();
 
-  /// Send OTP to phone number
-  Future<Map<String, dynamic>> sendOTP({required String phone}) async {
+  /// Send OTP to phone number.
+  ///
+  /// [language] — ilova tili ('uz'/'ru'). RO'YXATDAN O'TISHDA kerak:
+  /// foydalanuvchi hali serverda yo'q, va SMS tilini faqat ilova biladi.
+  /// Berilmasa — server o'zbekchani tanlaydi.
+  Future<Map<String, dynamic>> sendOTP({
+    required String phone,
+    String? language,
+  }) async {
     final cleanPhone = getCleanPhoneNumber(phone);
 
     final response = await _dio.post(
       "/auth/send-otp",
       data: {
         "phone": cleanPhone,
+        if (language != null) "language": language,
       },
     );
 

@@ -975,6 +975,8 @@
     "offer_title": "PIN kod o'rnatasizmi?",
     "offer_body": "Kirish endi saqlanadi va qaytadan so'ralmaydi. Telefon boshqa qo'lga tushsa, hisobingizni PIN kod himoya qiladi",
     "offer_later": "Keyinroq",
-    "offer_set": "O'rnatish"
+    "offer_set": "O'rnatish",
+    "forgot": "PIN kodni unutdingizmi?",
+    "reset_no_phone": "Telefon raqami topilmadi. Qaytadan kiring."
   }
 }
