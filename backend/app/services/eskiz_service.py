@@ -175,7 +175,10 @@ class EskizService:
     # o'zgartir, aks holda yuborish rad etiladi.
     OTP_TEMPLATES = {
         "uz": "Movex GO ilovasiga kirish uchun tasdiqlash kodi: {code}. Kodni hech kimga bermang!",
-        "ru": "Kod podtverzhdeniya dlya vhoda v Movex GO: {code}. Nikomu ne soobshchayte.",
+        # Ruscha — KIRILL yozuvida (67 belgi, hali ham 1 SMS). Lotin
+        # ("Kod podtverzhdeniya...") xunuk ko'rinardi, shuning uchun oddiy
+        # rus tili. Matn Eskizdagi tasdiqlangan shablon bilan aynan mos.
+        "ru": "Код подтверждения для входа в Movex GO: {code}. Никому не сообщайте.",
     }
 
     def otp_message(self, otp_code: str, language: str = "uz") -> str:
