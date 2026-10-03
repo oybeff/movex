@@ -86,7 +86,11 @@ def validate_uzbek_phone(phone: str) -> bool:
         
         # Operator kodini tekshirish
         operator_code = formatted[4:6]
-        valid_operators = ['90', '91', '93', '94', '95', '97', '98', '99', '33', '88', '77', '71', '50']
+        # O'zbekiston kodlari. '20' — yangi kod (eSIM/yangi operatorlar),
+        # ro'yxatda yo'q edi va +99820... raqamlar "noto'g'ri" deb rad
+        # etilardi — hisob to'ldirish shundan yiqilgan. '55' ham qo'shildi.
+        valid_operators = ['90', '91', '93', '94', '95', '97', '98', '99',
+                           '33', '88', '77', '71', '50', '20', '55']
         
         if operator_code not in valid_operators:
             return False

@@ -68,15 +68,19 @@ def create_transaction(
     """Yangi tranzaksiya yaratish"""
     from app.utils.phone_utils import format_phone_number, validate_uzbek_phone
 
-    # Telefon raqamni formatlash va validatsiya
+    # Telefon faqat SMS xabari uchun (ixtiyoriy). Format noto'g'ri bo'lsa —
+    # YIG'ILMAYMIZ, shunchaki saqlamaymiz: hisob to'ldirish telefon
+    # formati tufayli to'xtamasligi kerak. Ilgari bu yerda 400 "Invalid
+    # phone number" otilardi va yangi operator kodli (+99820...) raqamlar
+    # pul solishni butunlay bloklab qo'yardi.
     formatted_phone = None
     if phone_number:
         try:
-            formatted_phone = format_phone_number(phone_number)
-            if not validate_uzbek_phone(formatted_phone):
-                raise HTTPException(status_code=400, detail="Invalid phone number")
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Invalid phone number: {str(e)}")
+            candidate = format_phone_number(phone_number)
+            if validate_uzbek_phone(candidate):
+                formatted_phone = candidate
+        except Exception:
+            formatted_phone = None
 
     transaction = BalanceTransaction(
         user_id=user_id,
