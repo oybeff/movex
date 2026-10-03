@@ -6,18 +6,21 @@
 ///
 /// Yig'ish:
 ///   flutter run   --dart-define=API_BASE_URL=http://192.168.1.101:8000
-///   flutter build apk --release --dart-define=API_BASE_URL=https://movex.004.uz
-///   flutter build ipa --release --dart-define=API_BASE_URL=https://movex.004.uz
+///   flutter build apk --release --dart-define=API_BASE_URL=https://movexgo.uz
+///   flutter build ipa --release --dart-define=API_BASE_URL=https://movexgo.uz
 ///
-/// Hech narsa berilmasa — prod manzili ishlatiladi: tasodifan chiqib ketgan
-/// yig'ilma ishlaydigan serverga murojaat qilgani, dasturchining mahalliy
-/// IP siga urilib turganidan yaxshiroq.
+/// Hech narsa berilmasa — prod manzili (movexgo.uz) ishlatiladi. Bu MUHIM:
+/// Xcode orqali to'g'ridan-to'g'ri yig'ilganda --dart-define berilmaydi,
+/// shuning uchun standart qiymat jangovar server bo'lishi shart. Ilgari bu
+/// yerda eski `movex.004.uz` turardi (u boshqa serverda qolgan va bu
+/// loyihaga aloqasi yo'q) — Xcode'dan yig'ilgan ilova o'lik serverga
+/// urilardi.
 class AppConfig {
   const AppConfig._();
 
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://movex.004.uz',
+    defaultValue: 'https://movexgo.uz',
   );
 
   /// Tarmoq so'rovlarining to'liq jurnalini yoqish (token va so'rov tanasi
