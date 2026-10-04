@@ -144,21 +144,12 @@ media.folder("listings")
 media.folder("materials")
 app.mount("/static", StaticFiles(directory=media.MEDIA_ROOT), name="static")
 
-# Telegramdan yangiliklarni so'rash — kirish shu orqali tasdiqlanadi.
-#
-# Vebhuk emas, chunki unga ochiq HTTPS manzil kerak, prod esa hali
-# ko'tarilmagan. TELEGRAM_POLLING=false bo'lsa hech narsa boshlanmaydi:
-# bitta botni ikki joydan so'rab bo'lmaydi, Telegram 409 qaytaradi.
-@app.on_event("startup")
-async def _start_telegram_polling():
-    from app.services import telegram_poller
-    telegram_poller.start()
-
-
-@app.on_event("shutdown")
-async def _stop_telegram_polling():
-    from app.services import telegram_poller
-    await telegram_poller.stop()
+# Telegram orqali KIRISH olib tashlandi (04.10.2026): tasdiqlash kodi
+# endi faqat SMS bilan yuboriladi, kirish oqimi bitta — raqamni
+# tasdiqlash, so'ng PIN kod. Shu bilan birga botdan yangiliklarni
+# so'rash (polling) ham kerak emas: u faqat kirishni tasdiqlash uchun
+# ishlatilardi. Guruhga xabarnoma yuborish (telegram_service) qoladi —
+# u botdan javob kutmaydi.
 
 
 # Health check endpoint

@@ -38,19 +38,7 @@
     "code_not_received": "Код не пришел?",
     "resend": "Отправить повторно",
     "fill_information": "Заполните информацию",
-    "complete_registration": "Для завершения регистрации",
-    "telegram_button": "Войти через Telegram",
-    "telegram_title": "Вход через Telegram",
-    "telegram_hint": "Откройте бота и нажмите кнопку «Поделиться номером». Код вводить не нужно — Телеграм подтвердит номер сам.",
-    "telegram_open": "Открыть Telegram",
-    "telegram_waiting": "Ждём подтверждения в Телеграме…",
-    "telegram_confirmed": "Номер подтверждён",
-    "telegram_expired": "Время вышло. Начните заново.",
-    "telegram_retry": "Попробовать снова",
-    "telegram_unavailable": "Вход через Telegram пока не настроен",
-    "telegram_cant_open": "Не удалось открыть Телеграм. Установите приложение или откройте ссылку вручную.",
-    "telegram_link_copied": "Ссылка скопирована",
-    "or": "или"
+    "complete_registration": "Для завершения регистрации"
   },
   "home": {
     "main": "Главная",

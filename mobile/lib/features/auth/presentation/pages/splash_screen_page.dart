@@ -70,8 +70,13 @@ class _SplashScreenPageState extends State<SplashScreenPage> with SingleTickerPr
 
     if (token != null && role != null) {
       // Kirish saqlanadi va qaytadan so'ralmaydi, shuning uchun telefonni
-      // PIN kod himoya qiladi. PIN qo'yilmagan bo'lsa — to'g'ridan-to'g'ri
-      // ichkariga: majburlamaymiz.
+      // PIN kod himoya qiladi — va u MAJBURIY.
+      //
+      // PIN qo'yilmagan holat baribir bo'ladi: ilgari o'rnatish taklif edi
+      // va undan voz kechish mumkin edi, ya'ni yangilanishdan keyin kirgan
+      // odamda kod yo'q. Shuning uchun bu yerda ichkariga qo'yib
+      // yubormaymiz, balki o'rnatishni so'raymiz.
+      if (!mounted) return;
       if (await PinService.hasPin()) {
         if (!mounted) return;
         final unlocked = await Navigator.of(context).push<bool>(
@@ -81,6 +86,10 @@ class _SplashScreenPageState extends State<SplashScreenPage> with SingleTickerPr
           ),
         );
         if (unlocked != true) return;
+      } else {
+        if (!mounted) return;
+        await requirePinSetup(context);
+        if (!mounted) return;
       }
 
       if (!mounted) return;

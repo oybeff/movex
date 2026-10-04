@@ -38,19 +38,7 @@
     "code_not_received": "Kod kelmadimi?",
     "resend": "Qayta yuborish",
     "fill_information": "Ma'lumotlarni to'ldiring",
-    "complete_registration": "Ro'yxatdan o'tishni yakunlash uchun",
-    "telegram_button": "Telegram orqali kirish",
-    "telegram_title": "Telegram orqali kirish",
-    "telegram_hint": "Botni oching va «Raqamni ulashish» tugmasini bosing. Kod kiritish shart emas — raqamni Telegramning o'zi tasdiqlaydi.",
-    "telegram_open": "Telegramni ochish",
-    "telegram_waiting": "Telegramda tasdiqlashni kutyapmiz…",
-    "telegram_confirmed": "Raqam tasdiqlandi",
-    "telegram_expired": "Vaqt tugadi. Qaytadan boshlang.",
-    "telegram_retry": "Qayta urinish",
-    "telegram_unavailable": "Telegram orqali kirish hali sozlanmagan",
-    "telegram_cant_open": "Telegram ochilmadi. Ilovani o'rnating yoki havolani qo'lda oching.",
-    "telegram_link_copied": "Havola nusxalandi",
-    "or": "yoki"
+    "complete_registration": "Ro'yxatdan o'tishni yakunlash uchun"
   },
   "home": {
     "main": "Asosiy",

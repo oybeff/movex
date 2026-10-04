@@ -24,7 +24,7 @@ fi
 
 failed=0
 
-for test in verify_equipment_types verify_access verify_phone_normalization verify_demo_login verify_money verify_rahmat verify_commission verify_signup_bonus verify_refunds verify_payouts verify_notifications verify_requests verify_listings verify_listing_money verify_materials verify_tx_language verify_account_state verify_admin_csrf verify_otp_security verify_telegram_webhook verify_smoke_get; do
+for test in verify_equipment_types verify_access verify_phone_normalization verify_demo_login verify_money verify_rahmat verify_commission verify_signup_bonus verify_refunds verify_payouts verify_notifications verify_requests verify_listings verify_listing_money verify_materials verify_tx_language verify_account_state verify_admin_csrf verify_otp_security verify_smoke_get; do
   printf '\n\033[1m### %s ###\033[0m\n' "$test"
   if "$PY" "$DIR/$test.py"; then
     :

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:toastification/toastification.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/error_handler.dart';
+import 'pin_page.dart';
 import '/features/auth/data/repositories/auth_repository.dart';
 
 class RegisterCompletePage extends StatefulWidget {
@@ -32,8 +33,10 @@ class _RegisterCompletePageState extends State<RegisterCompletePage> {
 
     setState(() => _loading = true);
     try {
-      // 1. Register user (faqat user yaratish, token yo'q)
-      await _authRepository.register(
+      // 1. Ro'yxatdan o'tish. Javobda DARHOL kirish tokeni keladi:
+      //    raqam SMS kodi bilan oldingi qadamda tasdiqlangan, ikkinchi
+      //    marta kod so'rash ortiqcha (va ortiqcha SMS puli).
+      final result = await _authRepository.register(
         fullName: _nameCtrl.text.trim(),
         phone: widget.phone,
         role: widget.role,
@@ -51,8 +54,22 @@ class _RegisterCompletePageState extends State<RegisterCompletePage> {
         alignment: Alignment.topCenter,
       );
 
-      // 3. Login sahifasiga yo'naltirish (user o'zi login qiladi)
-      context.go('/login');
+      // 3. PIN kod — MAJBURIY. Keyingi kirishlarda SMS so'ralmaydi,
+      //    shuning uchun ilovani himoya qiladigan narsa aynan shu kod
+      //    (va u o'rnatilgach — barmoq izi / Face ID).
+      await requirePinSetup(context);
+      if (!mounted) return;
+
+      // 4. Rolga qarab ichkariga. Ilgari bu yer '/login' ga qaytarardi:
+      //    odam qaytadan kod so'rab, SMS ikki marta kelardi.
+      final role = result['role'];
+      if (role == 'owner') {
+        context.go('/ownerHome');
+      } else if (role == 'client') {
+        context.go('/clientHome');
+      } else {
+        context.go('/');
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);

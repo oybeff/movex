@@ -83,40 +83,6 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 30),
                 _buildForm(),
                 const SizedBox(height: 25),
-                // Telegram orqali kirish.
-                //
-                // SMS asosiy yo'l bo'lib qoladi, lekin kod yetib bormasligi
-                // mumkin: operator ushlab qolishi yoki hisobda mablag' yo'qligi.
-                // Telegramda esa xabar darhol keladi va birinchi kirishda kod
-                // umuman kerak emas.
-                Row(
-                  children: [
-                    const Expanded(child: Divider(color: AppColors.lightGrey)),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text(
-                        'auth.or'.tr(),
-                        style: const TextStyle(color: AppColors.grey, fontSize: 13),
-                      ),
-                    ),
-                    const Expanded(child: Divider(color: AppColors.lightGrey)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: _loading ? null : () => context.push('/telegram-login'),
-                  icon: const Icon(Icons.send, size: 20),
-                  label: Text('auth.telegram_button'.tr()),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 52),
-                    foregroundColor: AppColors.primaryGreen,
-                    side: const BorderSide(color: AppColors.primaryGreen),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
                 TextButton(
                   onPressed: () => context.pushReplacement('/register'),
                   child: Text('auth.no_account'.tr() + ' ' + 'auth.register_button'.tr()),

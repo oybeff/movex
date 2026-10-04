@@ -115,8 +115,8 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
           });
         } else {
           // Kirish endi saqlanadi va qaytadan so'ralmaydi, shuning uchun
-          // bu yerda PIN kod taklif qilinadi — bir marta.
-          await offerPinSetup(context);
+          // PIN kod MAJBURIY: ilovani himoya qiladigan yagona narsa shu.
+          await requirePinSetup(context);
           if (!mounted) return;
           // If this is login flow, navigate to home based on role
           final role = result['role'];

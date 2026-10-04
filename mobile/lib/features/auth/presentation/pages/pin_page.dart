@@ -1,7 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/services/pin_service.dart';
@@ -23,9 +22,18 @@ enum PinMode {
 }
 
 class PinPage extends StatefulWidget {
-  const PinPage({super.key, required this.mode, this.onSuccess});
+  const PinPage({
+    super.key,
+    required this.mode,
+    this.onSuccess,
+    this.mandatory = false,
+  });
 
   final PinMode mode;
+
+  /// Majburiy o'rnatish: ortga qaytish yo'q va AppBar ko'rsatilmaydi.
+  /// Ro'yxatdan o'tishda PIN kod shart — usiz ilovaga kirib bo'lmaydi.
+  final bool mandatory;
 
   /// Muvaffaqiyatli tugagach chaqiriladi. Berilmasa — Navigator.pop(true).
   final VoidCallback? onSuccess;
@@ -179,10 +187,12 @@ class _PinPageState extends State<PinPage> {
     // unlock rejimida ortga qaytish yo'q: aks holda qulf ma'nosini
     // yo'qotardi — "ortga" bosib ichkariga kirib bo'lardi.
     return PopScope(
-      canPop: widget.mode != PinMode.unlock,
+      // Qulf rejimida ham, majburiy o'rnatishda ham ortga qaytish yo'q:
+      // aks holda "ortga" bosib PIN kodsiz ichkariga kirib bo'lardi.
+      canPop: widget.mode != PinMode.unlock && !widget.mandatory,
       child: Scaffold(
         backgroundColor: AppColors.white,
-        appBar: widget.mode == PinMode.unlock
+        appBar: (widget.mode == PinMode.unlock || widget.mandatory)
             ? null
             : AppBar(
                 backgroundColor: AppColors.white,
@@ -322,39 +332,26 @@ class _PinPageState extends State<PinPage> {
 }
 
 
-/// Kirishdan keyin PIN o'rnatishni BIR MARTA taklif qiladi.
+/// PIN kodni MAJBURIY o'rnatish.
 ///
-/// Majburlamaymiz: kimdir kodni xohlamaydi, va uni zo'rlab qo'yish kirishni
-/// og'irlashtiradi. Rad etgan odam sozlamalardan istagan payt qo'ya oladi,
-/// shuning uchun taklif qayta chiqmaydi.
-Future<void> offerPinSetup(BuildContext context) async {
-  const shownKey = 'pin_offer_shown';
-  final prefs = await SharedPreferences.getInstance();
-  if (prefs.getBool(shownKey) ?? false) return;
+/// Ro'yxatdan o'tgandan va kirgandan keyin chaqiriladi. Ilgari bu taklif
+/// edi ("keyinroq" tugmasi bilan), va PIN qo'ymagan odam ilovaga har
+/// safar hech narsa so'ralmasdan kirardi. Endi kirish oqimi bitta:
+/// raqamni SMS bilan tasdiqlash, so'ng PIN kod — keyingi kirishlarda
+/// faqat PIN (yoki barmoq izi).
+Future<void> requirePinSetup(BuildContext context) async {
   if (await PinService.hasPin()) return;
-  await prefs.setBool(shownKey, true);
-
   if (!context.mounted) return;
-  final wants = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text('pin.offer_title'.tr()),
-      content: Text('pin.offer_body'.tr()),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext, false),
-          child: Text('pin.offer_later'.tr()),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext, true),
-          child: Text('pin.offer_set'.tr()),
-        ),
-      ],
-    ),
-  );
-  if (wants != true || !context.mounted) return;
 
-  await Navigator.of(context).push<bool>(
-    MaterialPageRoute(builder: (_) => const PinPage(mode: PinMode.create)),
-  );
+  // PIN o'rnatilmaguncha qaytarmaymiz: ekranni yopib bo'lmaydi, lekin
+  // kutilmagan holatda (masalan tizim ekranni yopsa) qayta so'raymiz.
+  while (!await PinService.hasPin()) {
+    if (!context.mounted) return;
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => const PinPage(mode: PinMode.create, mandatory: true),
+        fullscreenDialog: true,
+      ),
+    );
+  }
 }

@@ -17,4 +17,3 @@ from .eskiz_token import EskizToken
 from .equipment_request import EquipmentRequest, RequestOffer
 from .listing import Listing, ListingOffer, ListingPhoto, ListingReaction
 from .material import MaterialOrder, MaterialPhoto, MaterialProduct
-from .telegram import TelegramAccount, TelegramLoginRequest

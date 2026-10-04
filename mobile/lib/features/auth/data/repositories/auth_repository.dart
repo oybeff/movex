@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/widgets/phone_input_field.dart';
-import '../../../../core/models/user_model.dart';
 
 class AuthRepository {
   final Dio _dio = DioClient.create();
@@ -53,10 +52,9 @@ class AuthRepository {
 
   /// Kirish tugagach sessiyani saqlaydi.
   ///
-  /// SMS kodi ham, Telegram ham shu yerga keladi: javob tanasi bir xil
-  /// (OTPVerifyResponse). Ikki nusxa bo'lsa, biri til yuborishni yoki
-  /// rolni saqlashni unutib qoladi — shundan keyin ruscha interfeysdagi
-  /// odam o'zbekcha xabarnoma olardi.
+  /// Kirish ham, ro'yxatdan o'tish ham shu yerga keladi: javob tanasi
+  /// bir xil (OTPVerifyResponse). Ikki nusxa bo'lsa, biri rolni yoki
+  /// tilni saqlashni unutib qoladi.
   Future<Map<String, dynamic>> _saveSession(dynamic data) async {
     if (data["success"] == true && data["access_token"] != null) {
       final token = data["access_token"];
@@ -101,52 +99,14 @@ class AuthRepository {
     };
   }
 
-  // ------------------------------------------------ Telegram orqali kirish
-
-  /// Kirishni boshlaydi: t.me havolasi va kuzatish uchun token qaytadi.
-  ///
-  /// Nega havola. Bot odamga BIRINCHI bo'lib yoza olmaydi va uni telefon
-  /// raqami bo'yicha topa olmaydi — bunday API yo'q. Shuning uchun birinchi
-  /// qadamni doim odamning o'zi bosadi.
-  Future<Map<String, dynamic>> telegramStart() async {
-    final response = await _dio.post("/auth/telegram/start");
-    return {
-      "token": response.data["token"] as String,
-      "url": response.data["url"] as String,
-      "expires_in": response.data["expires_in"] as int? ?? 600,
-    };
-  }
-
-  /// Tasdiqlandimi — ilova shu yerni so'rab turadi.
-  ///
-  /// Tasdiqlangan bo'lsa raqam ham keladi: hisob hali yo'q bo'lsa,
-  /// ro'yxatdan o'tish oynasiga aynan shu raqam bilan o'tiladi.
-  Future<Map<String, dynamic>> telegramStatus(String token) async {
-    final response = await _dio.get(
-      "/auth/telegram/status",
-      queryParameters: {"token": token},
-    );
-    return {
-      "status": response.data["status"] as String? ?? "not_found",
-      "phone": response.data["phone"] as String?,
-    };
-  }
-
-  /// Tasdiqlangan so'rov bo'yicha kirish.
-  ///
-  /// Raqam Telegramning O'ZIDAN kelgan, ya'ni tasdiqlangan — SMS kodidan
-  /// kam ishonchli emas. Token bir martalik: ikkinchi chaqiriq 400 beradi.
-  Future<Map<String, dynamic>> telegramComplete(String token) async {
-    final response = await _dio.post(
-      "/auth/telegram/complete",
-      queryParameters: {"token": token},
-    );
-    return _saveSession(response.data);
-  }
-
   /// Register new user (phone must be verified first)
   /// No password needed - authentication is done via OTP only
-  Future<UserModel> register({
+  /// Ro'yxatdan o'tish. Javobda DARHOL kirish tokeni keladi.
+  ///
+  /// Ilgari bu yer foydalanuvchini qaytarardi va ilova odamni qaytadan
+  /// kirish ekraniga olib borardi — SMS ikki marta so'ralardi. Endi kod
+  /// bir marta keladi, token esa shu javobdan saqlanadi.
+  Future<Map<String, dynamic>> register({
     required String fullName,
     required String phone,
     required String role,
@@ -162,7 +122,7 @@ class AuthRepository {
         "role": role,
       },
     );
-    return UserModel.fromJson(response.data);
+    return _saveSession(response.data);
   }
 
   Future<void> logout() async {

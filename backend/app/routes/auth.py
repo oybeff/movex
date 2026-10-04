@@ -1,7 +1,6 @@
 import logging
-import secrets
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
@@ -11,7 +10,6 @@ from app.models.user import User
 from app.schemas.user import UserCreate, UserRead
 from app.schemas.otp import OTPSendRequest, OTPSendResponse, OTPVerifyRequest, OTPVerifyResponse
 from app.core.security import hash_password, verify_password, create_access_token
-from app.services import telegram_auth_service
 from app.core.config import settings
 from app.services.otp_service import OTPService
 from sqlalchemy import or_
@@ -60,11 +58,15 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 # ========================
 # Регистрация пользователя (только телефон + OTP)
 # ========================
-@router.post("/register", response_model=UserRead)
+@router.post("/register", response_model=OTPVerifyResponse)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
     """
-    Register new user with phone number only (no email/password needed)
-    Phone must be verified via OTP first
+    Ro'yxatdan o'tish: raqam SMS kodi bilan tasdiqlangan bo'lishi shart.
+
+    Javobda DARHOL kirish tokeni qaytadi. Ilgari bu yerda foydalanuvchi
+    qaytardi va ilova odamni qaytadan kirish ekraniga olib borardi —
+    ya'ni SMS IKKI MARTA so'ralardi. Endi kod bir marta keladi: raqamni
+    tasdiqlash, ism-familiya, so'ng PIN kod.
     """
     # Telefon raqam majburiy
     if not user_in.phone:
@@ -106,7 +108,8 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     from app.services import balance_service
     balance_service.grant_signup_bonus(db, new_user)
 
-    return new_user
+    # Token shu yerda beriladi — qayta SMS so'ramaslik uchun.
+    return _issue_login(new_user)
 
 # ========================
 # DEPRECATED: Login endpoint (use OTP verification instead)
@@ -221,82 +224,3 @@ def _login_by_phone(db: Session, clean_phone: str) -> OTPVerifyResponse:
         db.rollback()
 
     return _issue_login(user)
-
-
-# ------------------------------------------------ Telegram orqali kirish
-
-@router.post("/telegram/start")
-def telegram_login_start(db: Session = Depends(get_db)):
-    """
-    Kirish havolasini beradi: t.me/<bot>?start=<token>.
-
-    Nega havola kerak. Telegram boti odamga BIRINCHI bo'lib yoza olmaydi
-    va uni telefon raqami bo'yicha topa olmaydi — bunday API yo'q.
-    Shuning uchun birinchi aloqani odamning o'zi boshlaydi.
-    """
-    if not telegram_auth_service.is_configured():
-        raise HTTPException(400, "Telegram orqali kirish sozlanmagan")
-    return telegram_auth_service.create_login_request(db)
-
-
-@router.get("/telegram/status")
-def telegram_login_status(token: str, db: Session = Depends(get_db)):
-    """Ilova shu yerni so'rab turadi, javob kutayotganda."""
-    return telegram_auth_service.check_login_request(db, token)
-
-
-@router.post("/telegram/complete", response_model=OTPVerifyResponse)
-def telegram_login_complete(token: str, db: Session = Depends(get_db)):
-    """
-    Tasdiqlangan so'rov bo'yicha kirish.
-
-    Raqam Telegramning O'ZIDAN kelgan (contact xabari), ya'ni u
-    tasdiqlangan — SMS kodidan kam ishonchli emas.
-    """
-    phone = telegram_auth_service.consume_login_request(db, token)
-    if phone is None:
-        raise HTTPException(400, "Kirish tasdiqlanmagan yoki muddati o'tgan")
-    return _login_by_phone(db, phone)
-
-
-@router.post("/telegram/webhook", include_in_schema=False)
-async def telegram_webhook(
-    request: Request,
-    db: Session = Depends(get_db),
-    x_telegram_bot_api_secret_token: str | None = Header(default=None),
-):
-    """
-    Telegram yangiliklarini QABUL QILADI — so'rab turishning o'rniga.
-
-    Nega prodda aynan shu kerak. telegram_poller ilova ishga tushganda
-    boshlanadi, ilova esa uvicorn'da bir NECHA jarayonda ishlaydi
-    (--workers 2). Ya'ni bitta botni ikki joydan so'raymiz, Telegram esa
-    409 qaytaradi va kirish gohida ishlaydi, gohida yo'q. Vebhukda
-    bunday muammo yo'q: yangilikni Telegram o'zi yuboradi, qaysi
-    jarayon qabul qilsa — o'sha ishlaydi.
-
-    Manzil TELEGRAM_WEBHOOK_SECRET bilan yopilgan. So'z ko'rsatilmagan
-    bo'lsa manzil umuman yo'q (404): ochiq qoldirilsa, uni bilgan har
-    kim soxta "contact" yuborib, BEGONA raqamdan kirishni tasdiqlagan
-    bo'lardi — parol ham, kod ham so'ralmaydi.
-    """
-    secret = settings.TELEGRAM_WEBHOOK_SECRET
-    if not secret:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Not Found")
-    if not secrets.compare_digest(x_telegram_bot_api_secret_token or "", secret):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Forbidden")
-
-    try:
-        update = await request.json()
-    except Exception:  # noqa: BLE001 — Telegramdan buzuq tana kelishi mumkin
-        return {"ok": True}
-
-    # Xato bo'lsa ham 200 qaytaramiz. 200 dan boshqa javobda Telegram
-    # AYNAN SHU yangilikni qayta-qayta yuboraveradi va navbat to'xtaydi:
-    # bitta buzuq xabar butun kirishni o'ldiradi.
-    try:
-        await telegram_auth_service.handle_update(db, update)
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("Telegram yangiligi qayta ishlanmadi: %s", exc)
-        db.rollback()
-    return {"ok": True}

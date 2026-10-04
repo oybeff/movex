@@ -19,30 +19,18 @@ class Settings(BaseSettings):
     ESKIZ_PASSWORD: str
     # ------------------------------------------------------------ Telegram
     #
-    # Kirish uchun ASOSIY kanal. SMS zaxira bo'lib qoladi: Telegramsiz
-    # odam ham kira olishi kerak.
+    # Faqat XABARNOMA uchun: to'lov va buyurtmalar haqida guruhga yoziladi.
+    # Telegram orqali KIRISH olib tashlandi (04.10.2026) — kod endi faqat
+    # SMS bilan ketadi, shuning uchun bot logini, polling va vebhuk
+    # sozlamalari ham kerak emas, ular o'chirildi.
     #
     # DIQQAT: bu qiymatlar shu yerda, settings da e'lon qilinishi SHART.
     # telegram_service.py ilgari ularni os.getenv orqali o'qirdi va HECH
     # QACHON topmasdi: .env ni pydantic-settings o'qiydi va qiymatlar
-    # os.environ ga tushmaydi. Click kalitlari bilan aynan shunday
-    # bo'lgan — to'lov xabarnomalari jimgina yuborilmay turgan.
+    # os.environ ga tushmaydi.
     TELEGRAM_BOT_TOKEN: str = ""
-    #: Bot logini @ siz — chuqur havola shundan yig'iladi
-    TELEGRAM_BOT_USERNAME: str = ""
     TELEGRAM_GROUP_ID: str = ""
     TELEGRAM_GROUP_TOPIC_ID: str = ""
-
-    #: Bot yangiliklarini so'rab turadigan fon vazifasi. Vebhukdan farqi —
-    #: ochiq HTTPS manzil kerak emas, ya'ni tunnel o'lsa ham ishlaydi.
-    TELEGRAM_POLLING: bool = False
-
-    #: Vebhuk maxfiy so'zi. Bo'sh bo'lsa — /auth/telegram/webhook YO'Q
-    #: (404), ya'ni so'rab turish rejimi ishlaydi. To'ldirilgan bo'lsa
-    #: manzil ochiladi va HAR BIR so'rov shu so'z bilan tekshiriladi:
-    #: aks holda manzilni bilgan har kim soxta yangilik yuborib,
-    #: istalgan raqamdan kirishni tasdiqlagan bo'lardi.
-    TELEGRAM_WEBHOOK_SECRET: str = ""
 
     ESKIZ_API_URL: str = "https://notify.eskiz.uz/api"
 

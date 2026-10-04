@@ -15,7 +15,6 @@ import 'package:movex_go/features/auth/presentation/pages/register_page.dart';
 import 'package:movex_go/features/auth/presentation/pages/register_complete_page.dart';
 import 'package:movex_go/features/auth/presentation/pages/otp_verification_page.dart';
 import 'package:movex_go/features/auth/presentation/pages/login_page.dart';
-import 'package:movex_go/features/auth/presentation/pages/telegram_login_page.dart';
 import 'package:movex_go/features/client_home/presentation/client_home_page.dart';
 import 'package:movex_go/features/owner_home/presentation/pages/owner_home_page.dart';
 import 'package:movex_go/features/owner_home/presentation/pages/add_equipment_page.dart';
@@ -59,10 +58,6 @@ void main() async {
           final role = state.extra as String? ?? 'client';
           return RegisterPage(role: role);
         },
-      ),
-      GoRoute(
-        path: '/telegram-login',
-        builder: (context, state) => const TelegramLoginPage(),
       ),
       GoRoute(
         path: '/login',

@@ -9,7 +9,6 @@ from app.models.otp_verification import OTPVerification
 from app.models.user import User
 from app.core.config import settings
 from app.services.eskiz_service import EskizService
-from app.services import telegram_auth_service
 import logging
 from app.utils.phone_utils import to_db_phone
 
@@ -224,15 +223,11 @@ class OTPService:
             )
             language = saved_language or _normalize_lang(request_language) or "uz"
 
-            if await telegram_auth_service.send_code(self.db, clean_phone, otp_code, language):
-                logger.info("OTP Telegram orqali yuborildi: %s", clean_phone)
-                return {
-                    "success": True,
-                    "message": "Tasdiqlash kodi Telegramga yuborildi",
-                    "expires_in": settings.OTP_EXPIRY_MINUTES * 60,
-                    "channel": "telegram",
-                }
-
+            # Kod FAQAT SMS orqali ketadi. Ilgari avval Telegram sinalardi
+            # (boti bog'langan odamga kod o'sha yerga borardi), lekin kirish
+            # oqimi bitta va oldindan aytib bo'ladigan bo'lishi kerak:
+            # raqamni tasdiqlash — SMS, keyin PIN kod. Telegram orqali
+            # kirish butunlay olib tashlandi.
             sms_result = await self.eskiz_service.send_otp(clean_phone, otp_code, language)
 
             if not sms_result["success"]:
