@@ -77,9 +77,15 @@ class RoleSelectPage extends StatelessWidget {
                     ),
                   const SizedBox(height: 40),
 
-                  // Mijoz tugmasi
+                  // Mijoz tugmasi.
+                  //
+                  // Rol KEYINGI ekranga uzatiladi. Ilgari ikkala tugma ham
+                  // shunchaki '/login' ga olib borardi, rol esa yo'lda
+                  // yo'qolardi va ro'yxatdan o'tishda doim 'client' qo'yilardi:
+                  // "Texnika egasi" ni tanlagan odam mijoz bo'lib qolardi —
+                  // dashboard ham, texnika qo'shish ham, sovg'a ham yo'q.
                   ElevatedButton.icon(
-                    onPressed: () => context.push('/login'),
+                    onPressed: () => context.push('/login', extra: 'client'),
                     icon: const Icon(Icons.person, size: 22),
                     label: Text(
                       'role_select.client'.tr(),
@@ -100,7 +106,7 @@ class RoleSelectPage extends StatelessWidget {
 
                   // Texnika egasi tugmasi
                   ElevatedButton.icon(
-                    onPressed: () => context.push('/login'),
+                    onPressed: () => context.push('/login', extra: 'owner'),
                     icon: const Icon(Icons.engineering, size: 22),
                     label: Text(
                       'role_select.owner'.tr(),

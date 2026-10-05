@@ -61,7 +61,10 @@ void main() async {
       ),
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginPage(),
+        // extra — boshida tanlangan rol. U kirishga ta'sir qilmaydi, faqat
+        // ro'yxatdan o'tishga uzatiladi: rol tanlash ekrani shu yerdan
+        // o'tadi, va usiz tanlov yo'qolardi.
+        builder: (context, state) => LoginPage(role: state.extra as String?),
       ),
       GoRoute(
         path: '/clientHome',

@@ -61,7 +61,9 @@ class _PinPageState extends State<PinPage> {
     _biometricOffered = true;
     if (!await PinService.biometricEnabled()) return;
     if (!await PinService.biometricsAvailable()) return;
-    final ok = await PinService.authenticateBiometric('pin.biometric_reason'.tr());
+    final ok = await PinService.authenticateBiometric(
+      'pin.biometric_reason'.tr(),
+    );
     if (ok && mounted) _finish();
   }
 
@@ -174,7 +176,9 @@ class _PinPageState extends State<PinPage> {
   String get _title {
     switch (widget.mode) {
       case PinMode.create:
-        return _firstEntry == null ? 'pin.create_title'.tr() : 'pin.repeat_title'.tr();
+        return _firstEntry == null
+            ? 'pin.create_title'.tr()
+            : 'pin.repeat_title'.tr();
       case PinMode.unlock:
         return 'pin.unlock_title'.tr();
       case PinMode.confirmCurrent:
@@ -199,44 +203,80 @@ class _PinPageState extends State<PinPage> {
                 elevation: 0,
                 foregroundColor: AppColors.black,
               ),
+        // Ekran past bo'lsa pastki qismi KESILMAYDI.
+        //
+        // Ilgari bu oddiy Column edi: joy yetmaganda "PIN kodni
+        // unutdingizmi?" tugmasi ekrandan chiqib ketardi va bosib
+        // bo'lmasdi — ya'ni kodni unutgan odam ilovaga umuman kira
+        // olmasdi. Endi joy yetmasa ro'yxat suriladi, yetganda esa
+        // ko'rinish o'zgarmaydi: minHeight + IntrinsicHeight Spacer
+        // larni ishlatadi.
         body: SafeArea(
-          child: Column(
-            children: [
-              const Spacer(flex: 2),
-              Icon(Icons.lock_outline_rounded,
-                  size: 46, color: AppColors.primaryGreen),
-              const SizedBox(height: 18),
-              Text(
-                _title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.black),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 20,
-                child: _error == null
-                    ? Text('pin.hint'.tr(),
-                        style: const TextStyle(fontSize: 13, color: AppColors.grey))
-                    : Text(_error!,
-                        style: const TextStyle(fontSize: 13, color: AppColors.error)),
-              ),
-              const SizedBox(height: 26),
-              _dots(),
-              const Spacer(),
-              _keypad(),
-              // "Unutdingizmi?" faqat qulf rejimida: create/confirm da
-              // odam kodni endigina kiritmoqda, tiklash u yerda ortiqcha.
-              if (widget.mode == PinMode.unlock)
-                TextButton(
-                  onPressed: _forgotPin,
-                  child: Text(
-                    'pin.forgot'.tr(),
-                    style: const TextStyle(fontSize: 14, color: AppColors.primaryGreen),
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
+                      const Spacer(flex: 2),
+                      Icon(
+                        Icons.lock_outline_rounded,
+                        size: 46,
+                        color: AppColors.primaryGreen,
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        _title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 20,
+                        child: _error == null
+                            ? Text(
+                                'pin.hint'.tr(),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.grey,
+                                ),
+                              )
+                            : Text(
+                                _error!,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.error,
+                                ),
+                              ),
+                      ),
+                      const SizedBox(height: 26),
+                      _dots(),
+                      const Spacer(),
+                      _keypad(),
+                      // "Unutdingizmi?" faqat qulf rejimida: create/confirm da
+                      // odam kodni endigina kiritmoqda, tiklash u yerda ortiqcha.
+                      if (widget.mode == PinMode.unlock)
+                        TextButton(
+                          onPressed: _forgotPin,
+                          child: Text(
+                            'pin.forgot'.tr(),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.primaryGreen,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                    ],
                   ),
                 ),
-              const SizedBox(height: 12),
-            ],
+              ),
+            ),
           ),
         ),
       ),
@@ -285,7 +325,9 @@ class _PinPageState extends State<PinPage> {
             children: [
               _sideButton(
                 icon: Icons.fingerprint_rounded,
-                onTap: widget.mode == PinMode.unlock ? _tryBiometricManually : null,
+                onTap: widget.mode == PinMode.unlock
+                    ? _tryBiometricManually
+                    : null,
               ),
               _digitButton('0'),
               _sideButton(icon: Icons.backspace_outlined, onTap: _onBackspace),
@@ -304,17 +346,25 @@ class _PinPageState extends State<PinPage> {
   Widget _digitButton(String digit) {
     return _tapTarget(
       onTap: () => _onDigit(digit),
-      child: Text(digit,
-          style: const TextStyle(
-              fontSize: 26, fontWeight: FontWeight.w500, color: AppColors.black)),
+      child: Text(
+        digit,
+        style: const TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.w500,
+          color: AppColors.black,
+        ),
+      ),
     );
   }
 
   Widget _sideButton({required IconData icon, VoidCallback? onTap}) {
     return _tapTarget(
       onTap: onTap,
-      child: Icon(icon,
-          size: 24, color: onTap == null ? Colors.transparent : AppColors.grey),
+      child: Icon(
+        icon,
+        size: 24,
+        color: onTap == null ? Colors.transparent : AppColors.grey,
+      ),
     );
   }
 
@@ -330,7 +380,6 @@ class _PinPageState extends State<PinPage> {
     );
   }
 }
-
 
 /// PIN kodni MAJBURIY o'rnatish.
 ///

@@ -9,7 +9,13 @@ import 'package:movex_go/features/auth/data/repositories/auth_repository.dart';
 import 'package:movex_go/core/utils/error_handler.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({super.key, this.role});
+
+  /// Boshida tanlangan rol ('client' yoki 'owner').
+  ///
+  /// Kirishga TA'SIR QILMAYDI: mavjud odamning roli serverdan keladi.
+  /// U faqat ro'yxatdan o'tishga uzatiladi — shu ekran orqali o'tiladi.
+  final String? role;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -84,7 +90,8 @@ class _LoginPageState extends State<LoginPage> {
                 _buildForm(),
                 const SizedBox(height: 25),
                 TextButton(
-                  onPressed: () => context.pushReplacement('/register'),
+                  onPressed: () =>
+                      context.pushReplacement('/register', extra: widget.role),
                   child: Text('auth.no_account'.tr() + ' ' + 'auth.register_button'.tr()),
                 ),
               ],

@@ -334,6 +334,11 @@ class _SettingsPageState extends State<SettingsPage> {
   // Kirish tokeni endi muddatsiz, shuning uchun telefonni PIN kod himoya
   // qiladi. Yangi bo'lim ochilmadi — sozlamalardagi mavjud ro'yxatga
   // qo'shildi.
+  //
+  // PIN kodni O'CHIRISH yo'q: u majburiy (requirePinSetup). O'chirish
+  // tugmasi bo'lsa, odam uni bosib himoyasiz qolardi, keyin esa ekran-
+  // zastavka o'rnatishni qaytadan so'rab, cheksiz aylanish chiqardi.
+  // Bu yerda faqat kodni almashtirish va barmoq izi tumblerasi.
   bool _pinOn = false;
   bool _biometricOn = false;
   bool _biometricAvailable = false;
@@ -394,16 +399,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   await _loadPinState();
                 },
               ),
-            ListTile(
-              leading:
-                  const Icon(Icons.lock_open_rounded, color: AppColors.error),
-              title: Text('pin.turn_off'.tr(),
-                  style: const TextStyle(color: AppColors.error)),
-              onTap: () async {
-                Navigator.pop(sheetContext);
-                await _removePin();
-              },
-            ),
           ],
         ),
       ),
@@ -424,36 +419,6 @@ class _SettingsPageState extends State<SettingsPage> {
       MaterialPageRoute(builder: (_) => const PinPage(mode: PinMode.create)),
     );
     if (ok == true && mounted) _snackPin('pin.saved'.tr());
-    await _loadPinState();
-  }
-
-  Future<void> _removePin() async {
-    final confirmed = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-          builder: (_) => const PinPage(mode: PinMode.confirmCurrent)),
-    );
-    if (confirmed != true || !mounted) return;
-    if (!mounted) return;
-    final agreed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        content: Text('pin.turn_off_confirm'.tr()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('settings.cancel'.tr()),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text('settings.confirm'.tr()),
-          ),
-        ],
-      ),
-    );
-    if (agreed != true) return;
-    await PinService.clearPin();
-    if (mounted) _snackPin('pin.removed'.tr());
     await _loadPinState();
   }
 
