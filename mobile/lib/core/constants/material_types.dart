@@ -9,9 +9,12 @@ import 'package:easy_localization/easy_localization.dart';
 /// saqlanadi, ekranda esa nomi ko'rsatiladi. Kodni foydalanuvchiga
 /// chiqarib yuborish loyihada allaqachon to'rt marta bo'lgan.
 ///
-/// Ikonka sifatida emoji ishlatiladi — texnikadagidek svg yasash shart
-/// emas: g'isht va sement uchun chizma emas, tanib olinadigan belgi
-/// yetarli, va u har qanday platformada bir xil ko'rinadi.
+/// Ikonka — texnikadagidek SVG (`assets/material_types/<kod>.svg`),
+/// tool/generate_equipment_icons.py yasaydi.
+///
+/// Ilgari bu yerda EMOJI turardi (🧱, 🗿, 🏖). Ular har bir telefonda
+/// boshqacha chiziladi, ba'zisi esa materialga umuman mos emas: 🗿 —
+/// Pasxa oroli haykali, qurilish toshi emas; 🏖 — plyaj soyaboni.
 class MaterialTypes {
   const MaterialTypes._();
 
@@ -30,26 +33,15 @@ class MaterialTypes {
     fallback,
   ];
 
-  static const Map<String, String> _emoji = <String, String>{
-    'brick': '🧱',
-    'gas_block': '⬜',
-    'cement': '🪣',
-    'sand': '🏖',
-    'gravel': '🪨',
-    'stone': '🗿',
-    'rebar': '🔩',
-    'concrete': '🚧',
-    'lumber': '🪵',
-    fallback: '📦',
-  };
-
   static String normalize(String? code) {
     if (code == null) return fallback;
     final value = code.trim().toLowerCase();
     return codes.contains(value) ? value : fallback;
   }
 
-  static String emoji(String? code) => _emoji[normalize(code)] ?? '📦';
+  /// Interfeys uchun SVG yo'li.
+  static String svgAsset(String? code) =>
+      'assets/material_types/${normalize(code)}.svg';
 
   /// Foydalanuvchi tilidagi nomi.
   static String label(String? code) =>

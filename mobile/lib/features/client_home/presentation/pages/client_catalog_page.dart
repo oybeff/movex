@@ -13,6 +13,7 @@ import '../../../../core/constants/material_types.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import '../../../materials/presentation/pages/materials_catalog_page.dart';
+import '../../../../core/widgets/material_type_icon.dart';
 
 class ClientCatalogPage extends StatefulWidget {
   const ClientCatalogPage({super.key});
@@ -570,8 +571,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                           alignment: Alignment.center,
-                          child: Text(MaterialTypes.emoji(code),
-                              style: const TextStyle(fontSize: 24)),
+                          child: MaterialTypeIcon(code, size: 30),
                         ),
                         const SizedBox(height: 5),
                         Text(
@@ -593,6 +593,9 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
       ),
     );
   }
+
+  static const BorderRadius _cardTopRadius =
+      BorderRadius.vertical(top: Radius.circular(16));
 
   Widget _buildEquipmentCard(EquipmentModel equipment) {
     // Masofa hisoblash
@@ -640,12 +643,9 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Image
-                Container(
+                SizedBox(
                   height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  ),
+                  width: double.infinity,
                   child: equipment.photos != null && equipment.photos!.isNotEmpty
                       ? ClipRRect(
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
@@ -655,13 +655,15 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                             width: double.infinity,
                             // Rasm bo'lmasa — umumiy belgi emas, aynan shu
                             // texnika turining ikonkasi
-                            errorBuilder: (_, __, ___) => Center(
-                              child: EquipmentTypeIcon(equipment.type, size: 48),
+                            errorBuilder: (_, __, ___) => EquipmentPhotoPlaceholder(
+                              equipment.type,
+                              borderRadius: _cardTopRadius,
                             ),
                           ),
                         )
-                      : Center(
-                          child: EquipmentTypeIcon(equipment.type, size: 48),
+                      : EquipmentPhotoPlaceholder(
+                          equipment.type,
+                          borderRadius: _cardTopRadius,
                         ),
                 ),
                 // Info

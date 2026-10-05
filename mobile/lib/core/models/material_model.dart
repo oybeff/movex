@@ -68,7 +68,6 @@ class MaterialProductModel {
 
   String get typeLabel => MaterialTypes.label(materialType);
   String get unitLabel => MaterialTypes.unitLabel(unit);
-  String get emoji => MaterialTypes.emoji(materialType);
 
   factory MaterialProductModel.fromJson(Map<String, dynamic> json) {
     return MaterialProductModel(

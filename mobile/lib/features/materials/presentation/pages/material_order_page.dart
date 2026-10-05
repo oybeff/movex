@@ -9,6 +9,7 @@ import '../../../../core/constants/material_types.dart';
 import '../../../../core/models/material_model.dart';
 import '../../../../core/services/material_service.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/widgets/material_type_icon.dart';
 
 /// Material buyurtmasi: miqdor → og'irlik → mashina → yetkazish → jami.
 ///
@@ -236,7 +237,7 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
   Widget _productCard(MaterialProductModel product) => _card(
         child: Row(
           children: [
-            Text(product.emoji, style: const TextStyle(fontSize: 34)),
+            MaterialTypeIcon(product.materialType, size: 42),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

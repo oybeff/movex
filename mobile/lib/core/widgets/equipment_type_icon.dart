@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../constants/app_colors.dart';
 import '../constants/equipment_types.dart';
 
 /// Texnika turining ikonkasi.
 ///
-/// Odatda IKKI RANGLI chiziladi: korpus to'q, ishchi qismi (cho'mich, tig',
-/// baraban) yashil — mashinalar bir-biridan aynan shu detal bilan farq
-/// qiladi va ko'z avval o'shanga tushadi.
+/// Ikonka RANGLI: sariq korpus, po'lat ishchi qismi, qora gusenitsa.
+/// Mashinalar bir-biridan aynan ishchi qismi bilan farq qiladi.
 ///
-/// [color] berilsa — butun ikonka shu rangga bo'yaladi. Bu faqat ikkinchi
-/// darajali joylar uchun: masalan kulrang matn yonidagi kichik belgi.
+/// [color] berilsa — butun ikonka bitta rangga bo'yaladi va detallar
+/// yo'qoladi. Buni faqat zarur bo'lganda ishlating: 18-20 px da bo'yalgan
+/// ikonka tanib bo'lmaydigan dog'ga aylanadi, shuning uchun ro'yxatlardagi
+/// chip ham endi uni bo'yamaydi.
 ///
 /// Turi noma'lum bo'lsa ham bo'sh joy qolmaydi — 'other' ikonkasi
 /// ko'rsatiladi (qarang: [EquipmentTypes.normalize]).
@@ -58,7 +58,7 @@ class EquipmentTypeChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        EquipmentTypeIcon(typeCode, size: iconSize, color: AppColors.grey),
+        EquipmentTypeIcon(typeCode, size: iconSize),
         const SizedBox(width: 6),
         Flexible(
           child: Text(
@@ -68,6 +68,47 @@ class EquipmentTypeChip extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Rasmi yo'q texnika uchun o'rin — yumshoq fon va KATTA ikonka.
+///
+/// Ilgari bu yerda kulrang (grey[200]) to'rtburchak va o'rtasida kichkina
+/// belgi turardi: katta bo'sh maydon ichida 48 px ikonka "unutilgan"
+/// ko'rinardi. Endi fon mashinaning rangiga ohangdosh va ikonka maydonning
+/// qariyb yarmini egallaydi — kartochka to'la ko'rinadi.
+class EquipmentPhotoPlaceholder extends StatelessWidget {
+  const EquipmentPhotoPlaceholder(
+    this.typeCode, {
+    super.key,
+    this.borderRadius,
+  });
+
+  final String? typeCode;
+  final BorderRadius? borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Ikonka maydonning kichik tomoniga qarab o'lchanadi: kartochka
+        // ham, ro'yxatdagi kichik katak ham bir xil to'la ko'rinsin.
+        final side = constraints.biggest.shortestSide;
+        final iconSize = side.isFinite ? side * 0.72 : 64.0;
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFFF6E0), Color(0xFFF1F3F5)],
+            ),
+          ),
+          alignment: Alignment.center,
+          child: EquipmentTypeIcon(typeCode, size: iconSize),
+        );
+      },
     );
   }
 }

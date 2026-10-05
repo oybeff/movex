@@ -8,6 +8,7 @@ import '../../../../core/models/material_model.dart';
 import '../../../../core/services/material_service.dart';
 import '../../../../core/utils/number_formatter.dart';
 import 'material_order_page.dart';
+import '../../../../core/widgets/material_type_icon.dart';
 
 /// Qurilish materiallari katalogi: g'isht, sement, qum, gazoblok.
 ///
@@ -127,8 +128,7 @@ class _MaterialsCatalogPageState extends State<MaterialsCatalogPage> {
                   setState(() => _filterType = selected ? code : null);
                   _load();
                 },
-                avatar: Text(MaterialTypes.emoji(code),
-                    style: const TextStyle(fontSize: 15)),
+                avatar: MaterialTypeIcon(code, size: 20),
                 label: Text(MaterialTypes.label(code),
                     style: const TextStyle(fontSize: 12)),
                 selectedColor: AppColors.primaryGreen.withValues(alpha: 0.18),
@@ -178,11 +178,11 @@ class _MaterialsCatalogPageState extends State<MaterialsCatalogPage> {
                   width: 72,
                   height: 72,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _emojiBox(product),
+                  errorBuilder: (_, __, ___) => _iconBox(product),
                 ),
               )
             else
-              _emojiBox(product),
+              _iconBox(product),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -242,7 +242,8 @@ class _MaterialsCatalogPageState extends State<MaterialsCatalogPage> {
     );
   }
 
-  Widget _emojiBox(MaterialProductModel product) => Container(
+  /// Rasmi yo'q tovar uchun — material turi ikonkasi.
+  Widget _iconBox(MaterialProductModel product) => Container(
         width: 72,
         height: 72,
         decoration: BoxDecoration(
@@ -250,7 +251,7 @@ class _MaterialsCatalogPageState extends State<MaterialsCatalogPage> {
           borderRadius: BorderRadius.circular(12),
         ),
         alignment: Alignment.center,
-        child: Text(product.emoji, style: const TextStyle(fontSize: 30)),
+        child: MaterialTypeIcon(product.materialType, size: 46),
       );
 
   Widget _empty() {
@@ -258,8 +259,7 @@ class _MaterialsCatalogPageState extends State<MaterialsCatalogPage> {
       children: [
         const SizedBox(height: 100),
         Center(
-          child: Text(MaterialTypes.emoji(_filterType),
-              style: const TextStyle(fontSize: 56)),
+          child: MaterialTypeIcon(_filterType, size: 72),
         ),
         const SizedBox(height: 16),
         Center(

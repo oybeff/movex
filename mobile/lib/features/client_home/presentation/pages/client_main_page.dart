@@ -13,6 +13,7 @@ import '../../../../core/services/equipment_service.dart';
 import '../../../../core/models/equipment_model.dart';
 import '../../../../core/services/permission_service.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/widgets/equipment_type_icon.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
 
 class ClientMainPage extends StatefulWidget {
@@ -391,22 +392,22 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
                         height: 200,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorBuilder: (_, __, ___) => SizedBox(
                           height: 200,
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.construction, size: 60, color: Colors.grey),
+                          child: EquipmentPhotoPlaceholder(
+                            _selectedTech!.type,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     )
                   else
-                    Container(
+                    SizedBox(
                       height: 200,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                      width: double.infinity,
+                      child: EquipmentPhotoPlaceholder(
+                        _selectedTech!.type,
                         borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.construction, size: 60, color: Colors.grey),
                       ),
                     ),
                   const SizedBox(height: 16),
@@ -912,21 +913,19 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
                                     width: 100,
                                     height: 96,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
+                                    errorBuilder: (_, __, ___) => SizedBox(
                                       width: 100,
                                       height: 96,
-                                      color: Colors.grey[200],
-                                      child: Icon(Icons.construction, size: 32, color: Colors.grey[400]),
+                                      child: EquipmentPhotoPlaceholder(tech.type),
                                     ),
                                   )
-                                : Container(
+                                : SizedBox(
                                     width: 100,
                                     height: 96,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[200],
+                                    child: EquipmentPhotoPlaceholder(
+                                      tech.type,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: Icon(Icons.construction, size: 32, color: Colors.grey[400]),
                                   ),
                           ),
                           const SizedBox(width: 12),

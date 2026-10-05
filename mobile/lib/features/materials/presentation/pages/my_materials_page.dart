@@ -7,6 +7,7 @@ import '../../../../core/constants/material_types.dart';
 import '../../../../core/models/material_model.dart';
 import '../../../../core/services/material_service.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/widgets/material_type_icon.dart';
 
 /// Sotuvchining materiallari: qo'shish, ko'rish, o'chirish.
 ///
@@ -157,7 +158,7 @@ class _MyMaterialsPageState extends State<MyMaterialsPage> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(product.emoji, style: const TextStyle(fontSize: 28)),
+              MaterialTypeIcon(product.materialType, size: 34),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -383,8 +384,7 @@ class _AddMaterialPageState extends State<AddMaterialPage> {
                       setState(() => _type = code);
                       _applyDefaults();
                     },
-                    avatar: Text(MaterialTypes.emoji(code),
-                        style: const TextStyle(fontSize: 14)),
+                    avatar: MaterialTypeIcon(code, size: 20),
                     label: Text(MaterialTypes.label(code),
                         style: const TextStyle(fontSize: 12)),
                     selectedColor:

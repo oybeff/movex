@@ -146,6 +146,9 @@ flutter:
       # Texnika turlari ikonkalari: .svg — interfeys uchun, .png — xarita
       # markerlari uchun. tool/generate_equipment_icons.py yasaydi.
       - assets/equipment_types/
+      # Qurilish materiallari ikonkalari (g'isht, sement, qum…). Ilgari
+      # ular o'rnida emoji turardi va har telefonda boshqacha ko'rinardi.
+      - assets/material_types/
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
