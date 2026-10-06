@@ -321,6 +321,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   ),
                   TextFormField(
                     controller: _addressController,
+                    textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       hintText: 'equipment.address'.tr(),
                       border: const UnderlineInputBorder(),
@@ -337,6 +338,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 children: [
                   TextFormField(
                     controller: _budgetController,
+                    textInputAction: TextInputAction.next,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: InputDecoration(

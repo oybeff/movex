@@ -21,6 +21,7 @@ import 'client_balance_page.dart';
 import '../../../requests/presentation/pages/my_requests_page.dart';
 import '../../../requests/presentation/pages/search_area_page.dart';
 import '../../../settings/presentation/pages/terms_page.dart';
+import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../settings/presentation/pages/privacy_page.dart';
 
 class ClientProfilePage extends StatefulWidget {
@@ -726,7 +727,8 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                     ),
                   )
                 : SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.fromLTRB(
+                        16, 16, 16, bottomNavInset(context)),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,

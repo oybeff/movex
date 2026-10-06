@@ -15,7 +15,13 @@ class OwnerBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(left: 12, right: 12, bottom: 6),
+      // Pastdagi chekka telefonning jest chizig'ini hisobga oladi —
+      // mijoznikidagi kabi.
+      margin: EdgeInsets.only(
+        left: 12,
+        right: 12,
+        bottom: 6 + MediaQuery.of(context).padding.bottom,
+      ),
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -33,8 +39,11 @@ class OwnerBottomNavBar extends StatelessWidget {
         child: BottomNavigationBar(
           backgroundColor: Colors.white,
           selectedItemColor: Colors.green,
+          // Mijoznikidek: tor telefonda nomlar qirqilmasligi uchun.
+          selectedFontSize: 11,
+          unselectedFontSize: 11,
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          selectedIconTheme: const IconThemeData(size: 28),
+          selectedIconTheme: const IconThemeData(size: 26),
           unselectedItemColor: Colors.grey,
           showUnselectedLabels: true,
           type: BottomNavigationBarType.fixed,

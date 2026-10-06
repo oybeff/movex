@@ -73,6 +73,18 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
       child: Scaffold(
         backgroundColor: AppColors.background,
+        // Ortga qaytish tugmasi: bu ekranga rol tanlashdan kelinadi, va
+        // rolni almashtirmoqchi bo'lgan odam uchun yo'l yo'q edi —
+        // faqat Android jesti ishlardi, iPhone da esa umuman hech narsa.
+        // Tugma faqat qaytadigan joy bo'lsa ko'rinadi.
+        appBar: Navigator.of(context).canPop()
+            ? AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                foregroundColor: AppColors.black,
+                systemOverlayStyle: SystemUiOverlayStyle.dark,
+              )
+            : null,
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -135,6 +147,7 @@ class _RegisterPageState extends State<RegisterPage> {
             controller: _phoneCtrl,
             hintText: '+998 901234567',
             prefixIcon: Icons.phone,
+            onSubmitted: _loading ? null : _sendOTP,
           ),
           const SizedBox(height: 30),
           _loading

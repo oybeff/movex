@@ -20,6 +20,7 @@ import '../../../../core/utils/number_formatter.dart';
 import 'chat_page.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
 
 class OrdersPage extends StatefulWidget {
@@ -718,7 +719,8 @@ class _OrdersPageState extends State<OrdersPage> {
                         child: LayoutBuilder(
                           builder: (context, constraints) {
                             return ListView.builder(
-                              padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 80),
+                              padding: EdgeInsets.fromLTRB(
+                                  16, 16, 16, bottomNavInset(context)),
                               itemCount: _filteredOrders.length,
                               itemBuilder: (context, index) {
                                 final order = _filteredOrders[index];

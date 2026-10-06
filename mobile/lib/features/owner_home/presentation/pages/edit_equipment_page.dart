@@ -282,6 +282,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                       title: 'equipment.model'.tr(),
                       child: TextFormField(
                         controller: _modelController,
+                        textInputAction: TextInputAction.next,
                         decoration: _inputDecoration('equipment.model'.tr()),
                         maxLength: 100,
                         validator: (value) {
@@ -303,6 +304,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                             title: 'equipment.year'.tr(),
                             child: TextFormField(
                               controller: _yearController,
+                              textInputAction: TextInputAction.next,
                               decoration: _inputDecoration('equipment.year'.tr()),
                               keyboardType: TextInputType.number,
                               inputFormatters: [
@@ -331,6 +333,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                             title: 'equipment.power_hp'.tr(),
                             child: TextFormField(
                               controller: _powerController,
+                              textInputAction: TextInputAction.next,
                               decoration: _inputDecoration('equipment.power_hp'.tr()),
                               keyboardType: TextInputType.number,
                               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -356,6 +359,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                       title: 'equipment.price_per_hour'.tr(),
                       child: TextFormField(
                         controller: _pricePerHourController,
+                        textInputAction: TextInputAction.next,
                         decoration: _inputDecoration('equipment.price_per_hour'.tr()),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
@@ -381,6 +385,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                       title: 'equipment.price_per_shift'.tr(),
                       child: TextFormField(
                         controller: _pricePerShiftController,
+                        textInputAction: TextInputAction.next,
                         decoration: _inputDecoration('equipment.price_per_shift'.tr()),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
@@ -406,6 +411,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                       title: 'equipment.price_per_day'.tr(),
                       child: TextFormField(
                         controller: _pricePerDayController,
+                        textInputAction: TextInputAction.next,
                         decoration: _inputDecoration('equipment.price_per_day'.tr()),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
@@ -432,6 +438,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                       title: 'equipment.delivery_price'.tr(),
                       child: TextFormField(
                         controller: _deliveryPricePerKmController,
+                        textInputAction: TextInputAction.next,
                         decoration: _inputDecoration('equipment.delivery_price_hint'.tr()).copyWith(
                           suffixText: '${'common.currency'.tr()}/${'common.km'.tr()}',
                           helperText: 'equipment.delivery_price_help'.tr(),
@@ -484,6 +491,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                               Expanded(
                                 child: TextFormField(
                                   controller: _latitudeController,
+                                  textInputAction: TextInputAction.next,
                                   decoration: _inputDecoration('equipment.latitude'.tr()),
                                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                   inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^-?\d+\.?\d{0,6}'))],
@@ -506,6 +514,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                               Expanded(
                                 child: TextFormField(
                                   controller: _longitudeController,
+                                  textInputAction: TextInputAction.next,
                                   decoration: _inputDecoration('equipment.longitude'.tr()),
                                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                   inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^-?\d+\.?\d{0,6}'))],
@@ -546,6 +555,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                       title: 'equipment.payload_kg'.tr(),
                       child: TextFormField(
                         controller: _payloadController,
+                        textInputAction: TextInputAction.next,
                         decoration: _inputDecoration('equipment.payload_kg'.tr()),
                         keyboardType: TextInputType.number,
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -568,6 +578,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                       title: 'equipment.dimensions'.tr(),
                       child: TextFormField(
                         controller: _dimensionsController,
+                        textInputAction: TextInputAction.done,
                         decoration: _inputDecoration('equipment.dimensions'.tr()),
                         maxLength: 100,
                         validator: (value) {

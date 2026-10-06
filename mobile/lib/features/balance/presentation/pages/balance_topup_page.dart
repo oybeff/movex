@@ -426,6 +426,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
         const SizedBox(height: 8),
         TextField(
           controller: _amountController,
+          textInputAction: TextInputAction.next,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
@@ -461,6 +462,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
         const SizedBox(height: 8),
         TextField(
           controller: _phoneController,
+          textInputAction: TextInputAction.done,
           keyboardType: TextInputType.phone,
           readOnly: true, // Faqat o'qish uchun
           decoration: InputDecoration(

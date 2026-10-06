@@ -13,6 +13,12 @@ class PhoneInputField extends StatefulWidget {
   final bool enabled;
   final VoidCallback? onChanged;
 
+  /// Klaviaturadagi tugma bosilganda chaqiriladi.
+  ///
+  /// Usiz klaviaturadagi "Tayyor" shunchaki klaviaturani yopardi, va
+  /// odam yana ekrandagi tugmani qidirishi kerak bo'lardi.
+  final VoidCallback? onSubmitted;
+
   const PhoneInputField({
     Key? key,
     required this.controller,
@@ -21,6 +27,7 @@ class PhoneInputField extends StatefulWidget {
     this.prefixIcon,
     this.enabled = true,
     this.onChanged,
+    this.onSubmitted,
   }) : super(key: key);
 
   @override
@@ -46,6 +53,10 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
       controller: widget.controller,
       enabled: widget.enabled,
       keyboardType: TextInputType.phone,
+      // Telefon — formadagi oxirgi (ko'pincha yagona) maydon, shuning
+      // uchun klaviaturada "Tayyor" va u darhol davom ettiradi.
+      textInputAction: TextInputAction.done,
+      onFieldSubmitted: (_) => widget.onSubmitted?.call(),
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[\d\s+()-]')),
         // LengthLimitingTextInputFormatter ataylab YO'Q: u satrni

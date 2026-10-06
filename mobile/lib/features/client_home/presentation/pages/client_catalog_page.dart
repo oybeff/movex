@@ -13,6 +13,7 @@ import '../../../../core/constants/material_types.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import '../../../materials/presentation/pages/materials_catalog_page.dart';
+import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../../core/widgets/material_type_icon.dart';
 
 class ClientCatalogPage extends StatefulWidget {
@@ -484,7 +485,10 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                       : RefreshIndicator(
                           onRefresh: _loadEquipment,
                           child: GridView.builder(
-                            padding: const EdgeInsets.all(16),
+                            // Pastki suzuvchi menyu ro'yxat ustida turadi,
+                            // shuning uchun oxiriga bo'sh joy kerak.
+                            padding: EdgeInsets.fromLTRB(
+                                16, 16, 16, bottomNavInset(context)),
                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
                               childAspectRatio: 0.75,

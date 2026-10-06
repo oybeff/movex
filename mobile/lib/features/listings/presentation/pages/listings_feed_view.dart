@@ -9,6 +9,7 @@ import '../../../../core/models/listing_model.dart';
 import '../../../../core/services/listing_service.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../../core/widgets/bottom_nav_space.dart';
 import '../widgets/listing_card.dart';
 
 /// Taxta: begonalarning ochiq e'lonlari.
@@ -257,7 +258,8 @@ class ListingsFeedViewState extends State<ListingsFeedView> {
                   child: _items.isEmpty
                       ? _empty()
                       : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                          padding: EdgeInsets.fromLTRB(
+                              16, 8, 16, bottomNavInset(context) + 72),
                           itemCount: _items.length,
                           itemBuilder: (context, i) => _card(_items[i]),
                         ),

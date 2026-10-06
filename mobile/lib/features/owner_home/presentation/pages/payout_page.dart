@@ -229,6 +229,8 @@ class _PayoutPageState extends State<PayoutPage> {
             TextFormField(
               controller: _amountController,
               keyboardType: TextInputType.number,
+              // Maydondan maydonga o'tish klaviaturani yopmasdan.
+              textInputAction: TextInputAction.next,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: InputDecoration(
                 labelText: 'payout.amount'.tr(),
@@ -253,6 +255,7 @@ class _PayoutPageState extends State<PayoutPage> {
             TextFormField(
               controller: _cardController,
               keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(16),
@@ -271,6 +274,7 @@ class _PayoutPageState extends State<PayoutPage> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _holderController,
+              textInputAction: TextInputAction.done,
               textCapitalization: TextCapitalization.characters,
               decoration: InputDecoration(
                 labelText: 'payout.card_holder'.tr(),

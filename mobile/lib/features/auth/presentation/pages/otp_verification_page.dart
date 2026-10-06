@@ -43,6 +43,10 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
   bool _canResend = false;
   Timer? _timer;
 
+  /// KeyboardListener uchun alohida fokus tugunlari: matn maydoniniki
+  /// bilan bitta tugunni baham ko'rib bo'lmaydi.
+  final List<FocusNode> _keyNodes = List.generate(4, (_) => FocusNode());
+
   @override
   void initState() {
     super.initState();
@@ -60,6 +64,9 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
       controller.dispose();
     }
     for (var node in _focusNodes) {
+      node.dispose();
+    }
+    for (var node in _keyNodes) {
       node.dispose();
     }
     super.dispose();
@@ -189,12 +196,28 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
       _errorMessage = '';
     });
 
+    // BIR NECHTA raqam kelsa — kod to'liq joylangan (SMS dan avtomatik
+    // to'ldirish yoki buferdan qo'yish). Ilgari maydon faqat bittasini
+    // olardi, qolgani yo'qolardi va odam kodni qo'lda ko'chirardi.
+    if (value.length > 1) {
+      _fillFromCode(value);
+      return;
+    }
+
     if (value.isNotEmpty && index < 3) {
-      // Move to next field
       _focusNodes[index + 1].requestFocus();
     }
 
-    // Auto-submit when all fields are filled
+    // Raqam O'CHIRILGANDA fokus oldingi maydonga qaytadi.
+    //
+    // Bu yerda eng achinarli xato bor edi: _onBackspace yozilgan, lekin
+    // HECH QAYERDAN chaqirilmasdi. Raqamni o'chirgan odam bo'sh maydonda
+    // qolardi va har safar oldingi katakka barmoq bilan tegishi kerak
+    // bo'lardi — "klaviatura ishlamayapti" deb aynan shu tuyulardi.
+    if (value.isEmpty && index > 0) {
+      _focusNodes[index - 1].requestFocus();
+    }
+
     if (index == 3 && value.isNotEmpty) {
       final allFilled = _controllers.every((c) => c.text.isNotEmpty);
       if (allFilled) {
@@ -203,9 +226,18 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
     }
   }
 
-  void _onBackspace(int index) {
-    if (index > 0 && _controllers[index].text.isEmpty) {
-      _focusNodes[index - 1].requestFocus();
+  /// To'liq kodni kataklarga yoyadi va tekshirishni boshlaydi.
+  void _fillFromCode(String raw) {
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    for (var i = 0; i < 4; i++) {
+      _controllers[i].text = i < digits.length ? digits[i] : '';
+    }
+    final filled = digits.length.clamp(0, 4);
+    if (filled >= 4) {
+      _focusNodes[3].unfocus();
+      _verifyOTP();
+    } else {
+      _focusNodes[filled].requestFocus();
     }
   }
 
@@ -309,7 +341,22 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
         return SizedBox(
           width: 60,
           height: 60,
-          child: TextField(
+          // BO'SH katakda "o'chirish" bosilganda onChanged ishlamaydi:
+          // matn o'zgarmagan, demak hodisa ham yo'q. Shuning uchun
+          // tugmaning o'zini ushlaymiz va fokusni oldingi katakka
+          // qaytaramiz — aks holda odam har safar barmog'i bilan
+          // oldingi katakka tegishi kerak bo'lardi.
+          child: KeyboardListener(
+            focusNode: _keyNodes[index],
+            onKeyEvent: (event) {
+              if (event is! KeyDownEvent) return;
+              if (event.logicalKey != LogicalKeyboardKey.backspace) return;
+              if (_controllers[index].text.isNotEmpty) return;
+              if (index == 0) return;
+              _controllers[index - 1].clear();
+              _focusNodes[index - 1].requestFocus();
+            },
+            child: TextField(
             controller: _controllers[index],
             focusNode: _focusNodes[index],
             textAlign: TextAlign.center,
@@ -345,14 +392,22 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
                 ),
               ),
             ),
+            // SMS dagi kodni telefon o'zi taklif qiladi — bir tegishda
+            // to'rtala katak to'ladi.
+            autofillHints: index == 0 ? const [AutofillHints.oneTimeCode] : null,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
             ],
             onChanged: (value) => _onChanged(value, index),
+            // Katakka tegilganda u TOZALANMAYDI, faqat kursor oxiriga
+            // o'tadi. Ilgari tegish raqamni o'chirib yuborardi: kodni
+            // tuzatmoqchi bo'lgan odam uni yo'qotardi.
             onTap: () {
-              // Clear field on tap
-              _controllers[index].clear();
+              _controllers[index].selection = TextSelection.fromPosition(
+                TextPosition(offset: _controllers[index].text.length),
+              );
             },
+            ),
           ),
         );
       }),

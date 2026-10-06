@@ -273,6 +273,7 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
             const SizedBox(height: 10),
             TextField(
               controller: _quantityController,
+              textInputAction: TextInputAction.next,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: InputDecoration(
@@ -441,6 +442,7 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
             const SizedBox(height: 10),
             TextField(
               controller: _addressController,
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 hintText: 'materials.address_hint'.tr(),
                 border: const OutlineInputBorder(),

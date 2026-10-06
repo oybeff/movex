@@ -187,6 +187,10 @@ class _RegisterCompletePageState extends State<RegisterCompletePage> {
     return TextFormField(
       controller: ctrl,
       obscureText: obscure,
+      // Ism — formadagi yagona maydon: klaviaturadagi "Tayyor" darhol
+      // ro'yxatdan o'tkazadi. Ilgari u shunchaki klaviaturani yopardi.
+      textInputAction: TextInputAction.done,
+      onFieldSubmitted: (_) => _loading ? null : _completeRegistration(),
       validator: (v) {
         if (required && (v == null || v.isEmpty)) {
           return 'messages.enter_field'.tr(args: [hint]);

@@ -14,6 +14,7 @@ import '../../../../core/models/equipment_model.dart';
 import '../../../../core/services/permission_service.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
 
 class ClientMainPage extends StatefulWidget {
@@ -857,7 +858,7 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
     return Container(
       margin: const EdgeInsets.only(top: 40),
       child: ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomNavInset(context)),
           itemCount: _techList.length,
           itemBuilder: (context, index) {
             final tech = _techList[index];

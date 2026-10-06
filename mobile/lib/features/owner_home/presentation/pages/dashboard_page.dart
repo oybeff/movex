@@ -13,6 +13,7 @@ import '../../../../core/services/payment_service.dart';
 import '../../../../core/services/balance_service.dart';
 import '../../../../core/utils/number_formatter.dart';
 import 'franchise_manage_page.dart';
+import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../balance/presentation/pages/balance_topup_page.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -173,7 +174,7 @@ class _DashboardPageState extends State<DashboardPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen,))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(16, 16, 16, bottomNavInset(context)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

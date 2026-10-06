@@ -7,6 +7,7 @@ import '../../../../core/models/equipment_model.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../materials/presentation/pages/my_materials_page.dart';
 
 class MyEquipmentPage extends StatefulWidget {
@@ -452,6 +453,9 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                       : RefreshIndicator(
                           onRefresh: _fetchEquipment,
                           child: ListView.separated(
+                            // Pastki suzuvchi menyu ro'yxat ustida turadi.
+                            padding: EdgeInsets.only(
+                                bottom: bottomNavInset(context)),
                             itemCount: filteredList.length,
                             separatorBuilder: (_, __) => const SizedBox(height: 8),
                             itemBuilder: (context, index) {

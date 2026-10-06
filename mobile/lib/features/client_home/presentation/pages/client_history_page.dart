@@ -20,6 +20,7 @@ import '../../../../core/utils/number_formatter.dart';
 import 'client_chat_page.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
 
 class ClientHistoryPage extends StatefulWidget {
@@ -490,7 +491,8 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                       : RefreshIndicator(
                           onRefresh: _loadOrders,
                           child: ListView.builder(
-                            padding: const EdgeInsets.all(16),
+                            padding: EdgeInsets.fromLTRB(
+                                16, 16, 16, bottomNavInset(context)),
                             itemCount: _filteredOrders.length,
                             itemBuilder: (context, index) {
                               final order = _filteredOrders[index];

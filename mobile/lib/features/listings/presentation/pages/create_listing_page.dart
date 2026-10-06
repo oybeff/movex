@@ -185,6 +185,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
           _label('listings.title_field'.tr(), required: true),
           TextField(
             controller: _title,
+            textInputAction: TextInputAction.next,
             maxLength: 120,
             textCapitalization: TextCapitalization.sentences,
             decoration: _box('listings.title_hint'.tr()),
@@ -208,6 +209,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
           _label('listings.budget'.tr()),
           TextField(
             controller: _budget,
+            textInputAction: TextInputAction.next,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: _box('listings.budget_hint'.tr()).copyWith(
@@ -218,6 +220,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
           _label('listings.address'.tr()),
           TextField(
             controller: _address,
+            textInputAction: TextInputAction.next,
             textCapitalization: TextCapitalization.sentences,
             decoration: _box('listings.address_hint'.tr()).copyWith(
               prefixIcon: const Icon(Icons.place_outlined, size: 20),
@@ -268,6 +271,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
           _label('listings.contact_phone'.tr()),
           TextField(
             controller: _phone,
+            textInputAction: TextInputAction.done,
             keyboardType: TextInputType.phone,
             decoration: _box('listings.contact_phone_hint'.tr()).copyWith(
               prefixIcon: const Icon(Icons.phone_outlined, size: 20),

@@ -41,7 +41,14 @@ class _ClientHomePageState extends State<ClientHomePage> {
         extendBody: true,
         body: _pages[_currentIndex],
         bottomNavigationBar: Container(
-          margin: const EdgeInsets.only(left: 12, right: 12, bottom: 6),
+          // Pastdagi chekka telefonning JEST CHIZIG'Ini hisobga oladi:
+          // qat'iy 6 px da menyu Android 10+ va iPhone X+ da chiziq
+          // ustiga tushib, pastki tugmalar bosilmay qolardi.
+          margin: EdgeInsets.only(
+            left: 12,
+            right: 12,
+            bottom: 6 + MediaQuery.of(context).padding.bottom,
+          ),
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -60,8 +67,13 @@ class _ClientHomePageState extends State<ClientHomePage> {
               backgroundColor: Colors.white,
               currentIndex: _currentIndex,
               selectedItemColor: Colors.green,
+              // Shrift kichraytirildi: 400 px li telefonda besh bo'limning
+              // nomlari sig'masdi va "Obyavleniya" — "Obyavle..." bo'lib
+              // qirqilardi.
+              selectedFontSize: 11,
+              unselectedFontSize: 11,
               selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-              selectedIconTheme: const IconThemeData(size: 28),
+              selectedIconTheme: const IconThemeData(size: 26),
               unselectedItemColor: Colors.grey,
               showUnselectedLabels: true,
               type: BottomNavigationBarType.fixed,
