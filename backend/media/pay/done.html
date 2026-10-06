@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Movex GO — to'lov</title>
+<style>
+  :root { --green:#22A45D; --ink:#1F242B; --muted:#6B7681; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         background:#F6F7F9; color:var(--ink); padding:24px; }
+  .card { background:#fff; border-radius:20px; padding:32px 24px; max-width:360px; width:100%;
+          text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.06); }
+  .mark { width:64px; height:64px; border-radius:50%; background:#E8F7EF; margin:0 auto 18px;
+          display:flex; align-items:center; justify-content:center; }
+  h1 { font-size:20px; margin:0 0 8px; }
+  p { color:var(--muted); font-size:15px; line-height:1.5; margin:0 0 22px; }
+  a.btn { display:block; background:var(--green); color:#fff; text-decoration:none;
+          padding:15px 20px; border-radius:14px; font-weight:600; font-size:16px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="mark">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#22A45D"
+           stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 6 9 17l-5-5"/>
+      </svg>
+    </div>
+    <h1 id="title">To'lov yakunlandi</h1>
+    <p id="text">Ilovaga qayting — balans tasdiq kelishi bilan to'ldiriladi.</p>
+    <a class="btn" id="back" href="movexgo://payment/success">Ilovaga qaytish</a>
+  </div>
+<script>
+  // Ruscha interfeysdagi odam uchun matn ham ruscha.
+  if ((navigator.language || '').toLowerCase().startsWith('ru')) {
+    document.documentElement.lang = 'ru';
+    document.getElementById('title').textContent = 'Оплата завершена';
+    document.getElementById('text').textContent =
+      'Вернитесь в приложение — баланс пополнится, как только придёт подтверждение.';
+    document.getElementById('back').textContent = 'Вернуться в приложение';
+  }
+  // Ilovani O'ZI ochishga urinamiz: odam tugmani qidirmasin. Ochilmasa
+  // (ilova o'rnatilmagan yoki brauzer ruxsat bermadi) — tugma qoladi.
+  setTimeout(function () { window.location.href = 'movexgo://payment/success'; }, 400);
+</script>
+</body>
+</html>
