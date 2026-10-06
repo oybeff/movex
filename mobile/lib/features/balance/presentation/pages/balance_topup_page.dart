@@ -322,12 +322,13 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
                     const SizedBox(height: 16),
                     _buildQuickAmounts(),
                     const SizedBox(height: 24),
-                    // Usul bittagina bo'lsa, tanlash ro'yxatini
-                    // ko'rsatishdan ma'no yo'q.
-                    if (_paymentMethods.length > 1) ...[
-                      _buildPaymentMethods(),
-                      _buildPaymentSystems(),
-                    ],
+                    // Usullar ro'yxati faqat bir nechta bo'lsa ko'rinadi.
+                    // Ilovalar blokini esa BU shart bilan yashirish
+                    // mumkin emas: Rahmat yagona usul bo'lsa ham, uning
+                    // ichidagi ilovalar (Payme, Click…) ko'rinishi kerak.
+                    // Ilova yo'q bo'lsa blok o'zi bo'sh qoladi.
+                    if (_paymentMethods.length > 1) _buildPaymentMethods(),
+                    _buildPaymentSystems(),
                     const SizedBox(height: 24),
                     _buildPhoneInput(),
                     const SizedBox(height: 32),
