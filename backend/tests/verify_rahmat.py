@@ -405,6 +405,82 @@ check(
     f"qaytdi {wrong_secret.status_code}",
 )
 
+
+# --------------------------------------------------------------------------
+head("9. TO'LOV ILOVASI TANLANADI (payme, click, uzum...)")
+# --------------------------------------------------------------------------
+#
+# `/payment/invoice` Multicard'ning umumiy sahifasini beradi, va undagi
+# "Payme" tugmasi ilovani OCHMAYDI. `/payment` esa payment_system bo'yicha
+# aynan o'sha ilovaning havolasini qaytaradi. Shu yo'l buzilmaganini
+# tekshiramiz: ro'yxat, noto'g'ri kod va qaytish manzili.
+
+from app.services import rahmat_service as _rs  # noqa: E402
+
+check(
+    "ilovalar ro'yxati bo'sh emas",
+    len(_rs.PAYMENT_SYSTEMS) >= 8,
+    f"{len(_rs.PAYMENT_SYSTEMS)} ta",
+)
+check(
+    "ro'yxatda payme, click, uzum va alif bor",
+    {"payme", "click", "uzum", "alif"}.issubset(set(_rs.PAYMENT_SYSTEMS)),
+    ", ".join(_rs.PAYMENT_SYSTEMS),
+)
+check(
+    "sbp ro'yxatda YO'Q (u Rossiya tizimi)",
+    "sbp" not in _rs.PAYMENT_SYSTEMS,
+)
+check(
+    "har bir kod uchun ekranda nom bor",
+    all(code in _rs.PAYMENT_SYSTEM_TITLES for code in _rs.PAYMENT_SYSTEMS),
+)
+
+# Qaytish manzili http(s) bo'lishi SHART: `/payment` ilova sxemasini
+# ("movexgo://") rad etadi — "Значение «Return Url» не является
+# правильным URL". Shu sababli oraliq sahifa bor.
+return_url = _rs.return_url_for_app()
+check(
+    "qaytish manzili http(s), ilova sxemasi emas",
+    return_url.startswith("http"),
+    return_url,
+)
+
+try:
+    _rs.create_direct_payment(
+        payment_system="qandaydir-yoq-tizim",
+        invoice_id="0",
+        amount_sum=1000,
+    )
+    unknown_rejected = False
+except _rs.RahmatError:
+    unknown_rejected = True
+except Exception:
+    unknown_rejected = False
+check(
+    "noma'lum ilova kodi SHLYUZGA YUBORILMAYDI",
+    unknown_rejected,
+    "tekshiruv create_direct_payment ichida",
+)
+
+methods = requests.get(f"{API}/balance/methods", timeout=20)
+methods_data = methods.json() if methods.status_code == 200 else []
+rahmat_method = next((m for m in methods_data if m.get("code") == "rahmat"), None)
+check(
+    "/balance/methods ilovalar ro'yxatini beradi",
+    bool(rahmat_method and rahmat_method.get("systems")),
+    f"{len((rahmat_method or {}).get('systems') or [])} ta ilova",
+)
+
+# Qaytish sahifasi: odam to'lovdan keyin shu yerga tushadi va ilovaga
+# qaytadi. Yo'q bo'lsa — brauzerda 404 ko'radi.
+done_page = requests.get(f"{API}/static/pay/done.html", timeout=20)
+check(
+    "ilovaga qaytarish sahifasi ochiladi",
+    done_page.status_code == 200 and "movexgo://" in done_page.text,
+    f"HTTP {done_page.status_code}",
+)
+
 print(f"\n{'=' * 66}")
 print(f"ИТОГ: {ok_count} пройдено, {fail_count} провалено")
 print("=" * 66)

@@ -353,6 +353,97 @@ def create_invoice(
     return _request("POST", "/payment/invoice", body)
 
 
+# -------------------------------------------- to'g'ridan-to'g'ri to'lov tizimi
+#
+# `/payment/invoice` Multicard'ning UMUMIY sahifasini beradi: u yerda
+# Payme, Click, Uzum va boshqalar tugma sifatida turadi, lekin bosganda
+# o'sha ilova OCHILMAYDI — hammasi sahifaning o'z ichida bo'ladi.
+#
+# `/payment` esa boshqacha: `payment_system` beriladi va javobdagi
+# `checkout_url` — aynan o'sha ilovaning havolasi (Universal/App Link).
+# Telefonda bosilganda Payme, Click, Uzum, Alif ilovasi ochiladi; ilova
+# o'rnatilmagan bo'lsa — o'sha tizimning sayti.
+#
+# 06.10.2026 da jangovar kassada hammasi tekshirildi va ishladi.
+
+#: Ilovada tugma sifatida ko'rsatiladigan tizimlar.
+#:
+#: `sbp` ataylab YO'Q: u Rossiyaning Tezkor to'lovlar tizimi (qr.nspk.ru),
+#: O'zbekistondagi odamda bunday ilova bo'lmaydi va tugma faqat chalg'itadi.
+PAYMENT_SYSTEMS: List[str] = [
+    "payme",
+    "click",
+    "uzum",
+    "alif",
+    "anorbank",
+    "oson",
+    "xazna",
+    "beepul",
+    "trastpay",
+]
+
+#: Tugmadagi nom. Tarjimaga qo'yilmadi: bular BRAND nomlari, ular
+#: o'zbekchada ham, ruschada ham bir xil yoziladi.
+PAYMENT_SYSTEM_TITLES: Dict[str, str] = {
+    "payme": "Payme",
+    "click": "Click",
+    "uzum": "Uzum",
+    "alif": "Alif",
+    "anorbank": "Anorbank",
+    "oson": "Oson",
+    "xazna": "Xazna",
+    "beepul": "Beepul",
+    "trastpay": "Trastpay",
+}
+
+
+def return_url_for_app() -> str:
+    """
+    To'lovdan keyin qaytish manzili.
+
+    `/payment` endpointi ilova sxemasini (`movexgo://`) QABUL QILMAYDI —
+    "Значение «Return Url» не является правильным URL" deb rad etadi.
+    Shuning uchun oraliq sahifa: u brauzerda ochiladi va darhol ilovaga
+    qaytaradi.
+    """
+    base = settings.RAHMAT_CALLBACK_BASE_URL.rstrip("/")
+    return f"{base}/static/pay/done.html"
+
+
+def create_direct_payment(
+    *,
+    payment_system: str,
+    invoice_id: str,
+    amount_sum,
+    ofd: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """
+    Tanlangan to'lov tizimi uchun to'lov yaratadi.
+
+    Javobda `uuid` va `checkout_url` — o'sha ilovaning havolasi.
+    Qolgan hammasi invoys bilan bir xil: callback ham, imzo ham, holatlar
+    ham. Ya'ni pul yo'li o'zgarmaydi, faqat odam qayerda to'lashi
+    o'zgaradi.
+    """
+    if payment_system not in PAYMENT_SYSTEMS:
+        raise RahmatError("ERROR_FIELDS", f"noma'lum to'lov tizimi: {payment_system}")
+
+    body: Dict[str, Any] = {
+        "payment_system": payment_system,
+        # Bu endpoint store_id ni SON sifatida kutadi (invoysda satr ham
+        # ishlaydi), shuning uchun aniq o'tkazamiz.
+        "store_id": int(settings.RAHMAT_STORE_ID),
+        "amount": to_tiyin(amount_sum),
+        "invoice_id": str(invoice_id),
+        "callback_url": callback_url(),
+        "return_url": return_url_for_app(),
+    }
+    if ofd:
+        body["ofd"] = ofd
+
+    return _request("POST", "/payment", body)
+
+
 def get_invoice(uuid: str) -> Dict[str, Any]:
     return _request("GET", f"/payment/invoice/{uuid}")
 

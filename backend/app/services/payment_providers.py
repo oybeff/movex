@@ -46,12 +46,12 @@ class PaymentProvider:
     start_payment: Callable[..., str]
 
 
-def _start_rahmat(db, transaction) -> str:
+def _start_rahmat(db, transaction, payment_system=None) -> str:
     # Import shu yerda: modul yuklanishida halqa bo'lmasin
     # (balance_service -> payment_providers -> balance_service).
     from app.services import rahmat_payment
 
-    return rahmat_payment.start_topup(db, transaction)
+    return rahmat_payment.start_topup(db, transaction, payment_system)
 
 
 PROVIDERS: List[PaymentProvider] = [

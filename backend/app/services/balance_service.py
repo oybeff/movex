@@ -148,7 +148,7 @@ def top_up_balance(
     return transaction
 
 
-def start_payment(db: Session, transaction) -> str:
+def start_payment(db: Session, transaction, payment_system: str | None = None) -> str:
     """
     To'lov sahifasini boshlash va unga havola qaytarish.
 
@@ -173,7 +173,7 @@ def start_payment(db: Session, transaction) -> str:
             detail=f"{provider.title} to'lov tizimi sozlanmagan. Administratorga murojaat qiling."
         )
 
-    return provider.start_payment(db, transaction)
+    return provider.start_payment(db, transaction, payment_system)
 
 
 def get_transaction(db: Session, transaction_id: int, user_id: int):

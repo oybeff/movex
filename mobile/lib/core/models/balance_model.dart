@@ -170,10 +170,38 @@ class PaymentMethodModel {
   final String code;
   final String title;
 
-  const PaymentMethodModel({required this.code, required this.title});
+  /// Shu usul ichida tanlanadigan ILOVALAR: Payme, Click, Uzum, Alif…
+  ///
+  /// Tanlansa, server havolani o'sha ilovaga beradi va telefonda
+  /// aynan o'sha ilova ochiladi. Bo'sh bo'lsa — umumiy to'lov sahifasi.
+  final List<PaymentSystemModel> systems;
+
+  const PaymentMethodModel({
+    required this.code,
+    required this.title,
+    this.systems = const [],
+  });
 
   factory PaymentMethodModel.fromJson(Map<String, dynamic> json) {
     return PaymentMethodModel(
+      code: json['code'] as String,
+      title: json['title'] as String,
+      systems: ((json['systems'] as List?) ?? const [])
+          .map((e) => PaymentSystemModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+/// To'lov ilovasi: Payme, Click, Uzum va boshqalar.
+class PaymentSystemModel {
+  final String code;
+  final String title;
+
+  const PaymentSystemModel({required this.code, required this.title});
+
+  factory PaymentSystemModel.fromJson(Map<String, dynamic> json) {
+    return PaymentSystemModel(
       code: json['code'] as String,
       title: json['title'] as String,
     );

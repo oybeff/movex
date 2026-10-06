@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import List, Optional
 from datetime import datetime
 
 # Balance Schemas
@@ -47,6 +47,15 @@ class BalanceTransactionCreate(BalanceTransactionBase):
     #: berilmasa, profildagi raqam olinadi.
     phone_number: Optional[str] = Field(None, description="Phone number for the payment SMS")
 
+    #: Qaysi ILOVADA to'lanadi: payme, click, uzum, alif va h.k.
+    #:
+    #: Berilsa — javobdagi havola o'sha ilovani ochadi. Berilmasa —
+    #: Multicard'ning umumiy sahifasi (karta bilan to'lash ham o'sha
+    #: yerda). Ro'yxat /balance/methods da keladi.
+    payment_system: Optional[str] = Field(
+        None, description="payme | click | uzum | alif | anorbank | oson | xazna | beepul | trastpay"
+    )
+
 class BalanceTransactionUpdate(BaseModel):
     status: Optional[str] = None
     description: Optional[str] = None
@@ -81,6 +90,12 @@ class BalanceTopUpResponse(BaseModel):
         from_attributes = True
 
 
+class PaymentSystemRead(BaseModel):
+    """To'lov ilovasi: kodi va ekrandagi nomi."""
+    code: str
+    title: str
+
+
 class PaymentMethodRead(BaseModel):
     """
     Ilovaga beriladigan to'lov usuli.
@@ -90,4 +105,10 @@ class PaymentMethodRead(BaseModel):
     """
     code: str
     title: str
+
+    #: Shu usul ichida tanlash mumkin bo'lgan ilovalar.
+    #:
+    #: Ilova ularni tugma qilib ko'rsatadi: bosilganda Payme yoki Click
+    #: ILOVASI ochiladi. Bo'sh ro'yxat — faqat umumiy sahifa.
+    systems: List[PaymentSystemRead] = []
 

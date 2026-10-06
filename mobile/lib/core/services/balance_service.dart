@@ -43,12 +43,19 @@ class BalanceService {
     required double amount,
     required String paymentMethod,
     String? phoneNumber,
+    String? paymentSystem,
   }) async {
     try {
       final data = {
         'amount': amount,
         'payment_method': paymentMethod,
       };
+
+      // Tanlangan ilova (payme, click, uzum…). Berilmasa — server
+      // umumiy to'lov sahifasini ochadi.
+      if (paymentSystem != null && paymentSystem.isNotEmpty) {
+        data['payment_system'] = paymentSystem;
+      }
 
       // Telefon raqam qo'shish (agar mavjud bo'lsa)
       if (phoneNumber != null && phoneNumber.isNotEmpty) {

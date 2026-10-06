@@ -36,6 +36,14 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
   /// uning chekaut sahifasida esa Payme, Click, Uzum, Anorbank, Oson,
   /// Alif, Xazna, Beepul, Trastpay va karta bor.
   String _selectedPaymentMethod = 'rahmat';
+
+  /// Tanlangan ILOVA: payme, click, uzum, alif…
+  ///
+  /// null — umumiy to'lov sahifasi (karta bilan ham o'sha yerda).
+  /// Tanlansa, havola to'g'ridan-to'g'ri o'sha ilovani ochadi: ilgari
+  /// Multicard sahifasidagi "Payme" tugmasi ilovani ochmasdi, hammasi
+  /// o'sha sahifa ichida qolardi.
+  String? _selectedSystem;
   int? _pendingTransactionId; // to'lov kutilayotgan tranzaksiya
 
   /// Ro'yxat SERVERDAN keladi (`/balance/methods`). Bu — javob kelmasa
@@ -161,6 +169,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
         amount: amount,
         paymentMethod: _selectedPaymentMethod,
         phoneNumber: phoneNumber,
+        paymentSystem: _selectedSystem,
       );
 
       setState(() => _isLoading = false);
@@ -317,6 +326,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
                     // ko'rsatishdan ma'no yo'q.
                     if (_paymentMethods.length > 1) ...[
                       _buildPaymentMethods(),
+                      _buildPaymentSystems(),
                     ],
                     const SizedBox(height: 24),
                     _buildPhoneInput(),
@@ -518,6 +528,91 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
           ),
         );
       }).toList(),
+    );
+  }
+
+  /// Qaysi ILOVADA to'lash: Payme, Click, Uzum, Alif…
+  ///
+  /// Tugma bosilganda shu ilova ochiladi. "Karta bilan" — Multicard'ning
+  /// umumiy sahifasi: ilovalardan birortasi yo'q odam ham to'lay olsin.
+  Widget _buildPaymentSystems() {
+    final method = _paymentMethods.firstWhere(
+      (m) => m.code == _selectedPaymentMethod,
+      orElse: () => const PaymentMethodModel(code: '', title: ''),
+    );
+    if (method.systems.isEmpty) return const SizedBox.shrink();
+
+    final tiles = <Widget>[
+      _systemTile(
+        code: null,
+        title: 'balance.pay_with_card'.tr(),
+        icon: Icons.credit_card_rounded,
+      ),
+      ...method.systems.map(
+        (system) => _systemTile(
+          code: system.code,
+          title: system.title,
+          icon: Icons.account_balance_wallet_rounded,
+        ),
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 20),
+        Text(
+          'balance.pay_from'.tr(),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'balance.pay_from_hint'.tr(),
+          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 12),
+        Wrap(spacing: 8, runSpacing: 8, children: tiles),
+      ],
+    );
+  }
+
+  Widget _systemTile({
+    required String? code,
+    required String title,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedSystem == code;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => setState(() => _selectedSystem = code),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryGreen.withValues(alpha: 0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.primaryGreen : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 18,
+                color: isSelected ? AppColors.primaryGreen : Colors.grey[600]),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected ? AppColors.primaryGreen : Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

@@ -232,7 +232,10 @@
     "available": "Mavjud",
     "amount": "Summa",
     "payment_method": "To'lov usuli",
-    "phone_auto_used": "Tizimda ro'yxatdan o'tgan telefon raqamingiz avtomatik ishlatiladi"
+    "phone_auto_used": "Tizimda ro'yxatdan o'tgan telefon raqamingiz avtomatik ishlatiladi",
+    "pay_from": "Qayerdan to'laysiz",
+    "pay_from_hint": "Tugmani bosing — o'sha ilova ochiladi",
+    "pay_with_card": "Karta bilan"
   },
   "transactions": {
     "title": "Tranzaksiyalar",

@@ -49,9 +49,20 @@ def _language(db: Session, user_id: int) -> Optional[str]:
 
 # ------------------------------------------------------------- to'lov boshi
 
-def start_topup(db: Session, transaction: BalanceTransaction) -> str:
+def start_topup(
+    db: Session,
+    transaction: BalanceTransaction,
+    payment_system: Optional[str] = None,
+) -> str:
     """
-    Shlyuzda invoys yaratadi va chekaut havolasini qaytaradi.
+    Shlyuzda to'lov ochadi va havolani qaytaradi.
+
+    `payment_system` berilsa (payme, click, uzum, alif…) — havola AYNAN
+    o'sha ilovani ochadi. Berilmasa — Multicard'ning umumiy sahifasi, u
+    yerda karta bilan ham to'lash mumkin.
+
+    Pul yo'li ikkala holatda ham bir xil: o'sha callback, o'sha imzo,
+    o'sha holatlar. Farqi faqat odam qayerda to'lashida.
 
     `uuid` DARHOL tranzaksiyaga yoziladi. Usiz keyin kelgan vebhuk (unda
     faqat uuid bor, invoice_id esa har doim emas) qaysi to'lov ekanini
@@ -63,20 +74,41 @@ def start_topup(db: Session, transaction: BalanceTransaction) -> str:
 
     user = _user(db, transaction.user_id)
     phone = transaction.phone_number or (user.phone if user else None)
+    ofd = rahmat_service.build_ofd(db, transaction.amount, name)
 
     try:
-        data = rahmat_service.create_invoice(
-            invoice_id=str(transaction.id),
-            amount_sum=transaction.amount,
-            lang=language or "uz",
-            ofd=rahmat_service.build_ofd(db, transaction.amount, name),
-            phone=phone,
-        )
+        if payment_system:
+            data = rahmat_service.create_direct_payment(
+                payment_system=payment_system,
+                invoice_id=str(transaction.id),
+                amount_sum=transaction.amount,
+                ofd=ofd,
+            )
+        else:
+            data = rahmat_service.create_invoice(
+                invoice_id=str(transaction.id),
+                amount_sum=transaction.amount,
+                lang=language or "uz",
+                ofd=ofd,
+                phone=phone,
+            )
     except RahmatError as exc:
         logger.error(
-            "Rahmat invoys yaratilmadi: tx=%s code=%s details=%s",
-            transaction.id, exc.code, exc.details,
+            "Rahmat to'lov ochilmadi: tx=%s system=%s code=%s details=%s",
+            transaction.id, payment_system or "-", exc.code, exc.details,
         )
+        # Tanlangan ilova vaqtincha ishlamasligi mumkin (ERROR_PS_UNAVAILABLE):
+        # bu bizning xato emas va "tizim javob bermadi" degani ham emas —
+        # odam shunchaki boshqa ilovani tanlasa bo'ladi. Aralashtirib
+        # yuborilsa, u butun to'lov buzilgan deb o'ylaydi.
+        if payment_system and exc.code == "ERROR_PS_UNAVAILABLE":
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    f"{payment_system.title()} hozir mavjud emas. "
+                    "Boshqa ilovani tanlang yoki karta bilan to'lang."
+                ),
+            )
         raise HTTPException(
             status_code=503,
             detail=f"To'lov tizimi javob bermadi ({exc.code}). Keyinroq urinib ko'ring.",

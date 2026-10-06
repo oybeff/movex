@@ -43,8 +43,24 @@ def payment_methods():
     """
     from app.services import payment_providers
 
+    from app.services import rahmat_service
+
+    # Ilovalar ro'yxati faqat Rahmat uchun: boshqa usul qo'shilsa,
+    # o'zining ro'yxatini shu yerda beradi.
+    systems = [
+        balance_schema.PaymentSystemRead(
+            code=code,
+            title=rahmat_service.PAYMENT_SYSTEM_TITLES.get(code, code.title()),
+        )
+        for code in rahmat_service.PAYMENT_SYSTEMS
+    ]
+
     return [
-        balance_schema.PaymentMethodRead(code=provider.code, title=provider.title)
+        balance_schema.PaymentMethodRead(
+            code=provider.code,
+            title=provider.title,
+            systems=systems if provider.code == "rahmat" else [],
+        )
         for provider in payment_providers.PROVIDERS
         if provider.is_configured()
     ]
@@ -64,7 +80,10 @@ def top_up_balance(
     """
     transaction = balance_service.top_up_balance(db, current_user.id, transaction_data)
 
-    payment_url = balance_service.start_payment(db, transaction)
+    # payment_system berilgan bo'lsa — havola o'sha ilovani ochadi.
+    payment_url = balance_service.start_payment(
+        db, transaction, transaction_data.payment_system
+    )
 
     return {
         "transaction_id": transaction.id,
