@@ -115,7 +115,20 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
 
       if (result['success'] == true) {
         // If this is registration flow, continue to complete registration
-        if (widget.isRegistration) {
+        // Qaysi yo'l — SERVER javobi hal qiladi, odam qaysi tugmadan
+        // kelgani emas.
+        //
+        // Ilgari bu yerda `isRegistration` bayrog'i hal qilardi. Odam
+        // "Mijoz" tugmasini bosib KIRISH ekraniga tushardi va yangi raqam
+        // kiritardi: server "raqam tasdiqlandi, ro'yxatdan o'ting" deb
+        // tokensiz javob berardi, ilova esa buni kirish deb hisoblab PIN
+        // so'rardi va boshlang'ich ekranga qaytarardi. Hisob hech qachon
+        // yaratilmasdi — har urinish yangi SMS va yana o'sha aylanma.
+        //
+        // Endi: token keldi — hisob bor, PIN va ichkariga. Token yo'q —
+        // hisob yo'q, ism-familiya, keyin PIN.
+        final hasAccount = result['token'] != null;
+        if (!hasAccount) {
           context.pushReplacement('/register-complete', extra: {
             'phone': widget.phoneNumber,
             'role': widget.role ?? 'client',

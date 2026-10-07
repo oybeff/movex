@@ -53,6 +53,9 @@ class _LoginPageState extends State<LoginPage> {
       context.push('/otp-verification', extra: {
         'phoneNumber': formatPhoneNumber(_phoneCtrl.text.trim()),
         'isRegistration': false,
+        // Rol ham uzatiladi: raqam yangi bo'lsa, kod ekrani odamni
+        // ro'yxatdan o'tkazishga olib boradi va unga rol kerak.
+        'role': widget.role,
       });
     } catch (e) {
       if (!mounted) return;
