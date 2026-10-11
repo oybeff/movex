@@ -8,12 +8,16 @@ qaytaradi, unda hozirgi ilovaga mos narsalar yozilgan.
 
 Ishga tushirish (server ishlab turgan holda):
     venv/bin/python tests/verify_legal.py
+
+Prodni tekshirish (faqat o'qiydi, hech narsa o'zgartirmaydi):
+    API=https://movexgo.uz venv/bin/python tests/verify_legal.py
 """
+import os
 import sys
 
 import requests
 
-API = "http://127.0.0.1:8000"
+API = os.environ.get("API", "http://127.0.0.1:8000")
 ok_count = 0
 fail_count = 0
 
