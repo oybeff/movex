@@ -10,6 +10,7 @@ import '../../../../core/services/equipment_request_service.dart';
 import '../../../../core/services/equipment_service.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import 'incoming_order_page.dart';
 import 'search_area_page.dart';
 
 /// Egaga: yaqin atrofdagi ochiq zayavkalar.
@@ -78,6 +79,29 @@ class _RequestsFeedPageState extends State<RequestsFeedPage> {
       if (!launched && mounted) _snack('errors.no_maps_available'.tr());
     } catch (_) {
       if (mounted) _snack('errors.cannot_open_map'.tr());
+    }
+  }
+
+  /// Tez buyurtma: narx tayyor, taklif emas — "yangi buyurtma" ekrani.
+  /// Kartadagi "sizga tushadi"ni server hisoblaydi, shuning uchun karta
+  /// alohida so'raladi.
+  Future<void> _openQuick(EquipmentRequestModel request) async {
+    try {
+      final items = await _service.quickIncoming();
+      final card = items.where((o) => o.id == request.id).toList();
+      if (!mounted) return;
+      if (card.isEmpty) {
+        _snack('requests.quick_taken'.tr());
+        _load();
+        return;
+      }
+      await Navigator.of(context).push<bool>(MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => IncomingOrderPage(order: card.first),
+      ));
+      if (mounted) _load();
+    } catch (_) {
+      _snack('errors.something_went_wrong'.tr());
     }
   }
 
@@ -247,9 +271,31 @@ class _RequestsFeedPageState extends State<RequestsFeedPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(request.typeLabel,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600)),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(request.typeLabel,
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w600)),
+                        ),
+                        if (request.isQuick) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2D8CF0),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text('requests.mode_quick_badge'.tr(),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700)),
+                          ),
+                        ],
+                      ],
+                    ),
                     Text(
                       '${DateFormat('dd.MM.yyyy').format(request.startDate)} — '
                       '${DateFormat('dd.MM.yyyy').format(request.endDate)}'
@@ -301,7 +347,7 @@ class _RequestsFeedPageState extends State<RequestsFeedPage> {
                     size: 15, color: Colors.grey[600]),
                 const SizedBox(width: 4),
                 Text(
-                  '${'requests.client_budget'.tr()}: '
+                  '${request.isQuick ? 'requests.quick_price'.tr() : 'requests.client_budget'.tr()}: '
                   '${NumberFormatter.formatCurrency(request.budget)} '
                   '${'common.currency'.tr()}',
                   style: TextStyle(fontSize: 13, color: Colors.grey[700]),
@@ -338,15 +384,22 @@ class _RequestsFeedPageState extends State<RequestsFeedPage> {
               Expanded(
                 flex: 2,
                 child: ElevatedButton(
-                  onPressed: () => _makeOffer(request),
+                  onPressed: () => request.isQuick
+                      ? _openQuick(request)
+                      : _makeOffer(request),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryGreen,
+                    backgroundColor: request.isQuick
+                        ? const Color(0xFF2D8CF0)
+                        : AppColors.primaryGreen,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text('requests.make_offer'.tr(),
+                  child: Text(
+                      request.isQuick
+                          ? 'requests.quick_open'.tr()
+                          : 'requests.make_offer'.tr(),
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w600)),
                 ),

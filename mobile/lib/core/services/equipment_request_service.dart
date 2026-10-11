@@ -24,8 +24,12 @@ class EquipmentRequestService {
     String? address,
     double? budget,
     String? comment,
+    String mode = 'tender',
+    String? startTime,
   }) async {
     final response = await _dio.post('/requests/', data: {
+      'mode': mode,
+      if (startTime != null) 'start_time': startTime,
       'equipment_type': equipmentType,
       'start_date': _date(startDate),
       'end_date': _date(endDate),
@@ -107,6 +111,28 @@ class EquipmentRequestService {
 
   Future<void> withdrawOffer(int requestId, int offerId) async {
     await _dio.delete('/requests/$requestId/offers/$offerId');
+  }
+
+  // ------------------------------------------------------- tez buyurtma
+
+  /// Egaga ochiq tez buyurtmalar. Ilova ochiq turganda vaqti-vaqti bilan
+  /// so'raladi — push hali ulanmagan.
+  Future<List<QuickIncomingModel>> quickIncoming() async {
+    final response = await _dio.get('/requests/quick/incoming');
+    return (response.data as List<dynamic>)
+        .map((e) => QuickIncomingModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Olish. Birinchi bo'lib olgan ega oladi; kech qolsa server 409 beradi.
+  /// Yaratilgan buyurtma raqamini qaytaradi.
+  Future<int> quickAccept(int requestId) async {
+    final response = await _dio.post('/requests/$requestId/quick-accept', data: {});
+    return (response.data as Map<String, dynamic>)['order_id'] as int;
+  }
+
+  Future<void> quickDecline(int requestId) async {
+    await _dio.post('/requests/$requestId/quick-decline');
   }
 
   // ------------------------------------------------------------- radius

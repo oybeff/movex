@@ -30,6 +30,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    Time,
     UniqueConstraint,
 )
 from sqlalchemy.sql import func
@@ -62,7 +63,17 @@ class EquipmentRequest(Base):
     delivery_address = Column(Text, nullable=True)
 
     # Mijozning mo'ljali. Majburiy emas: "narxni o'zingiz ayting" ham bo'ladi.
+    # Tez buyurtmada (mode='quick') bu MO'LJAL emas, butun buyurtmaning
+    # yakuniy narxi: mijoz o'zi qo'yadi va u darhol muzlatiladi.
     budget = Column(Numeric(12, 2), nullable=True)
+
+    # tender — egalar narx taklif qiladi, mijoz tanlaydi (avvalgidek);
+    # quick  — narx tayyor, birinchi bo'lib olgan ega oladi.
+    mode = Column(String(10), nullable=False, default="tender", server_default="tender")
+    start_time = Column(Time, nullable=True)
+    # Tez buyurtmada muzlatilgan summa. Olinganda buyurtmaga o'tadi (0),
+    # bekor qilinsa yoki muddat tugasa — qaytariladi.
+    frozen_amount = Column(Numeric(12, 2), nullable=False, default=0, server_default="0")
     comment = Column(Text, nullable=True)
 
     # open      — takliflar kutilmoqda
@@ -90,6 +101,12 @@ class EquipmentRequest(Base):
         ),
         CheckConstraint("end_date >= start_date", name="check_request_dates"),
         CheckConstraint("budget IS NULL OR budget > 0", name="check_request_budget"),
+        CheckConstraint("mode IN ('tender','quick')", name="check_request_mode"),
+        CheckConstraint("frozen_amount >= 0", name="check_request_frozen_amount"),
+        CheckConstraint(
+            "mode <> 'quick' OR (budget IS NOT NULL AND start_time IS NOT NULL)",
+            name="check_quick_request_budget",
+        ),
     )
 
 
@@ -137,3 +154,20 @@ class RequestOffer(Base):
         ),
         CheckConstraint("price_per_day > 0", name="check_offer_price"),
     )
+
+
+class QuickRequestDecline(Base):
+    """Ega tez buyurtmani "Rad etish" bilan yopdi — unga qayta ko'rsatilmaydi."""
+
+    __tablename__ = "quick_request_declines"
+
+    id = Column(Integer, primary_key=True)
+    request_id = Column(
+        Integer, ForeignKey("equipment_requests.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    owner_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("request_id", "owner_id", name="uq_quick_decline"),)

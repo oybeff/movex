@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Numeric, String, Date, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, Numeric, String, Date, DateTime, ForeignKey, Text, Time
 from sqlalchemy.sql import func
 from sqlalchemy import CheckConstraint
 from app.db.base import Base
@@ -11,6 +11,8 @@ class Order(Base):
     equipment_id = Column(Integer, ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, index=True)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
+    # Boshlanish vaqti. Hozircha faqat tez buyurtmadan keladi.
+    start_time = Column(Time, nullable=True)
     status = Column(String(20), nullable=False, default='pending')  # pending, confirmed, rejected, cancelled, completed
     total_amount = Column(Numeric(10,2), nullable=False)  # Jami summa (narx + komissiya)
     commission = Column(Numeric(10,2), nullable=False)  # Komissiya

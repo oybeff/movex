@@ -93,6 +93,13 @@ class EquipmentRequestModel {
   /// open | assigned | cancelled | expired
   final String status;
 
+  /// tender — egalar narx taklif qiladi; quick — narx tayyor, kim birinchi
+  /// olsa o'shaniki (budget = butun buyurtma narxi, darhol muzlatilgan).
+  final String mode;
+
+  /// "09:00" — tez buyurtmada boshlanish vaqti
+  final String? startTime;
+
   final int? selectedOfferId;
   final int? orderId;
   final DateTime? expiresAt;
@@ -125,6 +132,8 @@ class EquipmentRequestModel {
     this.offersCount = 0,
     this.distanceKm,
     this.offers = const [],
+    this.mode = 'tender',
+    this.startTime,
   });
 
   factory EquipmentRequestModel.fromJson(Map<String, dynamic> json) {
@@ -147,6 +156,8 @@ class EquipmentRequestModel {
           : DateTime.parse(json['expires_at'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),
       offersCount: json['offers_count'] as int? ?? 0,
+      mode: json['mode'] as String? ?? 'tender',
+      startTime: (json['start_time'] as String?)?.substring(0, 5),
       distanceKm: RequestOfferModel._toDouble(json['distance_km']),
       offers: (json['offers'] as List<dynamic>?)
               ?.map((e) => RequestOfferModel.fromJson(e as Map<String, dynamic>))
@@ -157,7 +168,70 @@ class EquipmentRequestModel {
 
   bool get isOpen => status == 'open';
 
+  bool get isQuick => mode == 'quick';
+
   int get rentalDays => endDate.difference(startDate).inDays + 1;
+
+  String get typeLabel => EquipmentTypes.label(equipmentType);
+}
+
+/// Egaga tez buyurtma kartasi ("yangi buyurtma" ekrani).
+///
+/// Mijozning ismi va telefoni YO'Q: ular faqat olgan egaga, buyurtma
+/// ochilgandan keyin ko'rinadi. Pul hisobini server qiladi —
+/// [youReceive] narx minus komissiya, ilova o'zi ayirmaydi.
+class QuickIncomingModel {
+  final int id;
+  final String equipmentType;
+  final DateTime startDate;
+  final DateTime endDate;
+  final String? startTime;
+  final int days;
+  final double price;
+  final double youReceive;
+  final double deliveryLatitude;
+  final double deliveryLongitude;
+  final String? deliveryAddress;
+  final String? comment;
+  final double? distanceKm;
+  final String? clientInitials;
+
+  const QuickIncomingModel({
+    required this.id,
+    required this.equipmentType,
+    required this.startDate,
+    required this.endDate,
+    required this.days,
+    required this.price,
+    required this.youReceive,
+    required this.deliveryLatitude,
+    required this.deliveryLongitude,
+    this.startTime,
+    this.deliveryAddress,
+    this.comment,
+    this.distanceKm,
+    this.clientInitials,
+  });
+
+  factory QuickIncomingModel.fromJson(Map<String, dynamic> json) {
+    double d(dynamic v) => RequestOfferModel._toDouble(v) ?? 0;
+    return QuickIncomingModel(
+      id: json['id'] as int,
+      equipmentType: json['equipment_type'] as String,
+      startDate: DateTime.parse(json['start_date'] as String),
+      endDate: DateTime.parse(json['end_date'] as String),
+      startTime: (json['start_time'] as String?)?.substring(0, 5),
+      days: json['days'] as int? ?? 1,
+      price: d(json['price']),
+      youReceive: d(json['you_receive']),
+      deliveryLatitude: d(json['delivery_latitude']),
+      deliveryLongitude: d(json['delivery_longitude']),
+      deliveryAddress: json['delivery_address'] as String?,
+      comment: json['comment'] as String?,
+      distanceKm: RequestOfferModel._toDouble(json['distance_km']),
+      clientInitials: json['client_initials'] as String?,
+    );
+  }
 
   String get typeLabel => EquipmentTypes.label(equipmentType);
 }

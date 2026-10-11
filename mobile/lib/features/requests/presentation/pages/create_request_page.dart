@@ -42,6 +42,13 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
   bool _isSending = false;
   bool _isLocating = false;
 
+  /// tender — собрать предложения цен (как было); quick — «кто первый
+  /// взял»: клиент сам ставит цену за весь заказ, она сразу замораживается.
+  String _mode = 'quick';
+  TimeOfDay? _startTime;
+
+  bool get _isQuick => _mode == 'quick';
+
   @override
   void initState() {
     super.initState();
@@ -159,6 +166,10 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
       _snack('errors.location_not_available'.tr());
       return;
     }
+    if (_isQuick && _startTime == null) {
+      _snack('requests.quick_time_required'.tr());
+      return;
+    }
 
     setState(() => _isSending = true);
     try {
@@ -172,15 +183,94 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         budget: double.tryParse(
             _budgetController.text.replaceAll(RegExp(r'[^0-9]'), '')),
         comment: _commentController.text.trim(),
+        mode: _mode,
+        startTime: _startTime == null
+            ? null
+            : '${_startTime!.hour.toString().padLeft(2, '0')}:'
+                '${_startTime!.minute.toString().padLeft(2, '0')}:00',
       );
       if (!mounted) return;
-      _snack('requests.created'.tr());
+      _snack(_isQuick ? 'requests.quick_created'.tr() : 'requests.created'.tr());
       Navigator.of(context).pop(request);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSending = false);
-      _snack('errors.something_went_wrong'.tr());
+      // Сервер объясняет, что не так (например, не хватает денег на балансе)
+      String? detail;
+      try {
+        final data = (e as dynamic).response?.data;
+        if (data is Map && data['detail'] is String) detail = data['detail'] as String;
+      } catch (_) {}
+      _snack(detail ?? 'errors.something_went_wrong'.tr());
     }
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _startTime ?? const TimeOfDay(hour: 8, minute: 0),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context)
+                .colorScheme
+                .copyWith(primary: AppColors.primaryGreen),
+          ),
+          child: child!,
+        ),
+      ),
+    );
+    if (picked != null) setState(() => _startTime = picked);
+  }
+
+  Widget _modeSwitch() {
+    Widget option(String mode, IconData icon, String title, String hint) {
+      final selected = _mode == mode;
+      return Expanded(
+        child: InkWell(
+          onTap: () => setState(() => _mode = mode),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: selected
+                  ? AppColors.primaryGreen.withValues(alpha: 0.08)
+                  : AppColors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: selected ? AppColors.primaryGreen : Colors.black12,
+                width: selected ? 1.5 : 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon,
+                    color: selected ? AppColors.primaryGreen : AppColors.grey),
+                const SizedBox(height: 6),
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(hint,
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        option('quick', Icons.bolt_rounded, 'requests.mode_quick'.tr(),
+            'requests.mode_quick_hint'.tr()),
+        const SizedBox(width: 10),
+        option('tender', Icons.forum_outlined, 'requests.mode_tender'.tr(),
+            'requests.mode_tender_hint'.tr()),
+      ],
+    );
   }
 
   void _snack(String text) {
@@ -208,6 +298,8 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            _modeSwitch(),
+            const SizedBox(height: 12),
             _card(
               title: 'equipment.type'.tr(),
               child: InkWell(
@@ -276,6 +368,38 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 ),
               ),
             ),
+            if (_isQuick) ...[
+              const SizedBox(height: 12),
+              _card(
+                title: 'requests.start_time'.tr(),
+                child: InkWell(
+                  onTap: _pickTime,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.schedule,
+                            size: 18, color: AppColors.grey),
+                        const SizedBox(width: 10),
+                        Text(
+                          _startTime == null
+                              ? 'requests.choose_time'.tr()
+                              : '${_startTime!.hour.toString().padLeft(2, '0')}:'
+                                  '${_startTime!.minute.toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: _startTime == null
+                                ? Colors.grey[600]
+                                : AppColors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             _card(
               title: 'rent.delivery_place'.tr(),
@@ -332,7 +456,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             ),
             const SizedBox(height: 12),
             _card(
-              title: 'requests.budget'.tr(),
+              title: _isQuick ? 'requests.quick_price'.tr() : 'requests.budget'.tr(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -347,7 +471,10 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                       border: const UnderlineInputBorder(),
                     ),
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) return null;
+                      if (value == null || value.trim().isEmpty) {
+                        // В быстром заказе цена обязательна — её замораживаем
+                        return _isQuick ? 'requests.quick_price_required'.tr() : null;
+                      }
                       final parsed = double.tryParse(value);
                       if (parsed == null || parsed <= 0) {
                         return 'errors.price_positive'.tr();
@@ -356,7 +483,10 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     },
                   ),
                   const SizedBox(height: 6),
-                  Text('requests.budget_hint'.tr(),
+                  Text(
+                      _isQuick
+                          ? 'requests.quick_price_hint'.tr()
+                          : 'requests.budget_hint'.tr(),
                       style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                 ],
               ),

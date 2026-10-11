@@ -25,6 +25,9 @@ from app.schemas.equipment_request import (
     AcceptOfferResult,
     OfferCreate,
     OfferRead,
+    QuickAcceptIn,
+    QuickAcceptResult,
+    QuickIncoming,
     RequestCreate,
     RequestRead,
     RequestWithOffers,
@@ -142,6 +145,45 @@ def owner_feed(
     """Egaga: turi mos va radiusiga tushadigan ochiq zayavkalar."""
     items = request_service.list_open_for_owner(db, current_user, skip, limit)
     return [_to_read(db, r, current_user) for r in items]
+
+
+# --------------------------------------------- egaga: tez buyurtma
+# Ham /{request_id} dan oldin.
+
+@router.get("/quick/incoming", response_model=List[QuickIncoming])
+def quick_incoming(
+    db: Session = Depends(get_db),
+    current_user=Depends(role_checker(["owner"])),
+):
+    """
+    Egaga ochiq tez buyurtmalar — ilova ochiq turganda vaqti-vaqti bilan
+    so'raydi va yangisi kelsa "yangi buyurtma" ekranini o'zi ochadi.
+    Mijozning ismi va telefoni bu yerda yo'q.
+    """
+    return request_service.quick_incoming(db, current_user)
+
+
+@router.post("/{request_id}/quick-accept", response_model=QuickAcceptResult)
+def quick_accept(
+    request_id: int,
+    data: QuickAcceptIn = QuickAcceptIn(),
+    db: Session = Depends(get_db),
+    current_user=Depends(role_checker(["owner"])),
+):
+    """Birinchi bo'lib olgan ega oladi. Kech qolganga — 409."""
+    order = request_service.quick_accept(db, request_id, current_user, data.equipment_id)
+    return {"request_id": request_id, "order_id": order.id}
+
+
+@router.post("/{request_id}/quick-decline")
+def quick_decline(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(role_checker(["owner"])),
+):
+    """Ega rad etdi — bu buyurtma unga boshqa ko'rsatilmaydi."""
+    request_service.quick_decline(db, request_id, current_user)
+    return {"detail": "ok"}
 
 
 # ----------------------------------------------------- mijozga: zayavkalar

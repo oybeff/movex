@@ -96,6 +96,14 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "Yangi zayavka: {what}",
         "ru": "Новая заявка: {what}",
     },
+    "quick_request.title": {
+        "uz": "Tez buyurtma: {what} — {price} so'm",
+        "ru": "Быстрый заказ: {what} — {price} сум",
+    },
+    "quick_request.body": {
+        "uz": "{start} dan {end} gacha. Kim birinchi olsa — o'shaniki. Pul mijoz balansida muzlatilgan.",
+        "ru": "С {start} по {end}. Кто первый возьмёт — тому и заказ. Деньги заморожены на балансе клиента.",
+    },
     "request_offer.title": {
         "uz": "Zayavkangizga taklif keldi",
         "ru": "На вашу заявку прислали предложение",

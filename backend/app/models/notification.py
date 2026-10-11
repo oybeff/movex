@@ -50,7 +50,10 @@ class Notification(Base):
     __table_args__ = (
         CheckConstraint(
             "type IN ('order_created','order_confirmed','order_rejected','order_cancelled',"
-            "'order_completed','balance_topup','payout_paid','payout_rejected','system')",
+            "'order_completed','balance_topup','payout_paid','payout_rejected','system',"
+            "'request_created','request_offer','request_offer_accepted','request_offer_rejected',"
+            "'request_cancelled','listing_taken','listing_confirmed','listing_cancelled',"
+            "'listing_done','quick_request')",
             name="check_notification_type",
         ),
     )

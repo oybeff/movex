@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 class OrderBase(BaseModel):
     equipment_id: int
@@ -58,6 +58,7 @@ class OrderRead(BaseModel):
     equipment_id: int
     start_date: date
     end_date: date
+    start_time: Optional[time] = None
     status: str
     total_amount: float
     commission: float
