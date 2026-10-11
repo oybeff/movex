@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Sovg'a va Rahmat shakllarida rejim va foiz maydonlari yo'q —
     // ularni tekshirish shart emas.
-    $error = in_array($form, ['bonus', 'rahmat'], true)
+    $error = in_array($form, ['bonus', 'rahmat', 'listing_fee'], true)
         ? null
         : validateCommission($mode, $fixed, $percent);
 
@@ -111,6 +111,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             saveSetting($db, 'rahmat_ofd_package_code', $ofdPackageInput);
             saveSetting($db, 'rahmat_ofd_vat', $ofdVatInput);
             $message = 'Saqlandi. Yangi to\'lovlar va arizalarga qo\'llaniladi.';
+        }
+    } elseif ($form === 'listing_fee') {
+        // E'lon joylash narxi. 0 — bepul. Shaxsiy narx users.php da.
+        $listingFee = trim((string)($_POST['listing_fee'] ?? '0'));
+        if ($listingFee === '') {
+            $listingFee = '0';
+        }
+        if (!is_numeric($listingFee) || (float)$listingFee < 0) {
+            $error = "E'lon narxi manfiy bo'lishi mumkin emas";
+        } else {
+            saveSetting($db, 'listing_fee_amount', (string)(int)round((float)$listingFee));
+            $message = (float)$listingFee > 0
+                ? "Saqlandi. Yangi e'lonlar endi pullik."
+                : "Saqlandi. E'lon joylash bepul.";
         }
     } elseif ($form === 'bonus') {
         // Sovg'a — alohida shakl, ulush tekshiruviga bog'liq emas.
@@ -142,6 +156,9 @@ $percent = settingValue($db, 'commission_percent', '10');
 // Ro'yxatdan o'tganlik uchun sovg'a — faqat texnika egalari uchun.
 $bonusEnabled = settingValue($db, 'signup_bonus_enabled', '1') === '1';
 $bonusAmount = settingValue($db, 'signup_bonus_amount', '50000');
+
+// E'lon joylash narxi ("E'lonlar" bo'limi). 0 — bepul.
+$listingFee = settingValue($db, 'listing_fee_amount', '0');
 
 // Rahmat: avtomatik o'tkazma va fiskal chek kodlari.
 // Standart qiymatlar rahmat_service.py dagilar bilan bir xil bo'lishi
@@ -411,6 +428,34 @@ include 'includes/header.php';
                     <label>Summa</label><br>
                     <input type="number" name="bonus_amount" min="0" step="1000"
                            value="<?= htmlspecialchars($bonusAmount) ?>"
+                           style="max-width: 220px; margin-top: 6px;">
+                    <small class="text-muted">so'm</small>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
+                    💾 Saqlash
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-3" style="margin-top: 24px;">
+        <div class="card-header">
+            <h3 class="card-title">E'lon joylash narxi</h3>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info" style="margin-bottom: 18px;">
+                Faqat <strong>«E'lonlar»</strong> bo'limi uchun. Pul e'lon joylanganda
+                balansdan yechiladi (sovg'a ham ishlatiladi). <strong>0 — bepul.</strong>
+                Alohida odamga boshqa narx yoki bepul joylashni
+                «Foydalanuvchilar» → «Boshqarish» da qo'yish mumkin.
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                <input type="hidden" name="form" value="listing_fee">
+                <div class="form-group">
+                    <label>Bitta e'lon narxi</label><br>
+                    <input type="number" name="listing_fee" min="0" step="1000"
+                           value="<?= htmlspecialchars($listingFee) ?>"
                            style="max-width: 220px; margin-top: 6px;">
                     <small class="text-muted">so'm</small>
                 </div>

@@ -44,6 +44,10 @@ class User(Base):
     is_frozen = Column(Boolean, nullable=False, default=False)
     blocked_reason = Column(Text, nullable=True)
 
+    # E'lon joylash narxi shu odam uchun. NULL — umumiy narx
+    # (app_settings.listing_fee_amount), 0 — bepul. Adminkadan qo'yiladi.
+    listing_fee_override = Column(Numeric(12, 2), nullable=True)
+
     last_login_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -56,4 +60,8 @@ class User(Base):
             name="check_search_radius",
         ),
         CheckConstraint("language IN ('uz','ru')", name="check_user_language"),
+        CheckConstraint(
+            "listing_fee_override IS NULL OR listing_fee_override >= 0",
+            name="check_listing_fee_override",
+        ),
     )

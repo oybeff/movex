@@ -74,12 +74,12 @@ class BalanceTransaction(Base):
     __table_args__ = (
         CheckConstraint("amount > 0", name="check_transaction_amount"),
         CheckConstraint(
-            "type IN ('topup','payment','income','refund','withdrawal','bonus')",
+            "type IN ('topup','payment','income','refund','withdrawal','bonus','listing_fee')",
             name="check_transaction_type",
         ),
         CheckConstraint("status IN ('pending','completed','failed','canceled')", name="check_transaction_status"),
         CheckConstraint(
-            "payment_method IN ('rahmat','click','payme','uzum','card','cash') "
+            "payment_method IN ('rahmat','click','payme','uzum','card','cash','admin') "
             "OR payment_method IS NULL",
             name="check_transaction_payment_method",
         ),

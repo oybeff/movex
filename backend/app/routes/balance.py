@@ -7,11 +7,14 @@ tranzaksiyadagi summa bilan solishtiriladi. Imzosiz manzil = istalgan
 odam istalgan balansni to'ldirib olishi.
 """
 import logging
+from decimal import Decimal
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.core.internal_auth import require_internal_admin
 from app.dependencies import get_db, get_current_user
 from app.schemas import balance as balance_schema
 from app.services import balance_service, rahmat_payment, rahmat_service
@@ -321,3 +324,28 @@ async def rahmat_webhook(request: Request, db: Session = Depends(get_db)) -> Dic
         return {"success": False, "message": "Summa mos kelmadi"}
 
     return {"success": True, "status": status}
+
+
+# ---------------------------------------------------------------- adminka
+
+class AdminBonusIn(BaseModel):
+    user_id: int
+    amount: Decimal
+    comment: str = ""
+
+
+@router.post("/internal/bonus")
+def internal_admin_bonus(
+    payload: AdminBonusIn,
+    db: Session = Depends(get_db),
+    _=Depends(require_internal_admin),
+):
+    """
+    Adminkadan sovg'a (users.php → "Bonus berish").
+
+    Faqat SOVG'A: ilovada sarflanadi, kartaga yechilmaydi — egasi shunday
+    tanladi. Pul mantig'i balance_service.credit_bonus da, panel bazaga
+    o'zi yozmaydi.
+    """
+    tx = balance_service.grant_admin_bonus(db, payload.user_id, payload.amount, payload.comment)
+    return {"transaction_id": tx.id, "amount": float(tx.amount)}

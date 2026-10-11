@@ -117,6 +117,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
                 }
                 break;
 
+            case 'grant_bonus':
+                // Faqat SOVG'A (ilovada sarflanadi, kartaga yechilmaydi).
+                // Pulni panel o'zi yozmaydi — API orqali, mantiq bitta joyda:
+                // balance_service.grant_admin_bonus.
+                $amount = preg_replace('/[^\d]/', '', (string)($_POST['amount'] ?? ''));
+                $comment = trim((string)($_POST['comment'] ?? ''));
+                if ($amount === '' || (int)$amount <= 0) {
+                    $message = 'Summani kiriting';
+                    $messageType = 'error';
+                } else {
+                    $result = internalApiPost('/balance/internal/bonus', [
+                        'user_id' => $userId,
+                        'amount' => (int)$amount,
+                        'comment' => $comment,
+                    ]);
+                    if ($result['ok']) {
+                        $message = number_format((int)$amount, 0, '.', ' ')
+                                 . " so'm sovg'a berildi — " . $userData['full_name']
+                                 . ". Kartaga yechib bo'lmaydi, ilovada sarflanadi.";
+                        $messageType = 'success';
+                    } else {
+                        $message = "Sovg'a berilmadi: " . $result['error'];
+                        $messageType = 'error';
+                    }
+                }
+                break;
+
+            case 'set_listing_fee':
+                // Bo'sh — umumiy narx (commission.php), 0 — bepul, >0 — o'z narxi
+                $raw = trim((string)($_POST['listing_fee'] ?? ''));
+                if ($raw === '') {
+                    $db->prepare("UPDATE users SET listing_fee_override = NULL WHERE id = ?")
+                       ->execute([$userId]);
+                    $message = "E'lon narxi: umumiy narx bo'yicha";
+                    $messageType = 'success';
+                } elseif (!ctype_digit($raw)) {
+                    $message = "E'lon narxi butun son bo'lsin (yoki bo'sh qoldiring)";
+                    $messageType = 'error';
+                } else {
+                    $db->prepare("UPDATE users SET listing_fee_override = ? WHERE id = ?")
+                       ->execute([(int)$raw, $userId]);
+                    $message = (int)$raw === 0
+                        ? "Bu foydalanuvchi e'lonni bepul joylaydi"
+                        : "E'lon narxi: " . number_format((int)$raw, 0, '.', ' ') . " so'm";
+                    $messageType = 'success';
+                }
+                break;
+
             default:
                 $message = 'Noma\'lum amal';
                 $messageType = 'error';
@@ -173,8 +221,10 @@ $query = "
         is_frozen,
         blocked_reason,
         last_login_at,
+        listing_fee_override,
         (SELECT COUNT(*) FROM orders WHERE user_id = users.id) as orders_count,
-        (SELECT balance FROM balances WHERE user_id = users.id) as balance
+        (SELECT balance FROM balances WHERE user_id = users.id) as balance,
+        (SELECT bonus_balance FROM balances WHERE user_id = users.id) as bonus_balance
     FROM users 
     $whereClause
     ORDER BY created_at DESC
@@ -298,7 +348,12 @@ include 'includes/header.php';
                                 <?php endif; ?>
                             </td>
                             <td><?= number_format($user['orders_count']) ?></td>
-                            <td><?= number_format($user['balance'] ?? 0, 0) ?> so'm</td>
+                            <td>
+                                <?= number_format($user['balance'] ?? 0, 0) ?> so'm
+                                <?php if ((float)($user['bonus_balance'] ?? 0) > 0): ?>
+                                    <br><small class="text-muted">shundan sovg'a: <?= number_format($user['bonus_balance'], 0) ?></small>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <?php if (!empty($user['last_login_at'])): ?>
                                     <?= formatDate($user['last_login_at'], 'd.m.Y H:i') ?>
@@ -395,6 +450,37 @@ include 'includes/header.php';
                                                    style="max-width:170px;">
                                         </div>
                                         <button class="btn btn-sm btn-primary">O'rnatish</button>
+                                    </form>
+
+                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;"
+                                          onsubmit="this.querySelector('button').disabled = true;">
+                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                        <input type="hidden" name="action" value="grant_bonus">
+                                        <div>
+                                            <label style="font-size:12px;">Sovg'a (kartaga yechilmaydi)</label>
+                                            <input type="number" name="amount" min="1000" step="1000"
+                                                   placeholder="so'm" style="max-width:120px;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size:12px;">Izoh</label>
+                                            <input type="text" name="comment" maxlength="200"
+                                                   placeholder="ixtiyoriy" style="max-width:150px;">
+                                        </div>
+                                        <button class="btn btn-sm btn-success">🎁 Berish</button>
+                                    </form>
+
+                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
+                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                        <input type="hidden" name="action" value="set_listing_fee">
+                                        <div>
+                                            <label style="font-size:12px;">E'lon narxi (bo'sh — umumiy, 0 — bepul)</label>
+                                            <input type="number" name="listing_fee" min="0" step="1000"
+                                                   value="<?= $user['listing_fee_override'] === null ? '' : (int)$user['listing_fee_override'] ?>"
+                                                   placeholder="umumiy" style="max-width:150px;">
+                                        </div>
+                                        <button class="btn btn-sm btn-primary">Saqlash</button>
                                     </form>
 
                                 </div>

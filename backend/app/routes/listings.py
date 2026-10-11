@@ -25,7 +25,7 @@ from app.schemas.listing import (
     ListingOfferRead,
     ListingRead,
 )
-from app.services import listing_service, pricing_service
+from app.services import listing_fee_service, listing_service, pricing_service
 
 router = APIRouter()
 
@@ -174,6 +174,19 @@ def upload_photo(
     """
     assert_not_frozen(current_user)
     return {"url": media.save_upload(file, "listings")}
+
+
+# DIQQAT: "/{listing_id}" dan OLDIN — aks holda "fee" ni raqam deb o'qiydi
+@router.get("/fee")
+def listing_fee(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    E'lon joylash narxi SHU foydalanuvchi uchun. Ilova uni "joylash"
+    tugmasidan oldin ko'rsatadi: odam pul yechilishini bilib bossin.
+    """
+    return {"amount": float(listing_fee_service.fee_for(db, current_user))}
 
 
 # ---------------------------------------------------------------- amallar

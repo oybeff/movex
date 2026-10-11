@@ -318,6 +318,22 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "Ro'yxatdan o'tganlik uchun bonus",
         "ru": "Бонус за регистрацию",
     },
+    "tx.admin_bonus": {
+        "uz": "Ma'muriyatdan bonus: {comment}",
+        "ru": "Бонус от администрации: {comment}",
+    },
+    "tx.admin_bonus_plain": {
+        "uz": "Ma'muriyatdan bonus",
+        "ru": "Бонус от администрации",
+    },
+    "tx.listing_fee": {
+        "uz": "E'lon joylash: {title}",
+        "ru": "Размещение объявления: {title}",
+    },
+    "listing_fee.insufficient": {
+        "uz": "E'lon joylash narxi {fee} so'm. Balansingizda yetarli mablag' yo'q — hisobni to'ldiring.",
+        "ru": "Размещение объявления стоит {fee} сум. На балансе недостаточно средств — пополните баланс.",
+    },
     # Faqat OTP_TEST_MODE da ko'rinadi, prodda hech qachon chiqmaydi.
     "test_mode.code": {
         "uz": "TEST REJIMI: tasdiqlash kodi {code}",

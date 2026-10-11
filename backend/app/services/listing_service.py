@@ -58,7 +58,7 @@ from app.models.listing import (
 from app.models.balance import Balance, BalanceTransaction
 from app.models.budget_reserve import BudgetReserve
 from app.models.user import User
-from app.services import notification_service, pricing_service
+from app.services import listing_fee_service, notification_service, pricing_service
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +149,10 @@ def create_listing(db: Session, client: User, data) -> Listing:
     )
     db.add(listing)
     db.flush()
+
+    # E'lon joylash narxi (adminkada yoqilgan bo'lsa). Byudjetni muzlatishdan
+    # OLDIN: ikkalasi bitta balansdan, va pul yetmasa e'lon umuman saqlanmaydi.
+    listing_fee_service.charge(db, client, listing)
 
     # Byudjet KO'RSATILGAN bo'lsa — uni darhol muzlatamiz. Ilgari pul faqat
     # tasdiqlashda muzlatilardi, ya'ni puli yo'q odam ham byudjetli e'lon

@@ -876,7 +876,9 @@
     "offers_title": "Takliflar",
     "offers_waiting": "Narx takliflari: {count} ta. Ijrochini tanlang",
     "saved_empty": "Saqlanganlar yo'q",
-    "saved_empty_hint": "E'londa xatcho'pni bosing — taxta yangilansa ham u shu yerda qoladi"
+    "saved_empty_hint": "E'londa xatcho'pni bosing — taxta yangilansa ham u shu yerda qoladi",
+    "fee_note": "E'lon joylash narxi {} so'm — balansdan yechiladi (sovg'a ham ishlatiladi).",
+    "top_up": "Hisobni to'ldirish"
   },
   "material_types": {
     "brick": "G'isht",

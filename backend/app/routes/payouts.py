@@ -11,10 +11,10 @@ yoqilgan bo'lsa — ariza berilishi bilanoq tizim o'zi.
 """
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
+from app.core.internal_auth import require_internal_admin
 from app.core.roles import role_checker
 from app.db.session import get_db
 from app.routes.auth import get_current_user
@@ -52,25 +52,8 @@ def _to_read(request) -> PayoutRequestRead:
     )
 
 
-def _require_internal_admin(secret: Optional[str] = Header(None, alias="X-Admin-Secret")):
-    """
-    PHP adminkasi uchun ichki kirish.
-
-    Panel bazaga to'g'ridan-to'g'ri yozib pul harakatlantirmasligi kerak:
-    kartaga o'tkazish endi shlyuzga murojaat qiladi, ya'ni mantiq BITTA
-    joyda — payout_service da — turishi shart. Ilgari payouts.php shu
-    mantiqni takrorlardi va ikkisi ajralib ketishi mumkin edi.
-
-    Maxfiy so'z bo'sh bo'lsa manzil YO'Q (404): imzosiz manzil orqali
-    istalgan odam chet kartaga pul jo'natishni buyurgan bo'lardi.
-    """
-    if not settings.ADMIN_INTERNAL_SECRET:
-        raise HTTPException(status_code=404, detail="Not Found")
-    from hmac import compare_digest
-
-    if not secret or not compare_digest(str(secret), settings.ADMIN_INTERNAL_SECRET):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    return True
+# Tekshiruv app/core/internal_auth.py da — sovg'a berish ham shundan foydalanadi
+_require_internal_admin = require_internal_admin
 
 
 @router.get("/settings", response_model=PayoutSettingsRead)

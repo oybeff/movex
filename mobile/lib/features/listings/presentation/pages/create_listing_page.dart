@@ -9,6 +9,7 @@ import '../../../../core/constants/app_config.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/services/listing_service.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../balance/presentation/pages/balance_topup_page.dart';
 
 /// E'lon joylash.
 ///
@@ -43,6 +44,18 @@ class _CreateListingPageState extends State<CreateListingPage> {
 
   bool _isSending = false;
   String? _error;
+
+  /// Joylash narxi (0 — bepul). Tugmadan oldin ko'rsatiladi: pul
+  /// yechilishini odam oldindan bilsin.
+  double _fee = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _service.listingFee().then((fee) {
+      if (mounted) setState(() => _fee = fee);
+    }).catchError((_) {});
+  }
 
   @override
   void dispose() {
@@ -145,11 +158,58 @@ class _CreateListingPageState extends State<CreateListingPage> {
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _isSending = false;
-        _error = _detail(e) ?? 'errors.something_went_wrong'.tr();
-      });
+      setState(() => _isSending = false);
+      // 402 — joylash pullik, balansda pul yetmaydi: to'ldirishga yo'l
+      if (_status(e) == 402) {
+        await _offerTopUp(_detail(e) ?? '');
+        return;
+      }
+      setState(() => _error = _detail(e) ?? 'errors.something_went_wrong'.tr());
     }
+  }
+
+  int? _status(Object e) {
+    try {
+      return (e as dynamic).response?.statusCode as int?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _offerTopUp(String message) async {
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('settings.cancel'.tr()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('listings.top_up'.tr()),
+          ),
+        ],
+      ),
+    );
+    if (go == true && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => BalanceTopUpPage(requiredAmount: _fee)),
+      );
+    }
+  }
+
+  String _money(double v) {
+    final s = v.toStringAsFixed(0);
+    return s.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ' ');
   }
 
   String? _detail(Object e) {
@@ -289,6 +349,30 @@ class _CreateListingPageState extends State<CreateListingPage> {
             const SizedBox(height: 14),
             Text(_error!,
                 style: const TextStyle(color: AppColors.error, fontSize: 13)),
+          ],
+
+          if (_fee > 0) ...[
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.primaryGreen.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.payments_outlined,
+                      color: AppColors.primaryGreen, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'listings.fee_note'.tr(args: [_money(_fee)]),
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
 
           const SizedBox(height: 24),

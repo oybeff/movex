@@ -287,7 +287,8 @@ def has_signup_bonus(db: Session, user_id: int) -> bool:
     )
 
 
-def credit_bonus(db: Session, user, amount: Decimal):
+def credit_bonus(db: Session, user, amount: Decimal, description: str = None,
+                 payment_method: str = None):
     """
     Sovg'ani balansga qo'shadi va uni YECHIB BO'LMAYDIGAN deb belgilaydi.
 
@@ -300,19 +301,71 @@ def credit_bonus(db: Session, user, amount: Decimal):
     Xatoni YUTMAYDI: chaqiruvchi o'zi hal qiladi. Ro'yxatdan o'tishda xato
     yutiladi (odam ilovaga kira olishi shart), skriptda esa — yo'q, u xatoni
     ko'rsatishi kerak.
+
+    Adminkadan qo'lda berilgan sovg'a ham shu yerdan o'tadi (o'z matni va
+    payment_method='admin' bilan): pulni yechib bo'lmasligi bir xil bo'lishi
+    shart.
     """
-    update_balance(db, user.id, amount)
+    # Balans, sovg'a qismi va tranzaksiya — BITTA commit. Ilgari balans
+    # alohida commit qilinardi, tranzaksiya keyin: yozuv yiqilsa pul
+    # tushib qolardi-yu, tarixda izi bo'lmasdi.
+    amount = Decimal(str(amount))
     balance = get_or_create_balance(db, user.id)
-    balance.bonus_balance = Decimal(str(balance.bonus_balance or 0)) + Decimal(str(amount))
-    db.commit()
-    return create_transaction(
-        db,
+    balance.balance = Decimal(str(balance.balance or 0)) + amount
+    balance.bonus_balance = Decimal(str(balance.bonus_balance or 0)) + amount
+    transaction = BalanceTransaction(
         user_id=user.id,
         amount=amount,
-        transaction_type=TX_TYPE_BONUS,
-        description=t("tx.signup_bonus", _user_language(db, user.id)),
+        type=TX_TYPE_BONUS,
         status="completed",
+        payment_method=payment_method,
+        description=description or t("tx.signup_bonus", _user_language(db, user.id)),
     )
+    db.add(transaction)
+    db.commit()
+    db.refresh(transaction)
+    return transaction
+
+
+def grant_admin_bonus(db: Session, user_id: int, amount: Decimal, comment: str = ""):
+    """
+    Adminkadan sovg'a: tejab ishlatish mumkin, kartaga yechib bo'lmaydi.
+
+    Ikki marta bosilsa ikki marta tushmasin: oxirgi 30 soniyada shu odamga
+    xuddi shu summa adminkadan berilgan bo'lsa — rad etamiz.
+    """
+    from datetime import datetime, timedelta, timezone
+    from fastapi import HTTPException
+    from app.models.user import User
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(404, "Foydalanuvchi topilmadi")
+    if user.role == "admin" or user.is_blocked:
+        raise HTTPException(400, "Bu hisobga sovg'a berib bo'lmaydi")
+
+    amount = Decimal(str(amount))
+    if amount <= 0 or amount > Decimal("100000000"):
+        raise HTTPException(400, "Summa 0 dan katta va 100 mln dan oshmasin")
+
+    recent = (
+        db.query(BalanceTransaction.id)
+        .filter(
+            BalanceTransaction.user_id == user.id,
+            BalanceTransaction.type == TX_TYPE_BONUS,
+            BalanceTransaction.payment_method == "admin",
+            BalanceTransaction.amount == amount,
+            BalanceTransaction.created_at >= datetime.now(timezone.utc) - timedelta(seconds=30),
+        )
+        .first()
+    )
+    if recent:
+        raise HTTPException(409, "Shu summa hozirgina berildi — ikki marta bosilmadimi?")
+
+    comment = (comment or "").strip()[:200]
+    lang = _user_language(db, user.id)
+    description = t("tx.admin_bonus", lang, comment=comment) if comment else t("tx.admin_bonus_plain", lang)
+    return credit_bonus(db, user, amount, description=description, payment_method="admin")
 
 
 def grant_signup_bonus(db: Session, user):

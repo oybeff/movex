@@ -45,6 +45,14 @@ class ListingService {
 
   // ------------------------------------------------------------ mijozga
 
+  /// E'lon joylash narxi shu foydalanuvchi uchun (0 — bepul). Adminkada
+  /// umumiy va shaxsiy narx qo'yiladi; ilova uni faqat ko'rsatadi, pulni
+  /// server yechadi.
+  Future<double> listingFee() async {
+    final response = await _dio.get('/listings/fee');
+    return ((response.data as Map)['amount'] as num?)?.toDouble() ?? 0;
+  }
+
   Future<ListingModel> create({
     required String title,
     String? description,
