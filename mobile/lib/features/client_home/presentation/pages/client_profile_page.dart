@@ -22,6 +22,8 @@ import '../../../requests/presentation/pages/my_requests_page.dart';
 import '../../../requests/presentation/pages/search_area_page.dart';
 import '../../../settings/presentation/pages/terms_page.dart';
 import '../../../../core/widgets/bottom_nav_space.dart';
+import '../../../../core/widgets/delete_account_button.dart';
+import '../../../../core/services/pin_service.dart';
 import '../../../settings/presentation/pages/privacy_page.dart';
 
 class ClientProfilePage extends StatefulWidget {
@@ -531,6 +533,9 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('token');
       await prefs.remove('role');
+      // PIN ham o'chadi — egadagi kabi: aks holda telefonda boshqa odam
+      // kirsa, uni avvalgi egasining kodi kutib olardi.
+      await PinService.resetOnLogout();
       if (!mounted) return;
       context.go('/');
     }
@@ -974,6 +979,9 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
 
                         // Chiqish tugmasi
                         _LogoutButton(onTap: _showLogoutDialog),
+
+                        const SizedBox(height: 8),
+                        const DeleteAccountButton(),
 
                         const SizedBox(height: 90), // Bottom navigation uchun joy
                       ],
