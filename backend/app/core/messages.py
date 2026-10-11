@@ -20,6 +20,35 @@ SUPPORTED_LANGUAGES = ("uz", "ru")
 
 #: kalit -> {til: shablon}. Shablonda {} o'rniga format() argumentlari.
 MESSAGES: Dict[str, Dict[str, str]] = {
+    # --- hisobni o'chirish (account_deletion_service) ---
+    "account_delete.has_money": {
+        "uz": "Balansingizda pul bor — avval uni kartaga yechib oling.",
+        "ru": "На балансе есть деньги — сначала выведите их на карту.",
+    },
+    "account_delete.frozen": {
+        "uz": "Muzlatilgan summa bor (buyurtma yoki pul yechish arizasi) — u yakunlanishini kuting.",
+        "ru": "Есть замороженная сумма (заказ или заявка на вывод) — дождитесь её завершения.",
+    },
+    "account_delete.active_deals": {
+        "uz": "Tugallanmagan buyurtma yoki e'lon bor — avval uni yakunlang yoki bekor qiling.",
+        "ru": "Есть незавершённый заказ или объявление — сначала завершите или отмените его.",
+    },
+    "account_delete.admin": {
+        "uz": "Administrator hisobini ilovadan o'chirib bo'lmaydi.",
+        "ru": "Аккаунт администратора нельзя удалить из приложения.",
+    },
+    "account_delete.deleted_name": {
+        "uz": "O'chirilgan foydalanuvchi",
+        "ru": "Удалённый пользователь",
+    },
+    "account_delete.blocked_reason": {
+        "uz": "Hisob o'chirilgan.",
+        "ru": "Аккаунт удалён.",
+    },
+    "account_delete.done": {
+        "uz": "Hisob o'chirildi.",
+        "ru": "Аккаунт удалён.",
+    },
     # --- buyurtmalar: sarlavha ---
     "order_created.title": {
         "uz": "Yangi buyurtma: {what}",

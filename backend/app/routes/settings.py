@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
+from app.core import legal
 from app.db.session import get_db
 from app.models.app_settings import AppSettings, ContactMethod
 from app.schemas.app_settings import (
@@ -193,23 +194,15 @@ def get_terms_and_privacy(db: Session = Depends(get_db)):
     privacy_uz = db.query(AppSettings).filter(AppSettings.key == "privacy_uz").first()
     privacy_ru = db.query(AppSettings).filter(AppSettings.key == "privacy_ru").first()
     
+    def pick(row, kind, lang):
+        return row.value if row and row.value else legal.text(kind, lang)
+
     return {
-        "terms_uz": terms_uz.value if terms_uz else None,
-        "terms_ru": terms_ru.value if terms_ru else None,
-        "privacy_uz": privacy_uz.value if privacy_uz else None,
-        "privacy_ru": privacy_ru.value if privacy_ru else None,
+        "terms_uz": pick(terms_uz, "terms", "uz"),
+        "terms_ru": pick(terms_ru, "terms", "ru"),
+        "privacy_uz": pick(privacy_uz, "privacy", "uz"),
+        "privacy_ru": pick(privacy_ru, "privacy", "ru"),
     }
-
-
-# Matn hali yuklanmagan bo'lsa ko'rsatiladigan zaxira javob
-PLACEHOLDER_TERMS = {
-    "uz": "Foydalanish shartlari hali yuklanmagan.",
-    "ru": "Условия использования пока не загружены.",
-}
-PLACEHOLDER_PRIVACY = {
-    "uz": "Maxfiylik siyosati hali yuklanmagan.",
-    "ru": "Политика конфиденциальности пока не загружена.",
-}
 
 
 @router.get("/terms/{lang}")
@@ -222,9 +215,8 @@ def get_terms(lang: str, db: Session = Depends(get_db)):
     setting = db.query(AppSettings).filter(AppSettings.key == key).first()
     
     if not setting or not setting.value:
-        # Zaxira matn ham foydalanuvchi tilida bo'lishi kerak: ilgari
-        # ru so'ralganda ham o'zbekcha matn qaytardi
-        return {"content": PLACEHOLDER_TERMS[lang]}
+        # Bazada bo'lmasa — repodagi matn (app/legal/terms_{lang}.txt)
+        return {"content": legal.text("terms", lang)}
     
     return {"content": setting.value}
 
@@ -239,7 +231,7 @@ def get_privacy(lang: str, db: Session = Depends(get_db)):
     setting = db.query(AppSettings).filter(AppSettings.key == key).first()
     
     if not setting or not setting.value:
-        return {"content": PLACEHOLDER_PRIVACY[lang]}
+        return {"content": legal.text("privacy", lang)}
     
     return {"content": setting.value}
 

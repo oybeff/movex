@@ -1,0 +1,75 @@
+MoveX GO Privacy Policy
+
+MoveX GO app (uz.movexgo.app) and the movexgo.uz website. Version of 11 October 2026.
+
+MoveX GO is a service for renting construction equipment and buying building materials in Uzbekistan. This page explains what data we collect, why, who can see it, who we share it with, and how to delete your account.
+
+1. What we collect
+
+• Phone number — required. You sign in with it. Once a deal is confirmed, the other party can see it so you can call each other.
+• First and last name — required. Shown to the other party of a deal.
+• Role (customer or equipment owner) and interface language — to show the right sections and send notifications in your language.
+• Location — optional. Used to find equipment nearby, to set an order's delivery point and your search area. The point you choose as your search area is saved in your profile. The point an owner sets for their equipment is visible to other users on the map. We do not track your current location in the background and do not send it anywhere.
+• Photos and texts you upload yourself: equipment, listings, building materials, reviews.
+• Order chat messages — stored on the server, visible only to the participants of the order.
+• Orders, balance and payments: history of orders, top-ups, charges, commissions and withdrawals.
+• Card number and cardholder name — only if you withdraw money. Needed to send you the money and stored with the withdrawal request.
+• Server technical logs (request time, IP address) — to protect against abuse and investigate errors. Kept for a limited time.
+
+Your PIN code and fingerprint/face sign-in stay on your phone only. They are never sent to our server, and the app never receives biometric data itself: the phone's operating system performs the check.
+
+2. Why we use the data
+
+Only to run the service: sign-in, placing orders, contact between the parties, calculating and processing payments, withdrawals, notifications, support, fraud prevention and legal compliance. We do not sell data or share it with third parties for advertising.
+
+3. Who can see your data
+
+• The other party of a deal sees your name. Your phone number is revealed to them only after the order or listing has been confirmed. This is enforced by the server, not by the app.
+• Other users see only what you published yourself: equipment, listings, products, reviews.
+• Service administrators see data in the admin panel — for support, moderation and dispute resolution.
+
+4. Who we share data with
+
+Only those without whom the service cannot work, and only as much as needed:
+• Eskiz (Uzbekistan) — sending sign-in SMS codes. Receives your phone number and the SMS text.
+• Multicard / Rahmat (Uzbekistan) — accepting payments and transfers to cards. When you top up, you enter card details on the payment provider's page; the app never receives them. When you withdraw, we pass on the card number the money should be sent to.
+• Yandex — maps in the app. When a map is shown, Yandex receives technical device data and the visible map area.
+• Telegram — payment notifications to a private group of administrators. The notification contains the phone number and the payment amount.
+• Government authorities — only upon a lawful request.
+
+5. Where data is stored
+
+On a server in Uzbekistan. Data is transmitted only over an encrypted connection (HTTPS). Only administrators have access to the server and the admin panel.
+
+6. How long we keep data
+
+For as long as your account exists. After the account is deleted, records of orders and financial transactions are kept without your name and phone number: the other party of the deal needs them, and they are required for accounting.
+
+7. How to delete your account
+
+In the app: Settings → "Delete account". The account cannot be deleted while there is withdrawable money on the balance, a frozen amount (an order in progress or a withdrawal request), or an unfinished order or listing. Withdraw the money or finish the deal first.
+
+After deletion:
+• your name and phone number are erased and sign-in is closed immediately;
+• your equipment, listings and products are unpublished and photos are deleted;
+• the bonus balance is forfeited — it cannot be withdrawn anyway;
+• the history of completed orders stays with the other party without your data;
+• you can register again later with the same phone number.
+
+If you cannot sign in, email us at the address below with the subject "Delete account" and include your phone number. We will delete the account within 30 days on the same conditions.
+
+8. Your rights
+
+You can view and correct your data in your profile, delete your account, and ask us what data about you we store.
+
+9. Children
+
+The service is intended for people aged 18 and over. We do not knowingly collect data from children.
+
+10. Changes
+
+A new version is published in the app and at movexgo.uz/privacy with a new date.
+
+11. Contact
+
+Email: yakuboff25@gmail.com

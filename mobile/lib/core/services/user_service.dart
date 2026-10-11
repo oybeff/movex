@@ -54,6 +54,27 @@ class UserService {
     }
   }
 
+  /// Hisobni hozir o'chirish mumkinmi. Server sabablarni foydalanuvchi
+  /// tilida qaytaradi: pul bor, muzlatilgan summa, tugallanmagan bitim.
+  Future<({bool canDelete, List<String> reasons})> accountDeletionCheck() async {
+    final response = await _dio.get('/users/me/deletion-check');
+    final data = response.data as Map<String, dynamic>;
+    return (
+      canDelete: data['can_delete'] == true,
+      reasons: (data['reasons'] as List? ?? const []).map((e) => '$e').toList(),
+    );
+  }
+
+  /// Hisobni o'chirish. Rad etilsa (409) — server matni bilan xato.
+  Future<void> deleteAccount() async {
+    try {
+      await _dio.delete('/users/me');
+    } on DioException catch (e) {
+      final detail = e.response?.data is Map ? e.response?.data['detail'] : null;
+      throw Exception(detail?.toString() ?? e.message);
+    }
+  }
+
   /// Bitta foydalanuvchini olish (ID bo'yicha)
   Future<UserModel> getUser(int userId) async {
     try {

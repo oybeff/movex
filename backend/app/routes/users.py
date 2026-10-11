@@ -8,7 +8,9 @@ from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.routes.auth import get_current_user
 from app.core.access import assert_can_view_user, assert_self_or_admin
 from app.core.roles import role_checker
+from app.core.messages import t
 from app.core.security import hash_password
+from app.services import account_deletion_service
 from app.utils.phone_utils import to_db_phone
 
 router = APIRouter()
@@ -80,6 +82,38 @@ def update_current_user(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.get("/me/deletion-check")
+def account_deletion_check(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Hisobni hozir o'chirish mumkinmi. Ilova tasdiqlash oynasidan OLDIN
+    so'raydi: odam "o'chirish"ni bosib, keyin "pulingiz bor" deb rad
+    javobini olmasin.
+    """
+    reasons = account_deletion_service.blockers(db, current_user)
+    return {
+        "can_delete": not reasons,
+        "reasons": [t(key, current_user.language) for key in reasons],
+    }
+
+
+@router.delete("/me")
+def delete_current_user(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    O'z hisobini o'chirish (Google Play talabi). Anonimlashtirish — qarang:
+    app/services/account_deletion_service.py. Pul yoki tugallanmagan bitim
+    bo'lsa 409.
+    """
+    lang = current_user.language
+    account_deletion_service.delete_account(db, current_user)
+    return {"detail": t("account_delete.done", lang)}
 
 
 @router.get("/", response_model=List[UserRead])

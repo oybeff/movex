@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -24,7 +25,7 @@ from app.routes import (
 from app.routes import settings as settings_routes
 from app.db.base import Base
 from app.db.session import engine
-from app.core import media
+from app.core import legal, media
 from app.core.config import settings
 # Import all models to register them with Base
 from app.models import (
@@ -160,6 +161,18 @@ def health_check():
         "service": "Movex GO API",
         "version": "1.0.0"
     }
+
+# Публичные страницы политики и оферты — из тех же файлов, что видит
+# приложение (app/legal/*.txt). Google Play требует ссылку без входа.
+@app.get("/privacy", response_class=HTMLResponse, include_in_schema=False)
+def privacy_page():
+    return HTMLResponse(legal.page("privacy"))
+
+
+@app.get("/terms", response_class=HTMLResponse, include_in_schema=False)
+def terms_page():
+    return HTMLResponse(legal.page("terms"))
+
 
 # Корневая страница
 @app.get("/")

@@ -131,7 +131,13 @@
     "cancel": "Bekor qilish",
     "confirm": "Tasdiqlash",
     "select_language": "Tilni tanlang",
-    "language_changed": "Til muvaffaqiyatli o'zgartirildi"
+    "language_changed": "Til muvaffaqiyatli o'zgartirildi",
+    "delete_account": "Hisobni o'chirish",
+    "delete_account_blocked_title": "Hozircha o'chirib bo'lmaydi",
+    "delete_account_confirm_title": "Hisobni o'chirasizmi?",
+    "delete_account_confirm_message": "Bu amalni qaytarib bo'lmaydi. Ismingiz va telefon raqamingiz o'chiriladi, texnikangiz, e'lonlaringiz va suratlaringiz olib tashlanadi. Sovg'a balansi yo'qoladi. Yakunlangan buyurtmalar tarixi ikkinchi tomonda va buxgalteriya hisobida nomsiz qoladi.",
+    "delete_account_done": "Hisob o'chirildi",
+    "delete_account_error": "Serverga ulanib bo'lmadi. Keyinroq urinib ko'ring"
   },
   "profile": {
     "about": "Ilova haqida",

@@ -463,6 +463,82 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  /// Hisobni o'chirish (Google Play talabi).
+  ///
+  /// Avval serverdan "mumkinmi" so'raladi: pul yoki tugallanmagan bitim
+  /// bo'lsa tasdiqlash oynasi umuman ochilmaydi, sababi ko'rsatiladi.
+  /// Qoidani server hal qiladi — ilova faqat natijani ko'rsatadi.
+  Future<void> _deleteAccount() async {
+    final ({bool canDelete, List<String> reasons}) check;
+    try {
+      check = await _userService.accountDeletionCheck();
+    } catch (_) {
+      _snackPin('settings.delete_account_error'.tr());
+      return;
+    }
+    if (!mounted) return;
+
+    if (!check.canDelete) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: Colors.white,
+          title: Text('settings.delete_account_blocked_title'.tr()),
+          content: Text(check.reasons.join('\n\n')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('settings.confirm'.tr()),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        title: Text('settings.delete_account_confirm_title'.tr()),
+        content: Text('settings.delete_account_confirm_message'.tr()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('settings.cancel'.tr()),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('settings.delete_account'.tr()),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await _userService.deleteAccount();
+    } catch (e) {
+      if (!mounted) return;
+      _snackPin(e.toString().replaceFirst('Exception: ', ''));
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+    await prefs.remove('role');
+    await PinService.resetOnLogout();
+    if (!mounted) return;
+    _snackPin('settings.delete_account_done'.tr());
+    context.go('/');
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentLanguage = context.locale.languageCode == 'uz' ? 'O\'zbek' : 'Русский';
@@ -792,6 +868,20 @@ class _SettingsPageState extends State<SettingsPage> {
 
                       // Chiqish tugmasi
                       _LogoutButton(onTap: _showLogoutDialog),
+
+                      const SizedBox(height: 8),
+                      Center(
+                        child: TextButton(
+                          onPressed: _deleteAccount,
+                          child: Text(
+                            'settings.delete_account'.tr(),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.red.shade400,
+                            ),
+                          ),
+                        ),
+                      ),
 
                       const SizedBox(height: 20), // Bottom navigation uchun joy
                     ],

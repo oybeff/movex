@@ -1,0 +1,75 @@
+MoveX GO maxfiylik siyosati
+
+MoveX GO ilovasi (uz.movexgo.app) va movexgo.uz sayti. 2026-yil 11-oktabr tahriri.
+
+MoveX GO — O‘zbekistonda qurilish texnikasini ijaraga olish va qurilish materiallarini sotib olish xizmati. Quyida qanday ma’lumot yig‘ilishi, nima uchun, kimga ko‘rinishi, kimga uzatilishi va hisobni qanday o‘chirish mumkinligi yozilgan.
+
+1. Qanday ma’lumot yig‘iladi
+
+• Telefon raqam — majburiy. U orqali ilovaga kirasiz. Bitim tasdiqlangandan keyin ikkinchi tomon uni ko‘radi — bog‘lanishingiz uchun.
+• Ism va familiya — majburiy. Bitimning ikkinchi tomoniga ko‘rsatiladi.
+• Rol (buyurtmachi yoki texnika egasi) va interfeys tili — kerakli bo‘limlarni ko‘rsatish va xabarnomalarni sizning tilingizda yuborish uchun.
+• Joylashuv — ixtiyoriy. Yaqin atrofdagi texnikani topish, yetkazib berish nuqtasi va qidiruv hududi uchun. Qidiruv hududi uchun tanlangan nuqta profilda saqlanadi. Egasi o‘z texnikasi uchun ko‘rsatgan nuqta boshqa foydalanuvchilarga xaritada ko‘rinadi. Joriy joylashuvingiz fonda kuzatilmaydi va hech qayerga yuborilmaydi.
+• O‘zingiz yuklaydigan suratlar va matnlar: texnika, e’lonlar, qurilish materiallari, sharhlar.
+• Buyurtma chatidagi yozishmalar — serverda saqlanadi, faqat buyurtma ishtirokchilariga ko‘rinadi.
+• Buyurtmalar, balans va to‘lovlar: buyurtmalar, to‘ldirishlar, yechib olishlar, komissiyalar tarixi.
+• Karta raqami va karta egasining ismi — faqat pul yechib olsangiz. Pulni o‘tkazish uchun kerak va pul yechish arizasi bilan birga saqlanadi.
+• Serverning texnik yozuvlari (so‘rov vaqti, IP-manzil) — suiiste’mollardan himoya va xatolarni tahlil qilish uchun. Cheklangan muddat saqlanadi.
+
+PIN-kod va barmoq izi yoki yuz orqali kirish faqat telefoningizda saqlanadi. Ular serverga yuborilmaydi, biometrik ma’lumotning o‘zini ilova olmaydi: tekshiruvni telefon tizimi bajaradi.
+
+2. Ma’lumot nima uchun ishlatiladi
+
+Faqat xizmat ishlashi uchun: kirish, buyurtma rasmiylashtirish, tomonlar aloqasi, to‘lovni hisoblash va o‘tkazish, pul yechish, xabarnomalar, qo‘llab-quvvatlash, firibgarlikdan himoya va qonun talablari. Ma’lumot sotilmaydi va reklama uchun uchinchi shaxslarga berilmaydi.
+
+3. Ma’lumotni kim ko‘radi
+
+• Bitimning ikkinchi tomoni ismingizni ko‘radi. Telefon raqam unga faqat buyurtma yoki e’lon tasdiqlangandan keyin ochiladi. Buni ilova emas, server nazorat qiladi.
+• Boshqa foydalanuvchilar faqat o‘zingiz e’lon qilgan narsani ko‘radi: texnika, e’lonlar, tovarlar, sharhlar.
+• Xizmat administratorlari ma’lumotni boshqaruv panelida ko‘radi — qo‘llab-quvvatlash, moderatsiya va nizolarni hal qilish uchun.
+
+4. Ma’lumot kimga uzatiladi
+
+Faqat xizmat ularsiz ishlamaydiganlarga va faqat kerakli hajmda:
+• Eskiz (O‘zbekiston) — kirish kodi bilan SMS yuborish. Telefon raqam va SMS matnini oladi.
+• Multicard / Rahmat (O‘zbekiston) — to‘lovlarni qabul qilish va kartaga o‘tkazish. Hisobni to‘ldirishda karta ma’lumotlarini to‘lov tizimi sahifasida kiritasiz, ilova ularni olmaydi. Pul yechishda pul o‘tkaziladigan karta raqamini uzatamiz.
+• Yandex — ilovadagi xarita. Xarita ko‘rsatilganda Yandex qurilmaning texnik ma’lumotlari va xaritaning ko‘rinadigan qismini oladi.
+• Telegram — to‘lovlar haqida administratorlarning yopiq guruhiga xabarnoma. Xabarda telefon raqam va to‘lov summasi bor.
+• Davlat organlari — faqat qonuniy talab bo‘yicha.
+
+5. Ma’lumot qayerda saqlanadi
+
+O‘zbekistondagi serverda. Ma’lumot faqat himoyalangan ulanish (HTTPS) orqali uzatiladi. Serverga va boshqaruv paneliga faqat administratorlar kira oladi.
+
+6. Ma’lumot qancha saqlanadi
+
+Hisobingiz bor ekan. Hisob o‘chirilgandan keyin buyurtmalar va pul harakati yozuvlari ismingiz va telefon raqamingizsiz saqlanadi: ular bitimning ikkinchi tomoniga va buxgalteriya hisobi uchun kerak.
+
+7. Hisobni qanday o‘chirish mumkin
+
+Ilovada: Sozlamalar → «Hisobni o‘chirish». Balansda yechib olish mumkin bo‘lgan pul, muzlatilgan summa (bajarilayotgan buyurtma yoki pul yechish arizasi) yoki tugallanmagan buyurtma yoki e’lon bo‘lsa, hisobni o‘chirib bo‘lmaydi. Avval pulni yechib oling yoki bitimni yakunlang.
+
+O‘chirilgandan keyin:
+• ismingiz va telefon raqamingiz o‘chiriladi, hisobga kirish darhol yopiladi;
+• texnika, e’lonlar va tovarlar e’londan olinadi, suratlar o‘chiriladi;
+• sovg‘a balansi yo‘qoladi — uni baribir yechib bo‘lmaydi;
+• yakunlangan buyurtmalar tarixi ikkinchi tomonda sizning ma’lumotlaringizsiz qoladi;
+• shu telefon raqam bilan keyin qaytadan ro‘yxatdan o‘tish mumkin.
+
+Ilovaga kira olmasangiz, quyidagi pochtaga «Hisobni o‘chirish» mavzusi bilan xat yozing va telefon raqamni ko‘rsating. Hisob 30 kun ichida xuddi shu shartlar bilan o‘chiriladi.
+
+8. Huquqlaringiz
+
+Ma’lumotlaringizni profilda ko‘rishingiz va tuzatishingiz, hisobni o‘chirishingiz, shuningdek qaysi ma’lumotlaringiz saqlanayotgani haqida bizdan so‘rashingiz mumkin.
+
+9. Bolalar
+
+Xizmat 18 yoshdan oshganlar uchun. Bolalarning ma’lumotlarini ataylab yig‘maymiz.
+
+10. O‘zgarishlar
+
+Yangi tahrir ilovada va movexgo.uz/privacy sahifasida yangi sana bilan e’lon qilinadi.
+
+11. Bog‘lanish
+
+Elektron pochta: yakuboff25@gmail.com
