@@ -74,7 +74,7 @@ apt-get install -y -qq \
     python3 python3-venv python3-dev build-essential \
     postgresql postgresql-contrib libpq-dev \
     nginx \
-    php8.3-fpm php8.3-pgsql php8.3-mbstring php8.3-xml \
+    php8.3-fpm php8.3-pgsql php8.3-mbstring php8.3-xml php8.3-curl \
     git curl ufw certbot python3-certbot-nginx >/dev/null
 ok "python$(python3 -V | cut -d' ' -f2), postgres, nginx, php8.3, certbot"
 
