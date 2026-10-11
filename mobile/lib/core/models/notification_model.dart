@@ -10,7 +10,7 @@ class NotificationModel {
   final int? orderId;
 
   /// Texnika turi kodi — ro'yxatda ikonka shu bo'yicha tanlanadi
-  /// (EquipmentTypes.svgAsset).
+  /// (EquipmentTypes.markerAsset).
   final String? equipmentType;
 
   /// Texnika modeli ("JCB 3CX"). Turi bilan birga sarlavhani yig'ish uchun.

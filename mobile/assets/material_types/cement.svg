@@ -1,1 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><ellipse cx='32' cy='57.4' rx='17' ry='1.9' fill='#000' opacity='0.10'/><path d='M18 18 Q32 14 46 18 L48 50 Q32 54 16 50 Z' fill='#CFD5DB' stroke='#1F242B' stroke-width='1.2' stroke-linejoin='round'/><path d='M16 42 Q32 46 48 42 L48 50 Q32 54 16 50 Z' fill='#AEB6BE'/><path d='M18 18 Q32 14 46 18 L46.4 23 Q32 19 17.8 23 Z' fill='#D5DAE0'/><rect x='24' y='28' width='16' height='10' rx='1.4' fill='#99A2AA' opacity='0.45'/><path d='M27 36 L31 30 L34 34 L36.6 31 L38.6 36 Z' fill='#CFD5DB'/></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">MovexGo — Sement</title>
+  <desc id="desc">MovexGo Uzbek construction material category icon, black and amber on white.</desc>
+  <circle cx="64" cy="55" r="42" fill="#FFFFFF" stroke="#08090B" stroke-width="6"/>
+  <path d="M34 82 L64 119 L94 82" fill="#08090B"/>
+  <circle cx="64" cy="55" r="34" fill="#FFFFFF"/>
+  <circle cx="66" cy="52" r="22" fill="#FFB800"/>
+  <path d="M28 46 H43 M25 53 H37 M29 60 H39" stroke="#FFB800" stroke-width="3.5" stroke-linecap="round"/>
+  
+          <path d="M42 40 L82 40 L89 49 L85 87 Q62 95 39 87 L35 49 Z" fill="#E9D2A5" stroke="#08090B" stroke-width="2.8" stroke-linejoin="round"/>
+          <path d="M42 40 L48 48 L85 49 L82 40" fill="#FFF0CD" stroke="#08090B" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M46 59 H78 M46 67 H75" stroke="#B48A43" stroke-width="3" stroke-linecap="round"/>
+          <path d="M50 77 H72" stroke="#08090B" stroke-width="3" stroke-linecap="round"/>
+        
+</svg>

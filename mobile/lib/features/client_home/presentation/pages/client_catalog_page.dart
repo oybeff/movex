@@ -212,9 +212,12 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                           ? 'common.all'.tr()
                           : EquipmentTypes.label(type),
                     ),
+                    // `color` qo'yilmaydi: yangi ikonkalar ko'p rangli va
+                    // shaffoflik (alpha) qatlami yo'q — bitta rangga
+                    // bo'yash butun kvadratni to'ldirib, rasmni yo'qotadi.
                     avatar: type == 'all'
                         ? null
-                        : EquipmentTypeIcon(type, size: 18, color: AppColors.grey),
+                        : EquipmentTypeIcon(type, size: 18),
                     selected: isSelected,
                     onSelected: (selected) {
                       setModalState(() {

@@ -1,1 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><ellipse cx='32' cy='57.4' rx='20' ry='1.9' fill='#000' opacity='0.10'/><path d='M8 28 L32 18 L56 28 L32 38 Z' fill='#D5DAE0' stroke='#1F242B' stroke-width='1.2' stroke-linejoin='round'/><path d='M8 28 L8 44 L32 54 L32 38 Z' fill='#B9C0C6' stroke='#1F242B' stroke-width='1.2' stroke-linejoin='round'/><path d='M56 28 L56 44 L32 54 L32 38 Z' fill='#99A2AA' stroke='#1F242B' stroke-width='1.2' stroke-linejoin='round'/><circle cx='20' cy='26' r='1.2' fill='#99A2AA' opacity='0.5'/><circle cx='30' cy='23' r='1.2' fill='#99A2AA' opacity='0.5'/><circle cx='40' cy='27' r='1.2' fill='#99A2AA' opacity='0.5'/><circle cx='26' cy='30' r='1.2' fill='#99A2AA' opacity='0.5'/><circle cx='38' cy='32' r='1.2' fill='#99A2AA' opacity='0.5'/><circle cx='33' cy='27' r='1.2' fill='#99A2AA' opacity='0.5'/><path d='M14 29.6 Q32 22 50 29.6' fill='none' stroke='#FFFFFF' stroke-width='1.6' opacity='0.55'/><line x1='16' y1='32.6' x2='16' y2='48.6' stroke='#99A2AA' stroke-width='1' opacity='0.6'/><line x1='24' y1='36' x2='24' y2='52' stroke='#99A2AA' stroke-width='1' opacity='0.6'/><line x1='40' y1='50' x2='40' y2='34' stroke='#B9C0C6' stroke-width='1' opacity='0.5'/><line x1='48' y1='46' x2='48' y2='30.6' stroke='#B9C0C6' stroke-width='1' opacity='0.5'/></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">MovexGo — Beton</title>
+  <desc id="desc">MovexGo Uzbek construction material category icon, black and amber on white.</desc>
+  <circle cx="64" cy="55" r="42" fill="#FFFFFF" stroke="#08090B" stroke-width="6"/>
+  <path d="M34 82 L64 119 L94 82" fill="#08090B"/>
+  <circle cx="64" cy="55" r="34" fill="#FFFFFF"/>
+  <circle cx="66" cy="52" r="22" fill="#FFB800"/>
+  <path d="M28 46 H43 M25 53 H37 M29 60 H39" stroke="#FFB800" stroke-width="3.5" stroke-linecap="round"/>
+  
+          <path d="M32 54 L64 42 L94 54 L62 66 Z" fill="#E7ECEF" stroke="#08090B" stroke-width="2.8" stroke-linejoin="round"/>
+          <path d="M32 54 L62 66 L62 88 L32 76 Z" fill="#BFC8CE" stroke="#08090B" stroke-width="2.8" stroke-linejoin="round"/>
+          <path d="M62 66 L94 54 L94 76 L62 88 Z" fill="#D5DDE2" stroke="#08090B" stroke-width="2.8" stroke-linejoin="round"/>
+          <path d="M43 58 L43 80 M53 62 L53 84 M72 62 L72 84 M83 58 L83 80" stroke="#8A949B" stroke-width="2"/>
+        
+</svg>

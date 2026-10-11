@@ -1,1 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><ellipse cx='32' cy='57.4' rx='22' ry='1.9' fill='#000' opacity='0.10'/><rect x='12' y='16' width='6' height='36' rx='3' fill='#95A1AC' stroke='#1F242B' stroke-width='1' stroke-linejoin='round'/><rect x='13' y='16' width='1.6' height='36' fill='#C2CAD2'/><line x1='12' y1='20.0' x2='18' y2='18.0' stroke='#67727D' stroke-width='1.1'/><line x1='12' y1='25.6' x2='18' y2='23.6' stroke='#67727D' stroke-width='1.1'/><line x1='12' y1='31.2' x2='18' y2='29.2' stroke='#67727D' stroke-width='1.1'/><line x1='12' y1='36.8' x2='18' y2='34.8' stroke='#67727D' stroke-width='1.1'/><line x1='12' y1='42.4' x2='18' y2='40.4' stroke='#67727D' stroke-width='1.1'/><line x1='12' y1='48.0' x2='18' y2='46.0' stroke='#67727D' stroke-width='1.1'/><rect x='20' y='18' width='6' height='36' rx='3' fill='#95A1AC' stroke='#1F242B' stroke-width='1' stroke-linejoin='round'/><rect x='21' y='18' width='1.6' height='36' fill='#C2CAD2'/><line x1='20' y1='22.0' x2='26' y2='20.0' stroke='#67727D' stroke-width='1.1'/><line x1='20' y1='27.6' x2='26' y2='25.6' stroke='#67727D' stroke-width='1.1'/><line x1='20' y1='33.2' x2='26' y2='31.2' stroke='#67727D' stroke-width='1.1'/><line x1='20' y1='38.8' x2='26' y2='36.8' stroke='#67727D' stroke-width='1.1'/><line x1='20' y1='44.4' x2='26' y2='42.4' stroke='#67727D' stroke-width='1.1'/><line x1='20' y1='50.0' x2='26' y2='48.0' stroke='#67727D' stroke-width='1.1'/><rect x='28' y='16' width='6' height='36' rx='3' fill='#95A1AC' stroke='#1F242B' stroke-width='1' stroke-linejoin='round'/><rect x='29' y='16' width='1.6' height='36' fill='#C2CAD2'/><line x1='28' y1='20.0' x2='34' y2='18.0' stroke='#67727D' stroke-width='1.1'/><line x1='28' y1='25.6' x2='34' y2='23.6' stroke='#67727D' stroke-width='1.1'/><line x1='28' y1='31.2' x2='34' y2='29.2' stroke='#67727D' stroke-width='1.1'/><line x1='28' y1='36.8' x2='34' y2='34.8' stroke='#67727D' stroke-width='1.1'/><line x1='28' y1='42.4' x2='34' y2='40.4' stroke='#67727D' stroke-width='1.1'/><line x1='28' y1='48.0' x2='34' y2='46.0' stroke='#67727D' stroke-width='1.1'/><rect x='36' y='18' width='6' height='36' rx='3' fill='#95A1AC' stroke='#1F242B' stroke-width='1' stroke-linejoin='round'/><rect x='37' y='18' width='1.6' height='36' fill='#C2CAD2'/><line x1='36' y1='22.0' x2='42' y2='20.0' stroke='#67727D' stroke-width='1.1'/><line x1='36' y1='27.6' x2='42' y2='25.6' stroke='#67727D' stroke-width='1.1'/><line x1='36' y1='33.2' x2='42' y2='31.2' stroke='#67727D' stroke-width='1.1'/><line x1='36' y1='38.8' x2='42' y2='36.8' stroke='#67727D' stroke-width='1.1'/><line x1='36' y1='44.4' x2='42' y2='42.4' stroke='#67727D' stroke-width='1.1'/><line x1='36' y1='50.0' x2='42' y2='48.0' stroke='#67727D' stroke-width='1.1'/><rect x='44' y='16' width='6' height='36' rx='3' fill='#95A1AC' stroke='#1F242B' stroke-width='1' stroke-linejoin='round'/><rect x='45' y='16' width='1.6' height='36' fill='#C2CAD2'/><line x1='44' y1='20.0' x2='50' y2='18.0' stroke='#67727D' stroke-width='1.1'/><line x1='44' y1='25.6' x2='50' y2='23.6' stroke='#67727D' stroke-width='1.1'/><line x1='44' y1='31.2' x2='50' y2='29.2' stroke='#67727D' stroke-width='1.1'/><line x1='44' y1='36.8' x2='50' y2='34.8' stroke='#67727D' stroke-width='1.1'/><line x1='44' y1='42.4' x2='50' y2='40.4' stroke='#67727D' stroke-width='1.1'/><line x1='44' y1='48.0' x2='50' y2='46.0' stroke='#67727D' stroke-width='1.1'/><rect x='9' y='28' width='42' height='3.4' rx='1.7' fill='#3D444E'/><rect x='9' y='40' width='42' height='3.4' rx='1.7' fill='#3D444E'/></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">MovexGo — Armatura</title>
+  <desc id="desc">MovexGo Uzbek construction material category icon, black and amber on white.</desc>
+  <circle cx="64" cy="55" r="42" fill="#FFFFFF" stroke="#08090B" stroke-width="6"/>
+  <path d="M34 82 L64 119 L94 82" fill="#08090B"/>
+  <circle cx="64" cy="55" r="34" fill="#FFFFFF"/>
+  <circle cx="66" cy="52" r="22" fill="#FFB800"/>
+  <path d="M28 46 H43 M25 53 H37 M29 60 H39" stroke="#FFB800" stroke-width="3.5" stroke-linecap="round"/>
+  
+          <g stroke="#08090B" stroke-width="3" stroke-linecap="round">
+            <path d="M34 44 L86 86" stroke="#59636B" stroke-width="7"/>
+            <path d="M34 44 L86 86" stroke="#DDE3E7" stroke-width="3"/>
+            <path d="M45 37 L97 79" stroke="#59636B" stroke-width="7"/>
+            <path d="M45 37 L97 79" stroke="#DDE3E7" stroke-width="3"/>
+            <path d="M28 55 L80 97" stroke="#59636B" stroke-width="7"/>
+            <path d="M28 55 L80 97" stroke="#DDE3E7" stroke-width="3"/>
+          </g>
+          <g stroke="#08090B" stroke-width="2">
+            <path d="M41 46 L36 52 M51 54 L46 60 M61 62 L56 68 M71 70 L66 76 M81 78 L76 84 M91 86 L86 92" />
+            <path d="M52 39 L47 45 M62 47 L57 53 M72 55 L67 61 M82 63 L77 69 M92 71 L87 77" />
+          </g>
+        
+</svg>

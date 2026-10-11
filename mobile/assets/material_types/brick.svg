@@ -1,1 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><ellipse cx='32' cy='57.4' rx='20' ry='1.9' fill='#000' opacity='0.10'/><rect x='10' y='46' width='14' height='9' rx='1' fill='#C0563C' stroke='#1F242B' stroke-width='1' stroke-linejoin='round'/><rect x='10' y='52.3' width='14' height='2.7' fill='#9E422C'/><rect x='25' y='46' width='14' height='9' rx='1' fill='#C0563C' stroke='#1F242B' stroke-width='1' stroke-linejoin='round'/><rect x='25' y='52.3' width='14' height='2.7' fill='#9E422C'/><rect x='40' y='46' width='14' height='9' rx='1' fill='#C0563C' stroke='#1F242B' stroke-width='1' stroke-linejoin='round'/><rect x='40' y='52.3' width='14' height='2.7' fill='#9E422C'/><rect x='14' y='36' width='14' height='9' rx='1' fill='#C0563C' stroke='#1F242B' stroke-width='1' stroke-linejoin='round'/><rect x='14' y='42.3' width='14' height='2.7' fill='#9E422C'/><rect x='29' y='36' width='14' height='9' rx='1' fill='#C0563C' stroke='#1F242B' stroke-width='1' stroke-linejoin='round'/><rect x='29' y='42.3' width='14' height='2.7' fill='#9E422C'/><rect x='44' y='36' width='14' height='9' rx='1' fill='#C0563C' stroke='#1F242B' stroke-width='1' stroke-linejoin='round'/><rect x='44' y='42.3' width='14' height='2.7' fill='#9E422C'/><rect x='18' y='26' width='14' height='9' rx='1' fill='#C0563C' stroke='#1F242B' stroke-width='1' stroke-linejoin='round'/><rect x='18' y='32.3' width='14' height='2.7' fill='#9E422C'/><rect x='33' y='26' width='14' height='9' rx='1' fill='#C0563C' stroke='#1F242B' stroke-width='1' stroke-linejoin='round'/><rect x='33' y='32.3' width='14' height='2.7' fill='#9E422C'/><rect x='18' y='26' width='14' height='2.4' fill='#D7715A'/></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">MovexGo — G‘isht</title>
+  <desc id="desc">MovexGo Uzbek construction material category icon, black and amber on white.</desc>
+  <circle cx="64" cy="55" r="42" fill="#FFFFFF" stroke="#08090B" stroke-width="6"/>
+  <path d="M34 82 L64 119 L94 82" fill="#08090B"/>
+  <circle cx="64" cy="55" r="34" fill="#FFFFFF"/>
+  <circle cx="66" cy="52" r="22" fill="#FFB800"/>
+  <path d="M28 46 H43 M25 53 H37 M29 60 H39" stroke="#FFB800" stroke-width="3.5" stroke-linecap="round"/>
+  
+          <g stroke="#08090B" stroke-width="2.5" stroke-linejoin="round">
+            <path d="M34 57 L58 57 L58 70 L34 70 Z" fill="#FFB800"/>
+            <path d="M61 57 L85 57 L85 70 L61 70 Z" fill="#F5A900"/>
+            <path d="M47 42 L71 42 L71 54 L47 54 Z" fill="#FFCB45"/>
+            <path d="M47 73 L71 73 L71 86 L47 86 Z" fill="#F5A900"/>
+            <path d="M74 73 L94 73 L94 86 L74 86 Z" fill="#FFCB45"/>
+            <path d="M20 73 L43 73 L43 86 L20 86 Z" fill="#FFCB45"/>
+          </g>
+        
+</svg>

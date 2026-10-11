@@ -12,7 +12,8 @@ kerak: mobile/lib/core/constants/equipment_types.dart
 Yangi tur qo'shish:
   1. shu ro'yxatga yozish;
   2. mobil ilovadagi ro'yxatga o'sha kodni qo'shish;
-  3. assets/equipment_types/<icon>.png ikonkasini qo'yish;
+  3. mobile/assets/equipment_types/<kod>_uz.png va <kod>_ru.png ikonkalarini
+     qo'yish (nom rasm ichida yozilgan, shuning uchun har til uchun alohida);
   4. uz.json va ru.json ga nom qo'shish.
 """
 from typing import Dict, List, Optional

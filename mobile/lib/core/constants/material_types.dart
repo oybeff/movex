@@ -9,8 +9,8 @@ import 'package:easy_localization/easy_localization.dart';
 /// saqlanadi, ekranda esa nomi ko'rsatiladi. Kodni foydalanuvchiga
 /// chiqarib yuborish loyihada allaqachon to'rt marta bo'lgan.
 ///
-/// Ikonka — texnikadagidek SVG (`assets/material_types/<kod>.svg`),
-/// tool/generate_equipment_icons.py yasaydi.
+/// Ikonka — SVG (`assets/material_types/<kod>.svg`), dizaynerdan. Ichida
+/// matn yo'q, shuning uchun bitta fayl ikkala til uchun.
 ///
 /// Ilgari bu yerda EMOJI turardi (🧱, 🗿, 🏖). Ular har bir telefonda
 /// boshqacha chiziladi, ba'zisi esa materialga umuman mos emas: 🗿 —

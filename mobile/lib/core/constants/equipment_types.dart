@@ -10,8 +10,8 @@ import 'package:easy_localization/easy_localization.dart';
 /// tarjimalardan olinadi (assets/translations/*.json, `equipment_types` bo'limi).
 ///
 /// Yangi tur qo'shish: shu ro'yxatga kod qo'shing, backend ro'yxatiga ham
-/// qo'shing, `tool/generate_equipment_icons.py` ga chizmasini yozib ikonkalarni
-/// qayta yasang va ikkala tarjima fayliga nom qo'shing.
+/// qo'shing, `assets/equipment_types/<kod>_uz.png` va `<kod>_ru.png`
+/// ikonkalarini qo'ying va ikkala tarjima fayliga nom qo'shing.
 class EquipmentTypes {
   const EquipmentTypes._();
 
@@ -45,13 +45,16 @@ class EquipmentTypes {
     return codes.contains(value) ? value : fallback;
   }
 
-  /// Interfeys uchun ikonka — rangi bilan bo'yaladi.
-  static String svgAsset(String? code) =>
-      'assets/equipment_types/${normalize(code)}.svg';
-
-  /// Yandex xarita markeri uchun rasm — yashil doira ichida oq belgi.
-  static String markerAsset(String? code) =>
-      'assets/equipment_types/${normalize(code)}.png';
+  /// Ikonka: qora ramkali belgi, ostida tur nomi. Ham ro'yxatlarda, ham
+  /// Yandex xarita markeri sifatida ishlatiladi.
+  ///
+  /// Nom rasmning ICHIDA yozilgan, shuning uchun har til uchun alohida
+  /// fayl: `<kod>_uz.png`, `<kod>_ru.png`. Til berilmasa yoki noma'lum
+  /// bo'lsa — o'zbekcha (ilovaning asosiy tili).
+  static String markerAsset(String? code, [String? languageCode]) {
+    final lang = languageCode == 'ru' ? 'ru' : 'uz';
+    return 'assets/equipment_types/${normalize(code)}_$lang.png';
+  }
 
   /// Foydalanuvchi tilidagi nomi.
   static String label(String? code) =>

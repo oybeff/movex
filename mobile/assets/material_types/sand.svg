@@ -1,1 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><ellipse cx='32' cy='57.4' rx='23' ry='1.9' fill='#000' opacity='0.10'/><path d='M6 52 Q14 30 24 28 Q34 26 40 34 Q48 44 58 52 Z' fill='#E3C077' stroke='#1F242B' stroke-width='1.2' stroke-linejoin='round'/><path d='M6 52 Q16 44 26 44 Q42 44 58 52 Z' fill='#C9A458' opacity='0.55'/><path d='M12 48 Q18 36 24 32' fill='none' stroke='#C9A458' stroke-width='1.6' stroke-linecap='round' opacity='0.8'/><circle cx='20' cy='40' r='0.9' fill='#C9A458' opacity='0.7'/><circle cx='33' cy='44' r='0.9' fill='#C9A458' opacity='0.7'/><circle cx='44' cy='48' r='0.9' fill='#C9A458' opacity='0.7'/></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">MovexGo — Qum</title>
+  <desc id="desc">MovexGo Uzbek construction material category icon, black and amber on white.</desc>
+  <circle cx="64" cy="55" r="42" fill="#FFFFFF" stroke="#08090B" stroke-width="6"/>
+  <path d="M34 82 L64 119 L94 82" fill="#08090B"/>
+  <circle cx="64" cy="55" r="34" fill="#FFFFFF"/>
+  <circle cx="66" cy="52" r="22" fill="#FFB800"/>
+  <path d="M28 46 H43 M25 53 H37 M29 60 H39" stroke="#FFB800" stroke-width="3.5" stroke-linecap="round"/>
+  
+          <path d="M27 83 Q37 72 48 65 Q57 58 64 50 Q70 64 81 70 Q91 75 100 83 Z" fill="#FFCB45" stroke="#08090B" stroke-width="2.8" stroke-linejoin="round"/>
+          <path d="M42 79 Q60 73 83 79" fill="none" stroke="#D99800" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="45" cy="67" r="2" fill="#08090B"/><circle cx="76" cy="70" r="2" fill="#08090B"/><circle cx="63" cy="61" r="2" fill="#08090B"/>
+        
+</svg>

@@ -264,7 +264,7 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
           // Har bir tur o'z markeriga ega — ilgari butun texnika bitta
           // ekskavator belgisi bilan ko'rsatilardi.
           final icon = BitmapDescriptor.fromAssetImage(
-            EquipmentTypes.markerAsset(tech.type),
+            EquipmentTypes.markerAsset(tech.type, context.locale.languageCode),
           );
           _mapObjects.add(
             PlacemarkMapObject(
@@ -273,13 +273,16 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
               icon: PlacemarkIcon.single(
                 PlacemarkIconStyle(
                   image: icon,
-                  // Rasm 256x308: 256 px kvadrat va pastida 52 px dum.
-                  // 0.42 => ekranda ~108 px kenglik.
-                  scale: 0.42,
-                  // Anchor rasmning nisbiy nuqtasi: (0.5, 1.0) — dumning
-                  // uchi. Aynan shu nuqta koordinataga tushishi kerak,
-                  // aks holda marker texnikadan yuqorida turadi.
-                  anchor: const Offset(0.5, 1.0),
+                  // Rasm 300x300 kvadrat: aylana belgi + dum + ostida nom
+                  // yozuvi bitta tasvir ichida. Barcha ikonkalarda belgi bir
+                  // xil joyda: dumning uchi y=248 da, ya'ni balandlikning
+                  // 0.826 qismida (ostida matn qatori bor, shuning uchun 1.0
+                  // emas). 0.40 => ekranda ~120 px balandlik.
+                  scale: 0.40,
+                  // Anchor rasmning nisbiy nuqtasi — dumning uchi. Aynan
+                  // shu nuqta koordinataga tushishi kerak, aks holda marker
+                  // texnikadan yuqorida (yoki matn ustida) turadi.
+                  anchor: const Offset(0.5, 0.826),
                 ),
               ),
               opacity: isAvailable ? 1.0 : 0.5,
