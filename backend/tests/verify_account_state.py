@@ -25,7 +25,7 @@ sys.path.insert(0, BACKEND)
 
 from _auth import otp_code, token  # noqa: E402
 
-API = "http://127.0.0.1:8000"
+API = __import__("os").environ.get("API", "http://127.0.0.1:8000")
 CLIENT_PHONE = "998901179425"
 OWNER_PHONE = "998901110001"
 

@@ -16,7 +16,7 @@ import time
 
 import requests
 
-API = "http://127.0.0.1:8000"
+API = __import__("os").environ.get("API", "http://127.0.0.1:8000")
 MAX_ATTEMPTS = 5  # settings.OTP_MAX_ATTEMPTS
 
 ok_count = 0

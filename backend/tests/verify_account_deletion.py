@@ -33,7 +33,7 @@ from sqlalchemy import text  # noqa: E402
 
 from app.db.session import SessionLocal  # noqa: E402
 
-API = "http://127.0.0.1:8000"
+API = __import__("os").environ.get("API", "http://127.0.0.1:8000")
 
 ok_count = 0
 fail_count = 0

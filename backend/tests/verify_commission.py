@@ -34,7 +34,7 @@ from _auth import token  # noqa: E402
 BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BACKEND)
 
-API = "http://127.0.0.1:8000"
+API = __import__("os").environ.get("API", "http://127.0.0.1:8000")
 OWNER_PHONE = "998901110001"
 CLIENT_PHONE = "998901110002"
 
@@ -195,25 +195,32 @@ head("4. КОМИССИЯ НЕ ЗАГОНЯЕТ ВЛАДЕЛЬЦА В МИНУС
 # заплатил бы за то, что поработал.
 set_mode("fixed", fixed=99_000_000)
 
-start, end = free_dates(1)
-r = requests.post(f"{API}/orders/", headers=client, json={
-    "equipment_id": EQ["id"], "start_date": start, "end_date": end,
-    "delivery_latitude": "41.31", "delivery_longitude": "69.28",
-})
-check("заказ создан при огромной комиссии", r.status_code == 200, f"{r.status_code}")
-order3 = r.json()
-commission3 = Decimal(str(order3["commission"]))
-total3 = Decimal(str(order3["total_amount"]))
+# try/finally: если заказ не создастся (например, даты заняты), скрипт
+# падал на order3["commission"] и комиссия 99 млн ОСТАВАЛАСЬ в общей базе —
+# после этого валились все следующие наборы (завершение заказа давало 500).
+try:
+    start, end = free_dates(1)
+    r = requests.post(f"{API}/orders/", headers=client, json={
+        "equipment_id": EQ["id"], "start_date": start, "end_date": end,
+        "delivery_latitude": "41.31", "delivery_longitude": "69.28",
+    })
+    check("заказ создан при огромной комиссии", r.status_code == 200,
+          f"{r.status_code} {r.text[:200]}")
+    if r.status_code == 200:
+        order3 = r.json()
+        commission3 = Decimal(str(order3["commission"]))
+        total3 = Decimal(str(order3["total_amount"]))
 
-check("комиссия обрезана суммой заказа", commission3 == total3,
-      f"комиссия {commission3}, заказ {total3}")
-check("владельцу достанется не меньше нуля", total3 - commission3 >= 0,
-      f"{total3 - commission3}")
+        check("комиссия обрезана суммой заказа", commission3 == total3,
+              f"комиссия {commission3}, заказ {total3}")
+        check("владельцу достанется не меньше нуля", total3 - commission3 >= 0,
+              f"{total3 - commission3}")
 
-requests.put(f"{API}/orders/{order3['id']}", headers=client, json={"status": "cancelled"})
-
-# Возвращаем рабочий режим
-set_mode("fixed", fixed=5000, percent=10)
+        requests.put(f"{API}/orders/{order3['id']}", headers=client,
+                     json={"status": "cancelled"})
+finally:
+    # Возвращаем рабочий режим
+    set_mode("fixed", fixed=5000, percent=10)
 check("режим возвращён на 5 000", True)
 
 head(f"ИТОГ: {ok_count} пройдено, {fail_count} провалено")

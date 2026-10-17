@@ -34,7 +34,7 @@ BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BACKEND_DIR not in sys.path:
     sys.path.insert(0, BACKEND_DIR)
 
-API = "http://127.0.0.1:8000"
+API = __import__("os").environ.get("API", "http://127.0.0.1:8000")
 CLIENT_PHONE = "998901110002"
 OWNER_PHONE = "998901110001"
 

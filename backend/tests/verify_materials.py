@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _auth import token  # noqa: E402
 
-API = "http://127.0.0.1:8000"
+API = __import__("os").environ.get("API", "http://127.0.0.1:8000")
 
 SELLER_PHONE = "998901110001"
 BUYER_PHONE = "998901110002"

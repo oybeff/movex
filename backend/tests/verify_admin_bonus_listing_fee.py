@@ -34,7 +34,7 @@ from sqlalchemy import text  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.db.session import SessionLocal  # noqa: E402
 
-API = "http://127.0.0.1:8000"
+API = __import__("os").environ.get("API", "http://127.0.0.1:8000")
 SECRET = {"X-Admin-Secret": settings.ADMIN_INTERNAL_SECRET}
 
 ok_count = fail_count = 0

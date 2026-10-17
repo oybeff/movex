@@ -30,7 +30,7 @@ from _auth import otp_code  # noqa: E402
 BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BACKEND)
 
-API = "http://127.0.0.1:8000"
+API = __import__("os").environ.get("API", "http://127.0.0.1:8000")
 
 ok_count = 0
 fail_count = 0

@@ -16,7 +16,7 @@ import requests
 
 import _topup
 
-API = "http://127.0.0.1:8000"
+API = __import__("os").environ.get("API", "http://127.0.0.1:8000")
 
 
 CLIENT_PHONE = "998901110002"
