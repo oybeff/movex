@@ -368,6 +368,81 @@ def grant_admin_bonus(db: Session, user_id: int, amount: Decimal, comment: str =
     return credit_bonus(db, user, amount, description=description, payment_method="admin")
 
 
+TX_TYPE_TOPUP = "topup"
+CASH_PAYMENT_METHOD = "cash"
+
+
+def credit_cash_topup(db: Session, user_id: int, amount: Decimal, comment: str = ""):
+    """
+    Naqd pul: admin pulni qo'lda oldi va balansga yozadi (users.php →
+    "Naqd pul qabul qilish").
+
+    Sovg'adan farqi — bu HAQIQIY pul: `balance` oshadi, `bonus_balance`
+    tegilmaydi, ya'ni uni kartaga yechish ham mumkin. Odam pulni bergan.
+
+    'cash' SELF_SERVICE_PAYMENT_METHODS ga QO'SHILMAYDI va qo'shilmasligi
+    kerak: ilovadan "naqd to'ladim" deb balans to'ldirib bo'lmaydi — bu
+    yo'l faqat X-Admin-Secret bilan, adminkadan.
+
+    Ikki marta bosilsa ikki marta tushmasin: balans qatori FOR UPDATE bilan
+    qulflanadi, keyin oxirgi 30 soniyada shu odamga xuddi shu summa naqd
+    yozilganmi — tekshiriladi. Qulf tufayli bir vaqtda kelgan ikki so'rovning
+    ikkinchisi birinchisi commit bo'lishini kutadi va uni ko'radi.
+    """
+    from datetime import datetime, timedelta, timezone
+    from app.models.user import User
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(404, "Foydalanuvchi topilmadi")
+    if user.role == "admin" or user.is_blocked:
+        raise HTTPException(400, "Bu hisobga pul yozib bo'lmaydi")
+
+    amount = Decimal(str(amount))
+    if amount <= 0 or amount > Decimal("100000000"):
+        raise HTTPException(400, "Summa 0 dan katta va 100 mln dan oshmasin")
+
+    get_or_create_balance(db, user.id)
+    balance = (
+        db.query(Balance).filter(Balance.user_id == user.id).with_for_update().one()
+    )
+
+    recent = (
+        db.query(BalanceTransaction.id)
+        .filter(
+            BalanceTransaction.user_id == user.id,
+            BalanceTransaction.type == TX_TYPE_TOPUP,
+            BalanceTransaction.payment_method == CASH_PAYMENT_METHOD,
+            BalanceTransaction.amount == amount,
+            BalanceTransaction.created_at >= datetime.now(timezone.utc) - timedelta(seconds=30),
+        )
+        .first()
+    )
+    if recent:
+        db.rollback()
+        raise HTTPException(409, "Shu summa hozirgina yozildi — ikki marta bosilmadimi?")
+
+    comment = (comment or "").strip()[:200]
+    lang = user.language
+    description = (
+        t("tx.cash_topup", lang, comment=comment) if comment else t("tx.cash_topup_plain", lang)
+    )
+    # Balans va tranzaksiya — BITTA commit
+    balance.balance = Decimal(str(balance.balance or 0)) + amount
+    transaction = BalanceTransaction(
+        user_id=user.id,
+        amount=amount,
+        type=TX_TYPE_TOPUP,
+        status="completed",
+        payment_method=CASH_PAYMENT_METHOD,
+        description=description,
+    )
+    db.add(transaction)
+    db.commit()
+    db.refresh(transaction)
+    return transaction
+
+
 def grant_signup_bonus(db: Session, user):
     """
     Yangi texnika egasiga sovg'a beradi. Faqat 'owner' uchun.

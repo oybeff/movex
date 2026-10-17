@@ -25,10 +25,17 @@ from decimal import Decimal
 from typing import List, Optional
 
 from fastapi import HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.account_state import assert_not_frozen
-from app.core.equipment_types import is_valid_type, type_name
+from app.core.equipment_types import (
+    DIAGNOSTIKA,
+    SERVICE_TYPE_CODES,
+    is_service_type,
+    is_valid_request_type,
+    type_name,
+)
 from app.core.messages import normalize_language
 from app.models.equipment import Equipment
 from app.models.balance import Balance
@@ -41,7 +48,12 @@ from app.models.equipment_request import (
 from app.models.order import Order
 from app.models.user import User
 from app.schemas.order import OrderCreate
-from app.services import notification_service, order_service, pricing_service
+from app.services import (
+    diagnostika_service,
+    notification_service,
+    order_service,
+    pricing_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -131,14 +143,24 @@ def create_request(db: Session, client: User, data) -> EquipmentRequest:
     # Ilova turni ma'lumotnomadagi ro'yxatdan tanlaydi, shuning uchun
     # qat'iylik hech narsani buzmaydi.
     equipment_type = (data.equipment_type or "").strip()
-    if not is_valid_type(equipment_type):
+    if not is_valid_request_type(equipment_type):
         raise HTTPException(
             400,
             f"Texnika turi noto'g'ri: {data.equipment_type!r}. "
             "Ro'yxatni /equipment/types dan oling.",
         )
 
-    days = pricing_service.rental_days(data.start_date, data.end_date)
+    mode = getattr(data, "mode", "tender") or "tender"
+    budget = data.budget
+    end_date = data.end_date
+    if equipment_type == DIAGNOSTIKA:
+        # Diagnostika — har doim tez buyurtma, narxini SERVER qo'yadi.
+        # Mijoz yuborgan budget e'tiborga olinmaydi; xizmat bir kunlik.
+        mode = "quick"
+        budget = diagnostika_service.get_price(db)
+        end_date = data.start_date
+
+    days = pricing_service.rental_days(data.start_date, end_date)
     if days <= 0:
         raise HTTPException(400, "Tugash sanasi boshlanish sanasidan oldin bo'lmasin")
     if days > pricing_service.MAX_RENTAL_DAYS:
@@ -161,9 +183,8 @@ def create_request(db: Session, client: User, data) -> EquipmentRequest:
             "Avvalgilarini yoping.",
         )
 
-    mode = getattr(data, "mode", "tender") or "tender"
     if mode == "quick":
-        if data.budget is None or Decimal(str(data.budget)) <= 0:
+        if budget is None or Decimal(str(budget)) <= 0:
             raise HTTPException(400, "Tez buyurtmada narxni ko'rsating")
         if data.start_time is None:
             raise HTTPException(400, "Tez buyurtmada boshlanish vaqtini ko'rsating")
@@ -172,11 +193,11 @@ def create_request(db: Session, client: User, data) -> EquipmentRequest:
         client_id=client.id,
         equipment_type=equipment_type,
         start_date=data.start_date,
-        end_date=data.end_date,
+        end_date=end_date,
         delivery_latitude=str(data.delivery_latitude),
         delivery_longitude=str(data.delivery_longitude),
         delivery_address=data.delivery_address,
-        budget=data.budget,
+        budget=budget,
         comment=data.comment,
         mode=mode,
         start_time=getattr(data, "start_time", None),
@@ -188,7 +209,7 @@ def create_request(db: Session, client: User, data) -> EquipmentRequest:
     if mode == "quick":
         # Narx darhol muzlatiladi: ega "olaman" deganda pul allaqachon
         # turgan bo'lishi kerak, aks holda u bekorga yo'lga chiqardi.
-        amount = Decimal(str(data.budget))
+        amount = Decimal(str(budget))
         balance = (
             db.query(Balance).filter(Balance.user_id == client.id).with_for_update().first()
         )
@@ -224,15 +245,13 @@ def _notify_owners_nearby(db: Session, request: EquipmentRequest) -> None:
         lat = _as_float(request.delivery_latitude)
         lon = _as_float(request.delivery_longitude)
 
-        owner_ids = {
-            row[0]
-            for row in db.query(Equipment.owner_id)
-            .filter(
-                Equipment.type == request.equipment_type,
-                Equipment.deleted_at.is_(None),
-            )
-            .distinct()
-        }
+        # Xizmatni (diagnostika) texnikasi bor HAR QANDAY ega oladi —
+        # turi mos kelishi shart emas. Texnikasiz egaga yubormaymiz:
+        # buyurtma egasining biror mashinasiga bog'lanadi (orders.equipment_id).
+        owners_query = db.query(Equipment.owner_id).filter(Equipment.deleted_at.is_(None))
+        if not is_service_type(request.equipment_type):
+            owners_query = owners_query.filter(Equipment.type == request.equipment_type)
+        owner_ids = {row[0] for row in owners_query.distinct()}
         if not owner_ids:
             return
 
@@ -244,6 +263,17 @@ def _notify_owners_nearby(db: Session, request: EquipmentRequest) -> None:
             if owner.id == request.client_id:
                 continue
             lang = normalize_language(owner.language)
+            if request.equipment_type == DIAGNOSTIKA:
+                created.append(notification_service.create_localized(
+                    db, owner.id, "quick_request",
+                    "diagnostika_request.title", "diagnostika_request.body",
+                    None, request.equipment_type, None,
+                    commit=False, language=lang,
+                    price=f"{int(request.budget):,}".replace(",", " "),
+                    start=request.start_date,
+                    time=request.start_time.strftime("%H:%M") if request.start_time else "",
+                ))
+                continue
             if request.mode == "quick":
                 created.append(notification_service.create_localized(
                     db, owner.id, "quick_request",
@@ -309,7 +339,11 @@ def list_open_for_owner(db: Session, owner: User, skip=0, limit=50):
         db.query(EquipmentRequest)
         .filter(
             EquipmentRequest.status == "open",
-            EquipmentRequest.equipment_type.in_(own_types),
+            # Xizmatlar (diagnostika) texnikasi bor hamma egaga ko'rinadi
+            or_(
+                EquipmentRequest.equipment_type.in_(own_types),
+                EquipmentRequest.equipment_type.in_(SERVICE_TYPE_CODES),
+            ),
         )
         .order_by(EquipmentRequest.created_at.desc())
         .limit(limit * 4 + skip)  # radius filtridan keyin yetarli qolishi uchun
@@ -552,20 +586,19 @@ def accept_offer(db: Session, request_id: int, offer_id: int, client: User):
 def _owner_point_and_equipment(db: Session, owner: User, request: EquipmentRequest):
     """
     Egasining shu turdagi, zayavka nuqtasiga eng yaqin mashinasi va masofa.
+    Xizmatda (diagnostika) tur ahamiyatsiz — egasining istalgan mashinasi.
 
     Mashinaning nuqtasi bo'lmasa — egasining qidiruv nuqtasidan masofa.
     """
     lat = _as_float(request.delivery_latitude)
     lon = _as_float(request.delivery_longitude)
-    machines = (
-        db.query(Equipment)
-        .filter(
-            Equipment.owner_id == owner.id,
-            Equipment.type == request.equipment_type,
-            Equipment.deleted_at.is_(None),
-        )
-        .all()
+    machines_query = db.query(Equipment).filter(
+        Equipment.owner_id == owner.id,
+        Equipment.deleted_at.is_(None),
     )
+    if not is_service_type(request.equipment_type):
+        machines_query = machines_query.filter(Equipment.type == request.equipment_type)
+    machines = machines_query.all()
     best, best_km = None, None
     for eq in machines:
         e_lat, e_lon = _as_float(eq.latitude), _as_float(eq.longitude)
@@ -678,7 +711,8 @@ def quick_accept(db: Session, request_id: int, owner: User, equipment_id: Option
         )
         if equipment is None or equipment.owner_id != owner.id:
             raise HTTPException(403, "Bu texnika sizniki emas")
-        if equipment.type != request.equipment_type:
+        if (not is_service_type(request.equipment_type)
+                and equipment.type != request.equipment_type):
             raise HTTPException(400, "Texnika turi buyurtmaga mos emas")
     else:
         equipment, _ = _owner_point_and_equipment(db, owner, request)

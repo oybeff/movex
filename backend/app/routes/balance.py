@@ -349,3 +349,20 @@ def internal_admin_bonus(
     """
     tx = balance_service.grant_admin_bonus(db, payload.user_id, payload.amount, payload.comment)
     return {"transaction_id": tx.id, "amount": float(tx.amount)}
+
+
+@router.post("/internal/cash_topup")
+def internal_cash_topup(
+    payload: AdminBonusIn,
+    db: Session = Depends(get_db),
+    _=Depends(require_internal_admin),
+):
+    """
+    Naqd pul qabul qilindi (users.php → "Naqd pul qabul qilish").
+
+    Sovg'adan farqi: HAQIQIY balans (type='topup', payment_method='cash'),
+    bonus_balance ga tushmaydi — kartaga yechish mumkin. Masalan,
+    diagnostikaga pulni naqd bergan mijoz uchun.
+    """
+    tx = balance_service.credit_cash_topup(db, payload.user_id, payload.amount, payload.comment)
+    return {"transaction_id": tx.id, "amount": float(tx.amount)}

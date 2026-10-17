@@ -43,6 +43,37 @@ class EquipmentRequestService {
         response.data as Map<String, dynamic>);
   }
 
+  /// Diagnostika narxi — serverdan, ilovada yozib qo'yilmaydi: adminkada
+  /// o'zgarsa yig'ilgan APK eski narxni ko'rsatardi.
+  Future<double> getDiagnostikaPrice() async {
+    final response = await _dio.get('/requests/diagnostika');
+    final price = (response.data as Map<String, dynamic>)['price'];
+    return double.parse(price.toString());
+  }
+
+  /// Diagnostika buyurtmasi. Narx YUBORILMAYDI — uni server qo'yadi va
+  /// darhol muzlatadi; mablag' yetmasa 400.
+  Future<EquipmentRequestModel> createDiagnostika({
+    required DateTime date,
+    required String startTime,
+    required double latitude,
+    required double longitude,
+    String? address,
+  }) async {
+    final response = await _dio.post('/requests/', data: {
+      'equipment_type': 'diagnostika',
+      'mode': 'quick',
+      'start_date': _date(date),
+      'end_date': _date(date),
+      'start_time': startTime,
+      'delivery_latitude': latitude,
+      'delivery_longitude': longitude,
+      if (address != null && address.isNotEmpty) 'delivery_address': address,
+    });
+    return EquipmentRequestModel.fromJson(
+        response.data as Map<String, dynamic>);
+  }
+
   Future<List<EquipmentRequestModel>> getMyRequests({
     int skip = 0,
     int limit = 50,

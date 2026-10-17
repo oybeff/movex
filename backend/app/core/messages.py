@@ -104,6 +104,14 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "{start} dan {end} gacha. Kim birinchi olsa — o'shaniki. Pul mijoz balansida muzlatilgan.",
         "ru": "С {start} по {end}. Кто первый возьмёт — тому и заказ. Деньги заморожены на балансе клиента.",
     },
+    "diagnostika_request.title": {
+        "uz": "Diagnostikaga borish — {price} so'm",
+        "ru": "Выезд на диагностику — {price} сум",
+    },
+    "diagnostika_request.body": {
+        "uz": "{start} {time}. Kim birinchi olsa — o'shaniki. Pul mijoz balansida muzlatilgan.",
+        "ru": "{start} {time}. Кто первый возьмёт — тому и заказ. Деньги заморожены на балансе клиента.",
+    },
     "request_offer.title": {
         "uz": "Zayavkangizga taklif keldi",
         "ru": "На вашу заявку прислали предложение",
@@ -329,6 +337,14 @@ MESSAGES: Dict[str, Dict[str, str]] = {
     "tx.admin_bonus": {
         "uz": "Ma'muriyatdan bonus: {comment}",
         "ru": "Бонус от администрации: {comment}",
+    },
+    "tx.cash_topup": {
+        "uz": "Naqd pul qabul qilindi: {comment}",
+        "ru": "Принято наличными: {comment}",
+    },
+    "tx.cash_topup_plain": {
+        "uz": "Naqd pul qabul qilindi",
+        "ru": "Принято наличными",
     },
     "tx.admin_bonus_plain": {
         "uz": "Ma'muriyatdan bonus",

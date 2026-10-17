@@ -234,6 +234,9 @@ class QuickIncomingModel {
   }
 
   String get typeLabel => EquipmentTypes.label(equipmentType);
+
+  /// Xizmat (diagnostika) — ijara emas, "kun" ham, texnika ikonkasi ham yo'q
+  bool get isService => EquipmentTypes.isService(equipmentType);
 }
 
 /// Qidiruv va xabarnoma radiusi.

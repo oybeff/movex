@@ -37,6 +37,14 @@ class EquipmentTypes {
     fallback,
   ];
 
+  /// Xizmatlar — TEXNIKA EMAS, faqat zayavkada (tez buyurtma) uchraydi.
+  /// [codes] ga qo'shilmaydi: aks holda texnika qo'shish va tur tanlash
+  /// ro'yxatlarida chiqardi. Backend: SERVICE_TYPES (equipment_types.py).
+  static const String diagnostika = 'diagnostika';
+  static const List<String> serviceCodes = <String>[diagnostika];
+
+  static bool isService(String? code) => serviceCodes.contains(code);
+
   /// Noma'lum yoki bo'sh qiymatni 'other' ga aylantiradi.
   /// Eski yozuvlar (erkin matn) ham shu yerdan o'tadi.
   static String normalize(String? code) {
@@ -57,6 +65,7 @@ class EquipmentTypes {
   }
 
   /// Foydalanuvchi tilidagi nomi.
-  static String label(String? code) =>
-      'equipment_types.${normalize(code)}'.tr();
+  static String label(String? code) => isService(code)
+      ? 'equipment_types.$code'.tr()
+      : 'equipment_types.${normalize(code)}'.tr();
 }

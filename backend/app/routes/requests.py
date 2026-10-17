@@ -34,7 +34,8 @@ from app.schemas.equipment_request import (
     SearchAreaRead,
     SearchAreaUpdate,
 )
-from app.services import pricing_service, request_service
+from app.core.equipment_types import DIAGNOSTIKA
+from app.services import diagnostika_service, pricing_service, request_service
 
 router = APIRouter()
 
@@ -145,6 +146,22 @@ def owner_feed(
     """Egaga: turi mos va radiusiga tushadigan ochiq zayavkalar."""
     items = request_service.list_open_for_owner(db, current_user, skip, limit)
     return [_to_read(db, r, current_user) for r in items]
+
+
+# ------------------------------------------------------ diagnostika narxi
+# Ham /{request_id} dan oldin — aks holda "diagnostika" son deb o'qiladi.
+
+@router.get("/diagnostika")
+def diagnostika_price(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Diagnostika narxi — ilova uni ekranda ko'rsatadi. Ilovada yozib
+    qo'yilmaydi: adminkada o'zgarsa, yig'ilgan APK eski narxni ko'rsatardi.
+    Buyurtma yaratilganda ham aynan shu qiymat olinadi.
+    """
+    return {"code": DIAGNOSTIKA, "price": diagnostika_service.get_price(db)}
 
 
 # --------------------------------------------- egaga: tez buyurtma

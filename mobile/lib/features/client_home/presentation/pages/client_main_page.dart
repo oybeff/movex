@@ -16,6 +16,7 @@ import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
+import '../../../requests/presentation/pages/diagnostika_page.dart';
 
 class ClientMainPage extends StatefulWidget {
   const ClientMainPage({super.key});
@@ -810,6 +811,15 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
               ),
             ),
 
+          // Diagnostika — narxi qat'iy tez buyurtma. Pastda, ro'yxat/xarita
+          // tugmasi va zoom tugmalari ORASIDA: mavjud tugmalarni surmaydi.
+          Positioned(
+            left: 76,
+            right: 76,
+            bottom: 100,
+            child: Center(child: _buildDiagnostikaEntry()),
+          ),
+
           // Toggle view tugmasi
           Positioned(
             left: 16,
@@ -837,6 +847,42 @@ class _ClientMainPageState extends State<ClientMainPage> with WidgetsBindingObse
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDiagnostikaEntry() {
+    return Material(
+      color: Colors.white,
+      elevation: 3,
+      shadowColor: Colors.black26,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const DiagnostikaPage()),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              EquipmentTypeIcon(EquipmentTypes.diagnostika, size: 22),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'requests.diag_title'.tr(),
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryGreen,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -696,7 +696,8 @@
     "auger_drill": "Yamobur",
     "tow_truck": "Tral / Evakuator",
     "compressor": "Kompressor",
-    "other": "Boshqa texnika"
+    "other": "Boshqa texnika",
+    "diagnostika": "Diagnostika"
   },
   "notifications": {
     "all": "Barcha xabarnomalar",
@@ -811,7 +812,17 @@
     "quick_decline": "Rad etish",
     "quick_accepted": "Buyurtma sizniki! Mijoz ma'lumotlari «Buyurtmalar»da",
     "quick_taken": "Bu buyurtmani boshqa ega allaqachon oldi",
-    "quick_open": "Ko'rish va olish"
+    "quick_open": "Ko'rish va olish",
+    "diag_title": "Diagnostika",
+    "diag_subtitle": "Texnikani joyida tekshirish",
+    "diag_price": "Narxi: {} so'm",
+    "diag_price_hint": "Summa buyurtma berilganda balansingizda muzlatiladi va ish bajarilgach egaga o'tadi.",
+    "diag_price_error": "Narxni olib bo'lmadi. Qayta urinib ko'ring",
+    "diag_date": "Sana",
+    "diag_choose_date": "Sanani tanlang",
+    "diag_order": "Buyurtma berish",
+    "diag_created": "Diagnostika buyurtmasi yuborildi — yaqin atrofdagi egalar ko'rmoqda",
+    "diag_go": "Diagnostikaga borish"
   },
   "area": {
     "client_hint": "Bu masofadan uzoqdagi texnika ko'rsatilmaydi",

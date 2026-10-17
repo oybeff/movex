@@ -238,7 +238,8 @@ include 'includes/header.php';
                                     'payment' => '📤 To\'lov',
                                     'refund' => '↩️ Qaytarish',
                                     'withdrawal' => '🏧 Pul yechish',
-                                    'bonus' => '🎁 Sovg\'a'
+                                    'bonus' => '🎁 Sovg\'a',
+                                    'listing_fee' => '📢 E\'lon narxi'
                                 ];
                                 ?>
                                 <?php if ($isDeposit): ?>
@@ -266,6 +267,7 @@ include 'includes/header.php';
                                     'click' => 'Click (arxiv)',
                                     'uzum' => 'Uzum (arxiv)',
                                     'cash' => 'Naqd',
+                                    'admin' => 'Adminka',
                                     'card' => 'Karta'
                                 ];
                                 $paymentMethod = $transaction['payment_method'];

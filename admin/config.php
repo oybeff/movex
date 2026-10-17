@@ -298,6 +298,8 @@ function equipmentTypeName($code) {
         'tow_truck'       => 'Tral / Evakuator',
         'compressor'      => 'Kompressor',
         'other'           => 'Boshqa texnika',
+        // Xizmat — texnika emas, faqat zayavkada (equipment_types.SERVICE_TYPES)
+        'diagnostika'     => 'Diagnostika',
     ];
     if ($code === null || $code === '') return '—';
     return $names[$code] ?? $code;

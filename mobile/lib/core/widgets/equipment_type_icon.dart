@@ -34,6 +34,11 @@ class EquipmentTypeIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Xizmatning (diagnostika) rasmi yo'q — u texnika emas
+    if (EquipmentTypes.isService(typeCode)) {
+      return Icon(Icons.car_repair,
+          size: size, color: color ?? const Color(0xFFF59E0B));
+    }
     return Image.asset(
       EquipmentTypes.markerAsset(typeCode, context.locale.languageCode),
       width: size,

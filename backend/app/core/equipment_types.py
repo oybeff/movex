@@ -44,13 +44,37 @@ EQUIPMENT_TYPE_CODES = {t["code"] for t in EQUIPMENT_TYPES}
 
 FALLBACK_TYPE_CODE = "other"
 
+# Xizmatlar — TEXNIKA EMAS, faqat zayavkada (tez buyurtma) bo'ladi.
+#
+# Alohida ro'yxat ataylab: EQUIPMENT_TYPES /equipment/types orqali ilovaga
+# ketadi va egasi texnika qo'shganda shundan tanlaydi. "Diagnostika" u yerga
+# tushsa, egasi "diagnostika" turidagi mashina qo'shardi, katalog filtrida
+# ham chiqardi. Xizmat narxini server qo'yadi (diagnostika_service), uni
+# radiusdagi HAMMA egalar ko'radi — turi mos kelishi shart emas.
+DIAGNOSTIKA = "diagnostika"
+
+SERVICE_TYPES: List[Dict[str, str]] = [
+    {"code": DIAGNOSTIKA, "name_ru": "Диагностика", "name_uz": "Diagnostika"},
+]
+
+SERVICE_TYPE_CODES = {t["code"] for t in SERVICE_TYPES}
+
 
 def is_valid_type(code: Optional[str]) -> bool:
     return code in EQUIPMENT_TYPE_CODES
 
 
+def is_service_type(code: Optional[str]) -> bool:
+    return code in SERVICE_TYPE_CODES
+
+
+def is_valid_request_type(code: Optional[str]) -> bool:
+    """Zayavkada ruxsat etilgan kod: texnika turi yoki xizmat."""
+    return is_valid_type(code) or is_service_type(code)
+
+
 def get_type(code: str) -> Optional[Dict[str, str]]:
-    for t in EQUIPMENT_TYPES:
+    for t in EQUIPMENT_TYPES + SERVICE_TYPES:
         if t["code"] == code:
             return t
     return None

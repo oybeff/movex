@@ -144,6 +144,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
                 }
                 break;
 
+            case 'cash_topup':
+                // Naqd pul: HAQIQIY balans (kartaga yechish mumkin), sovg'a emas.
+                // Pulni panel o'zi yozmaydi — API orqali, mantiq bitta joyda:
+                // balance_service.credit_cash_topup.
+                $amount = preg_replace('/[^\d]/', '', (string)($_POST['amount'] ?? ''));
+                $comment = trim((string)($_POST['comment'] ?? ''));
+                if ($amount === '' || (int)$amount <= 0) {
+                    $message = 'Summani kiriting';
+                    $messageType = 'error';
+                } else {
+                    $result = internalApiPost('/balance/internal/cash_topup', [
+                        'user_id' => $userId,
+                        'amount' => (int)$amount,
+                        'comment' => $comment,
+                    ]);
+                    if ($result['ok']) {
+                        $message = number_format((int)$amount, 0, '.', ' ')
+                                 . " so'm naqd qabul qilindi va balansga yozildi — "
+                                 . $userData['full_name'] . '.';
+                        $messageType = 'success';
+                    } else {
+                        $message = 'Naqd pul yozilmadi: ' . $result['error'];
+                        $messageType = 'error';
+                    }
+                }
+                break;
+
             case 'set_listing_fee':
                 // Bo'sh — umumiy narx (commission.php), 0 — bepul, >0 — o'z narxi
                 $raw = trim((string)($_POST['listing_fee'] ?? ''));
@@ -183,6 +210,10 @@ $searchQuery = $_GET['search'] ?? '';
 
 // Build query
 $db = getDbConnection();
+
+// "Naqd pul qabul qilish" shaklidagi standart summa — diagnostika narxi
+// (commission.php; standart backend'dagi diagnostika_service bilan bir xil)
+$diagnostikaPrice = appSettingValue($db, 'diagnostika_price_amount', '50000');
 $whereConditions = [];
 $params = [];
 
@@ -468,6 +499,25 @@ include 'includes/header.php';
                                                    placeholder="ixtiyoriy" style="max-width:150px;">
                                         </div>
                                         <button class="btn btn-sm btn-success">🎁 Berish</button>
+                                    </form>
+
+                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;"
+                                          onsubmit="if (!confirm('Naqd pul qabul qilindimi? Summa haqiqiy balansga yoziladi.')) return false; this.querySelector('button').disabled = true;">
+                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                        <input type="hidden" name="action" value="cash_topup">
+                                        <div>
+                                            <label style="font-size:12px;">Naqd pul qabul qilish</label>
+                                            <input type="number" name="amount" min="1000" step="1000"
+                                                   value="<?= (int)$diagnostikaPrice ?>"
+                                                   placeholder="so'm" style="max-width:120px;">
+                                        </div>
+                                        <div>
+                                            <label style="font-size:12px;">Izoh</label>
+                                            <input type="text" name="comment" maxlength="200"
+                                                   placeholder="ixtiyoriy" style="max-width:150px;">
+                                        </div>
+                                        <button class="btn btn-sm btn-primary">💵 Qabul qilish</button>
                                     </form>
 
                                     <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
