@@ -1,6 +1,6 @@
 MoveX GO foydalanuvchi shartnomasi (ommaviy oferta)
 
-MoveX GO ilovasi (uz.movexgo.app) va movexgo.uz sayti. 2026-yil 11-oktabr tahriri.
+MoveX GO ilovasi (uz.movexgo.app) va movexgo.uz sayti. 2026-yil 14-noyabr tahriri.
 
 Bu MoveX GO xizmati ma’muriyati (keyingi o‘rinlarda — Xizmat) va foydalanuvchi o‘rtasidagi shartnoma. Ilovada ro‘yxatdan o‘tib yoki undan foydalanib, siz bu shartlarni to‘liq qabul qilasiz. Rozi bo‘lmasangiz, xizmatdan foydalanmang.
 
@@ -87,6 +87,21 @@ Hisob ilovada o‘chiriladi: Sozlamalar → «Hisobni o‘chirish». Balansda ye
 
 Xizmat bu shartnomani o‘zgartirishi mumkin. Yangi tahrir ilovada va movexgo.uz/terms sahifasida sana bilan e’lon qilinadi. Xizmatdan foydalanishni davom ettirib, siz yangi tahrirni qabul qilasiz.
 
-14. Bog‘lanish
+14. Karta orqali to‘lov va pulni qaytarish
 
+14.1. Tarif bo‘yicha texnika buyurtmasini ijrochiga naqd pul bilan, ilovadagi balansdan yoki bog‘langan bank kartasi bilan to‘lash mumkin. Karta Multicard to‘lov tizimining himoyalangan sahifasida bog‘lanadi; karta raqamini Xizmat olmaydi va saqlamaydi — faqat token va karta niqobi saqlanadi.
+14.2. Karta bilan to‘langanda buyurtma summasi rasmiylashtirish paytida kartada bloklanadi (muzlatiladi) va faqat ish yakunlangandan keyin yechiladi. Xizmat takroriy, davriy yoki obuna to‘lovlarini yechmaydi — faqat rasmiylashtirishdan oldin ko‘rsatilgan aniq buyurtma summasi yechiladi.
+14.3. Pulni qaytarish:
+• buyurtma ish boshlanishidan oldin bekor qilinsa, ijrochi rad etsa yoki texnika topilmasa — blok to‘liq olib tashlanadi, pul kartada yoki balansda qoladi. Bank blokni odatda 3 ish kunigacha olib tashlaydi;
+• ish to‘liq yoki kelishilgan vaqtda bajarilmagan bo‘lsa — buyurtmani tasdiqlashdan oldin ilovada muammo haqida xabar bering («Muammo bor»). Xizmat buyurtmani ko‘rib chiqadi va tasdiqlansa, summaning hammasini yoki bir qismini 10 ish kuni ichida kartaga yoki balansga qaytaradi;
+• xato yoki ikki marta yechilgan summa murojaatdan keyin 10 ish kuni ichida to‘liq qaytariladi;
+• ilovadagi balansdagi pulni bank kartasiga yechib olish mumkin (6-bo‘lim).
+14.4. Qaytarish bo‘yicha murojaat — buyurtma raqami bilan qo‘llab-quvvatlash xizmatiga telefon yoki pochta orqali (15-bo‘lim).
+14.5. Bog‘langan kartani ilovada istalgan vaqtda o‘chirish mumkin (Profil → To‘lov usullari), agar u bilan yakunlanmagan buyurtma bo‘lmasa.
+
+15. Bog‘lanish
+
+Yakka tartibdagi tadbirkor Yoqubov Sherzodbek Xusanboy o‘g‘li, STIR 32510985180037 (guvohnoma № 7967412, 24.08.2026).
+Manzil: Andijon viloyati, Shahrixon tumani, Shahrixon shahri, Shahrixon buyum bozori.
+Telefon: +998 20 005 98 90
 Elektron pochta: yakuboff25@gmail.com
