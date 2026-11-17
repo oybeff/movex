@@ -17,10 +17,11 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        user_id: int = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-    except JWTError:
+        # sub в JWT — строка. Без int() сравнение integer = varchar
+        # прощал только psycopg2; psycopg 3 отвечал 500 на всех роутах,
+        # которые берут пользователя отсюда.
+        user_id = int(payload.get("sub"))
+    except (JWTError, TypeError, ValueError):
         raise credentials_exception
 
     user = db.query(User).filter(User.id == user_id).first()

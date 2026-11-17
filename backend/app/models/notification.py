@@ -53,7 +53,11 @@ class Notification(Base):
             "'order_completed','balance_topup','payout_paid','payout_rejected','system',"
             "'request_created','request_offer','request_offer_accepted','request_offer_rejected',"
             "'request_cancelled','listing_taken','listing_confirmed','listing_cancelled',"
-            "'listing_done','quick_request')",
+            "'listing_done','quick_request',"
+            "'order_departed','order_started','order_finished','order_delayed',"
+            "'order_extend_requested','order_extend_approved','order_extend_declined',"
+            "'listing_offer','material_order','material_confirmed','material_cancelled',"
+            "'material_delivered','material_moderated')",
             name="check_notification_type",
         ),
     )
