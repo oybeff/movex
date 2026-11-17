@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:movex_go/core/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app_links/app_links.dart';
@@ -10,6 +11,7 @@ import 'package:movex_go/features/owner_home/presentation/pages/payout_page.dart
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:movex_go/features/auth/presentation/pages/splash_screen_page.dart';
 import 'package:movex_go/features/auth/presentation/pages/language_select_page.dart';
+import 'package:movex_go/features/auth/presentation/pages/onboarding_page.dart';
 import 'package:movex_go/features/auth/presentation/pages/role_select_page.dart';
 import 'package:movex_go/features/auth/presentation/pages/register_page.dart';
 import 'package:movex_go/features/auth/presentation/pages/register_complete_page.dart';
@@ -43,6 +45,13 @@ void main() async {
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashScreenPage(),
+      ),
+      // Birinchi ochilishda ko'rsatiladigan uch ekran. Splash undan
+      // oldin turadi va bayroqqa qarab shu yerga yoki to'g'ri /language ga
+      // yuboradi.
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingPage(),
       ),
       GoRoute(
         path: '/language',
@@ -243,10 +252,10 @@ class _MyAppState extends State<MyApp> {
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
         title: 'Movex Go',
-        theme: ThemeData(
-          primarySwatch: Colors.green,
-          useMaterial3: true,
-        ),
+        // Тема из токенов макета (core/theme/app_tokens.dart). До 12.11.2026
+        // здесь стоял ThemeData(primarySwatch: green), и AppTheme не
+        // применялся вовсе: кнопки и поля рисовались цветами Material.
+        theme: AppTheme.lightTheme,
         locale: context.locale,
         supportedLocales: context.supportedLocales,
         localizationsDelegates: context.localizationDelegates,

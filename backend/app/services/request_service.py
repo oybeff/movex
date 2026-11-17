@@ -25,17 +25,14 @@ from decimal import Decimal
 from typing import List, Optional
 
 from fastapi import HTTPException
-from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.account_state import assert_not_frozen
 from app.core.equipment_types import (
-    DIAGNOSTIKA,
-    SERVICE_TYPE_CODES,
-    is_service_type,
-    is_valid_request_type,
+    is_valid_type,
     type_name,
 )
+from app.core import service_area
 from app.core.messages import normalize_language
 from app.models.equipment import Equipment
 from app.models.balance import Balance
@@ -49,10 +46,11 @@ from app.models.order import Order
 from app.models.user import User
 from app.schemas.order import OrderCreate
 from app.services import (
-    diagnostika_service,
+    card_service,
     notification_service,
     order_service,
     pricing_service,
+    tariff_service,
 )
 
 logger = logging.getLogger(__name__)
@@ -99,7 +97,7 @@ def expire_stale(db: Session) -> int:
     stale = (
         db.query(EquipmentRequest)
         .filter(
-            EquipmentRequest.status == "open",
+            EquipmentRequest.status.in_(("open", "awaiting_payment")),
             EquipmentRequest.expires_at.isnot(None),
             EquipmentRequest.expires_at < _now(),
         )
@@ -115,6 +113,10 @@ def expire_stale(db: Session) -> int:
 
 def _release_quick(db: Session, request: EquipmentRequest) -> None:
     """Tez buyurtmaning muzlatilgan summasini mijozga qaytaradi (commit'siz)."""
+    if request.payment_method == "card":
+        # Холд на карте снимается в Multicard — деньги вернутся на карту
+        card_service.cancel_hold(_card_payment(db, request))
+        return
     amount = Decimal(str(request.frozen_amount or 0))
     if amount <= 0:
         return
@@ -143,7 +145,7 @@ def create_request(db: Session, client: User, data) -> EquipmentRequest:
     # Ilova turni ma'lumotnomadagi ro'yxatdan tanlaydi, shuning uchun
     # qat'iylik hech narsani buzmaydi.
     equipment_type = (data.equipment_type or "").strip()
-    if not is_valid_request_type(equipment_type):
+    if not is_valid_type(equipment_type):
         raise HTTPException(
             400,
             f"Texnika turi noto'g'ri: {data.equipment_type!r}. "
@@ -153,12 +155,39 @@ def create_request(db: Session, client: User, data) -> EquipmentRequest:
     mode = getattr(data, "mode", "tender") or "tender"
     budget = data.budget
     end_date = data.end_date
-    if equipment_type == DIAGNOSTIKA:
-        # Diagnostika — har doim tez buyurtma, narxini SERVER qo'yadi.
-        # Mijoz yuborgan budget e'tiborga olinmaydi; xizmat bir kunlik.
+    # Тарифный заказ «как такси»: цену считает сервер по тарифу админа,
+    # budget из тела игнорируется. Заказ на
+    # один день: часы — это часы, а не сутки.
+    payment_method = getattr(data, "payment_method", None) or "balance"
+    tariff = getattr(data, "tariff", None)
+    tariff_quote = None
+    attachment_price = None
+    if tariff is not None:
+        tariff_quote = tariff_service.quote(
+            db, equipment_type, tariff, data.hours, getattr(data, "attachment_id", None)
+        )
         mode = "quick"
-        budget = diagnostika_service.get_price(db)
+        budget = tariff_quote.total
+        surge = int(getattr(data, "surge_percent", 0) or 0)
+        if surge:
+            # Округление вверх до 1 000 — суммы на экране «круглые»
+            raw = budget * (100 + surge) / 100
+            budget = ((raw + 999) // 1000) * 1000
+        if not service_area.contains(data.delivery_latitude, data.delivery_longitude):
+            raise HTTPException(400, "Bu manzilga hozircha xizmat yo'q")
         end_date = data.start_date
+        if getattr(data, "attachment_id", None) is not None:
+            attachment_price = tariff_quote.attachment_per_hour
+    elif payment_method in ("cash", "card"):
+        # Наличные и карта — только в тарифном заказе. В тендере и каталоге деньги
+        # идут через эскроу, и «наличными» там некому было бы удержать
+        # комиссию.
+        raise HTTPException(400, "Naqd yoki karta bilan to'lov faqat tarifli buyurtmada mumkin")
+    card = None
+    if payment_method == "card":
+        if not getattr(data, "card_id", None):
+            raise HTTPException(400, "Kartani tanlang")
+        card = card_service.own_card(db, client, data.card_id)
 
     days = pricing_service.rental_days(data.start_date, end_date)
     if days <= 0:
@@ -203,10 +232,37 @@ def create_request(db: Session, client: User, data) -> EquipmentRequest:
         start_time=getattr(data, "start_time", None),
         status="open",
         expires_at=_now() + timedelta(hours=REQUEST_TTL_HOURS),
+        tariff=tariff,
+        hours=tariff_quote.hours if tariff_quote else None,
+        attachment_id=getattr(data, "attachment_id", None) if tariff_quote else None,
+        attachment_price=attachment_price,
+        payment_method=payment_method,
+        origin_latitude=(
+            str(data.origin_latitude) if getattr(data, "origin_latitude", None) is not None else None
+        ),
+        origin_longitude=(
+            str(data.origin_longitude) if getattr(data, "origin_longitude", None) is not None else None
+        ),
+        origin_address=getattr(data, "origin_address", None),
+        card_id=card.id if card else None,
     )
     db.add(request)
 
-    if mode == "quick":
+    # Карта: сумма замораживается на самой карте (холд в Multicard), баланс
+    # не трогаем. Без SMS-кода не прошло — заявка ждёт кода и владельцам
+    # не видна (awaiting_payment).
+    if card is not None:
+        db.flush()
+        cp = card_service.create_hold(db, client, card, Decimal(str(budget)), request.id)
+        if cp.status == "failed":
+            db.rollback()
+            raise HTTPException(402, "Kartadan to'lov o'tmadi. Boshqa karta yoki naqd pulni tanlang")
+        if cp.status != "active":
+            request.status = "awaiting_payment"
+
+    # Наличный заказ ничего не замораживает у клиента: он платит владельцу
+    # в руки. Комиссию заморозят у владельца, когда тот возьмёт заказ.
+    if mode == "quick" and payment_method == "balance":
         # Narx darhol muzlatiladi: ega "olaman" deganda pul allaqachon
         # turgan bo'lishi kerak, aks holda u bekorga yo'lga chiqardi.
         amount = Decimal(str(budget))
@@ -230,6 +286,36 @@ def create_request(db: Session, client: User, data) -> EquipmentRequest:
     db.commit()
     db.refresh(request)
 
+    if request.status == "open":
+        _notify_owners_nearby(db, request)
+    return request
+
+
+def _card_payment(db: Session, request: EquipmentRequest):
+    from app.models.card import CardPayment
+
+    return (
+        db.query(CardPayment)
+        .filter(CardPayment.request_id == request.id)
+        .order_by(CardPayment.id.desc())
+        .first()
+    )
+
+
+def confirm_card_otp(db: Session, request_id: int, user: User, otp: str) -> EquipmentRequest:
+    """Код из SMS для холда на карте: заявка открывается владельцам."""
+    request = db.query(EquipmentRequest).filter(EquipmentRequest.id == request_id).with_for_update().first()
+    if request is None or request.client_id != user.id:
+        raise HTTPException(404, "Zayavka topilmadi")
+    if request.status != "awaiting_payment":
+        raise HTTPException(409, "To'lov tasdiqlash kutilmayapti")
+    cp = _card_payment(db, request)
+    if cp is None or not card_service.confirm_hold_otp(cp, otp.strip()):
+        db.commit()
+        raise HTTPException(400, "Kod noto'g'ri yoki muddati o'tgan")
+    request.status = "open"
+    db.commit()
+    db.refresh(request)
     _notify_owners_nearby(db, request)
     return request
 
@@ -245,12 +331,10 @@ def _notify_owners_nearby(db: Session, request: EquipmentRequest) -> None:
         lat = _as_float(request.delivery_latitude)
         lon = _as_float(request.delivery_longitude)
 
-        # Xizmatni (diagnostika) texnikasi bor HAR QANDAY ega oladi —
-        # turi mos kelishi shart emas. Texnikasiz egaga yubormaymiz:
-        # buyurtma egasining biror mashinasiga bog'lanadi (orders.equipment_id).
-        owners_query = db.query(Equipment.owner_id).filter(Equipment.deleted_at.is_(None))
-        if not is_service_type(request.equipment_type):
-            owners_query = owners_query.filter(Equipment.type == request.equipment_type)
+        owners_query = db.query(Equipment.owner_id).filter(
+            Equipment.deleted_at.is_(None),
+            Equipment.type == request.equipment_type,
+        )
         owner_ids = {row[0] for row in owners_query.distinct()}
         if not owner_ids:
             return
@@ -263,17 +347,6 @@ def _notify_owners_nearby(db: Session, request: EquipmentRequest) -> None:
             if owner.id == request.client_id:
                 continue
             lang = normalize_language(owner.language)
-            if request.equipment_type == DIAGNOSTIKA:
-                created.append(notification_service.create_localized(
-                    db, owner.id, "quick_request",
-                    "diagnostika_request.title", "diagnostika_request.body",
-                    None, request.equipment_type, None,
-                    commit=False, language=lang,
-                    price=f"{int(request.budget):,}".replace(",", " "),
-                    start=request.start_date,
-                    time=request.start_time.strftime("%H:%M") if request.start_time else "",
-                ))
-                continue
             if request.mode == "quick":
                 created.append(notification_service.create_localized(
                     db, owner.id, "quick_request",
@@ -339,11 +412,7 @@ def list_open_for_owner(db: Session, owner: User, skip=0, limit=50):
         db.query(EquipmentRequest)
         .filter(
             EquipmentRequest.status == "open",
-            # Xizmatlar (diagnostika) texnikasi bor hamma egaga ko'rinadi
-            or_(
-                EquipmentRequest.equipment_type.in_(own_types),
-                EquipmentRequest.equipment_type.in_(SERVICE_TYPE_CODES),
-            ),
+            EquipmentRequest.equipment_type.in_(own_types),
         )
         .order_by(EquipmentRequest.created_at.desc())
         .limit(limit * 4 + skip)  # radius filtridan keyin yetarli qolishi uchun
@@ -375,7 +444,7 @@ def _declined_ids(db: Session, owner_id: int) -> set:
 def cancel_request(db: Session, request: EquipmentRequest, user: User) -> EquipmentRequest:
     if request.client_id != user.id and user.role != "admin":
         raise HTTPException(403, "Bu zayavka sizniki emas")
-    if request.status != "open":
+    if request.status not in ("open", "awaiting_payment"):
         raise HTTPException(400, "Faqat ochiq zayavkani bekor qilish mumkin")
 
     request.status = "cancelled"
@@ -586,7 +655,6 @@ def accept_offer(db: Session, request_id: int, offer_id: int, client: User):
 def _owner_point_and_equipment(db: Session, owner: User, request: EquipmentRequest):
     """
     Egasining shu turdagi, zayavka nuqtasiga eng yaqin mashinasi va masofa.
-    Xizmatda (diagnostika) tur ahamiyatsiz — egasining istalgan mashinasi.
 
     Mashinaning nuqtasi bo'lmasa — egasining qidiruv nuqtasidan masofa.
     """
@@ -595,9 +663,8 @@ def _owner_point_and_equipment(db: Session, owner: User, request: EquipmentReque
     machines_query = db.query(Equipment).filter(
         Equipment.owner_id == owner.id,
         Equipment.deleted_at.is_(None),
+        Equipment.type == request.equipment_type,
     )
-    if not is_service_type(request.equipment_type):
-        machines_query = machines_query.filter(Equipment.type == request.equipment_type)
     machines = machines_query.all()
     best, best_km = None, None
     for eq in machines:
@@ -643,6 +710,9 @@ def quick_card(db: Session, request: EquipmentRequest, owner: User) -> dict:
         distance_km=round(km, 1) if km is not None else None,
         client_initials=_initials(client.full_name if client else None),
         created_at=request.created_at,
+        payment_method=request.payment_method or "balance",
+        tariff=request.tariff,
+        hours=request.hours,
     )
 
 
@@ -711,8 +781,7 @@ def quick_accept(db: Session, request_id: int, owner: User, equipment_id: Option
         )
         if equipment is None or equipment.owner_id != owner.id:
             raise HTTPException(403, "Bu texnika sizniki emas")
-        if (not is_service_type(request.equipment_type)
-                and equipment.type != request.equipment_type):
+        if equipment.type != request.equipment_type:
             raise HTTPException(400, "Texnika turi buyurtmaga mos emas")
     else:
         equipment, _ = _owner_point_and_equipment(db, owner, request)
@@ -725,6 +794,32 @@ def quick_accept(db: Session, request_id: int, owner: User, equipment_id: Option
 
     price = Decimal(str(request.budget))
     commission = pricing_service.calculate_commission(db, price, price)
+    is_cash = (request.payment_method or "balance") == "cash"
+    is_card = request.payment_method == "card"
+
+    owner_frozen = Decimal("0")
+    if is_cash and commission > 0:
+        # Наличные: деньги клиента идут владельцу в руки, а комиссию
+        # платформа возьмёт с баланса владельца. Замораживаем её СЕЙЧАС:
+        # иначе к завершению он успел бы вывести деньги, и брать было бы
+        # не с чего. Не хватает на балансе — заказ за наличные взять нельзя.
+        owner_balance = (
+            db.query(Balance).filter(Balance.user_id == owner.id).with_for_update().first()
+        )
+        available = (
+            Decimal(str(owner_balance.balance)) - Decimal(str(owner_balance.frozen_balance))
+            if owner_balance is not None else Decimal("0")
+        )
+        if available < commission:
+            db.rollback()
+            raise HTTPException(
+                402,
+                "Naqd buyurtmani olish uchun hisobingizda komissiya miqdori "
+                f"bo'lishi kerak: {int(commission):,} so'm".replace(",", " "),
+            )
+        owner_balance.frozen_balance = Decimal(str(owner_balance.frozen_balance)) + commission
+        owner_frozen = commission
+
     order = Order(
         user_id=request.client_id,
         equipment_id=equipment.id,
@@ -734,16 +829,25 @@ def quick_accept(db: Session, request_id: int, owner: User, equipment_id: Option
         status="confirmed",
         total_amount=price,
         commission=commission,
-        frozen_amount=price,
+        # Карта: деньги в холде на карте, на балансе ничего не заморожено
+        frozen_amount=Decimal("0") if (is_cash or is_card) else price,
         delivery_latitude=request.delivery_latitude,
         delivery_longitude=request.delivery_longitude,
         delivery_address=request.delivery_address,
+        payment_method="cash" if is_cash else ("card" if is_card else "balance"),
+        owner_frozen=owner_frozen,
+        tariff=request.tariff,
+        hours=request.hours,
     )
     db.add(order)
     db.flush()
 
     request.status = "assigned"
     request.order_id = order.id
+    if is_card:
+        cp = _card_payment(db, request)
+        if cp is not None:
+            cp.order_id = order.id
     # Pul endi buyurtmaniki: mijoz balansidagi muzlatish o'z joyida qoladi
     request.frozen_amount = Decimal("0")
     db.commit()

@@ -1,9 +1,16 @@
+import '../../../taxi/presentation/pages/app_status_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/widgets/app_loader.dart';
+import '../../../../core/widgets/app_logo.dart';
+
 import '../../../../core/services/pin_service.dart';
+import 'onboarding_page.dart';
 import 'pin_page.dart';
 
 class SplashScreenPage extends StatefulWidget {
@@ -56,12 +63,20 @@ class _SplashScreenPageState extends State<SplashScreenPage> with SingleTickerPr
     
     if (!mounted) return;
 
+    // U2/U3: majburiy yangilanish va texnik ishlar — hammadan oldin
+    if (!await passAppStatus(context)) return;
+    if (!mounted) return;
+
     final prefs = await SharedPreferences.getInstance();
 
     // Til tanlanganligini tekshirish
     final languageSelected = prefs.getBool('language_selected') ?? false;
     if (!languageSelected) {
-      if (mounted) context.go('/language');
+      // Ilova BIRINCHI marta ochilgan bo'lsa — avval onboarding, keyin til.
+      // Tekshiruv aynan shu yerda: til tanlangandan keyin onboarding
+      // ko'rsatish kech, odam allaqachon ichkarida.
+      final seen = prefs.getBool(OnboardingPage.seenKey) ?? false;
+      if (mounted) context.go(seen ? '/language' : '/onboarding');
       return;
     }
 
@@ -117,52 +132,68 @@ class _SplashScreenPageState extends State<SplashScreenPage> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
+      // Fon to'q ko'k — status bar belgilari OQ.
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarBrightness: Brightness.light,
-        statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Color(0xFFFFFFFF),
-        systemNavigationBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: AppPalette.inverse,
+        systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        // Maket «S0 · Splash»: fon bg/inverse, markazda logotip
+        // (belgi 88×114, yozuv 212×30, «POWER IN MOTION») va yuklanish halqasi.
+        backgroundColor: AppPalette.inverse,
         body: Center(
           child: AnimatedBuilder(
             animation: _animationController,
-            builder: (context, child) {
-              return Opacity(
-                opacity: _fadeAnimation.value,
-                child: Transform.scale(
-                  scale: _scaleAnimation.value,
+            builder: (context, child) => Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.scale(
+                scale: _scaleAnimation.value,
+                child: child,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Semantics(
+                  label: 'MoveX GO',
+                  image: true,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Logo
-                      Image.asset(
-                        'assets/logo-png.png',
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.contain,
+                      SvgPicture.asset(
+                        AppLogo.markAsset,
+                        width: 88,
+                        height: 114.4,
                       ),
-                      const SizedBox(height: 24),
-                      // Loading indicator
-                      const SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
+                      const SizedBox(height: 20),
+                      SvgPicture.asset(
+                        'assets/brand/wordmark_on_dark.svg',
+                        width: 212,
+                        height: 30,
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'POWER IN MOTION',
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 2.88,
+                          color: Color(0xD9F6C849),
                         ),
                       ),
                     ],
                   ),
                 ),
-              );
-            },
+                const SizedBox(height: AppSpacing.xxl),
+                const AppLoader(),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
-

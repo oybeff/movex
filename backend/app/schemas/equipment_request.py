@@ -32,6 +32,41 @@ class RequestCreate(BaseModel):
     mode: str = Field(default="tender", pattern="^(tender|quick)$")
     start_time: Optional[time] = None
 
+    #: Тарифный заказ «как такси». Если tariff задан — цену считает сервер
+    #: по тарифу (budget из тела игнорируется), mode принудительно quick.
+    tariff: Optional[str] = Field(default=None, pattern="^(econom|fast|day)$")
+    hours: Optional[int] = Field(default=None, ge=1, le=24)
+    attachment_id: Optional[int] = None
+    #: cash — только вместе с tariff.
+    payment_method: str = Field(default="balance", pattern="^(balance|cash|card)$")
+    #: card — какой привязанной картой (только тарифный заказ)
+    card_id: Optional[int] = None
+    origin_latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    origin_longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+    origin_address: Optional[str] = Field(default=None, max_length=500)
+    #: E4 «Qayta qidirish (+10% narx)»: надбавка к тарифу, только в тарифном
+    #: заказе. Клиент сам поднимает цену, чтобы заказ скорее взяли.
+    surge_percent: int = Field(default=0, ge=0, le=30)
+
+
+class TariffQuoteRead(BaseModel):
+    """Один тариф на экране выбора: цена часа, часы и итог — от сервера."""
+    tier: str
+    price_per_hour: Decimal
+    attachment_per_hour: Decimal
+    min_hours: int
+    hours: int
+    total: Decimal
+    #: «45 daqiqada keladi». Задаёт админ; null — подпись без минут.
+    eta_minutes: Optional[int] = None
+
+
+class AttachmentRead(BaseModel):
+    id: int
+    #: Название на языке пользователя.
+    name: str
+    price_per_hour: Decimal
+
 
 class OfferCreate(BaseModel):
     equipment_id: int
@@ -79,6 +114,15 @@ class RequestRead(BaseModel):
     mode: str = "tender"
     start_time: Optional[time] = None
     frozen_amount: Optional[Decimal] = None
+
+    tariff: Optional[str] = None
+    hours: Optional[int] = None
+    attachment_id: Optional[int] = None
+    attachment_price: Optional[Decimal] = None
+    payment_method: str = "balance"
+    origin_latitude: Optional[str] = None
+    origin_longitude: Optional[str] = None
+    origin_address: Optional[str] = None
 
     selected_offer_id: Optional[int] = None
     order_id: Optional[int] = None
@@ -142,6 +186,11 @@ class QuickIncoming(BaseModel):
     #: Mijoz ismining bosh harflari ("DR") — avatar uchun, ismsiz
     client_initials: Optional[str] = None
     created_at: datetime
+    #: cash — клиент платит наличными владельцу; комиссия уйдёт с баланса
+    #: владельца, поэтому он должен видеть это ДО того, как возьмёт заказ.
+    payment_method: str = "balance"
+    tariff: Optional[str] = None
+    hours: Optional[int] = None
 
 
 class QuickAcceptIn(BaseModel):

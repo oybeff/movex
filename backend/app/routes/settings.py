@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.core import legal
+from app.core import legal, service_area
 from app.db.session import get_db
 from app.models.app_settings import AppSettings, ContactMethod
 from app.schemas.app_settings import (
@@ -182,6 +182,33 @@ def delete_contact_method(
     db.delete(method)
     db.commit()
     return {"detail": "Contact method deleted"}
+
+
+# ==================== APP STATUS (U2, U3, E3) ====================
+
+@router.get("/app-status")
+def app_status(db: Session = Depends(get_db)):
+    """
+    Без входа: приложение спрашивает при запуске.
+    - min_version — ниже неё приложение не пускает дальше (U2);
+    - maintenance — техработы (U3), maintenance_until — «02:00 gacha»;
+    - service_area — зона обслуживания для E3.
+    Всё меняется в админке (commission.php → «Ilova holati»).
+    """
+    def val(key, default=None):
+        row = db.query(AppSettings).filter(AppSettings.key == key).first()
+        v = row.value if row else None
+        return default if v in (None, "") else str(v)
+
+    return {
+        "min_version": val("min_app_version", "0.0.0"),
+        "maintenance": val("maintenance_enabled", "0") == "1",
+        "maintenance_until": val("maintenance_until"),
+        "store_android": val("store_url_android",
+                             "https://play.google.com/store/apps/details?id=uz.movexgo.app"),
+        "store_ios": val("store_url_ios"),
+        "service_area": service_area.AREA,
+    }
 
 
 # ==================== TERMS AND PRIVACY ====================

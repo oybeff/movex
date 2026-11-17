@@ -1,7 +1,15 @@
-import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:movex_go/core/constants/app_colors.dart';
+import 'package:flutter/material.dart';
+import 'package:movex_go/core/widgets/app_bottom_nav.dart';
 
+/// Texnika egasining pastki menyusi.
+///
+/// Ko'rinishi [AppBottomNav] da — u mijozniki bilan BITTA. Ilgari bu yerda
+/// menyuning to'liq nusxasi turardi, va ikkala nusxada ham `Colors.green`
+/// qotirilgan edi: brend rangi almashganda menyu yashil bo'lib qolgandi,
+/// chunki rang palitradan olinmagan.
+///
+/// Bu yerda faqat bo'limlar ro'yxati qoladi — ular rollarda har xil.
 class OwnerBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
@@ -14,65 +22,36 @@ class OwnerBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      // Pastdagi chekka telefonning jest chizig'ini hisobga oladi —
-      // mijoznikidagi kabi.
-      margin: EdgeInsets.only(
-        left: 12,
-        right: 12,
-        bottom: 6 + MediaQuery.of(context).padding.bottom,
-      ),
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BottomNavigationBar(
-          backgroundColor: Colors.white,
-          selectedItemColor: Colors.green,
-          // Mijoznikidek: tor telefonda nomlar qirqilmasligi uchun.
-          selectedFontSize: 11,
-          unselectedFontSize: 11,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          selectedIconTheme: const IconThemeData(size: 26),
-          unselectedItemColor: Colors.grey,
-          showUnselectedLabels: true,
-          type: BottomNavigationBarType.fixed,
-          currentIndex: currentIndex,
-          onTap: onTap,
-          items: [
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.dashboard_rounded),
-              label: 'owner.dashboard'.tr(),
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.build_rounded),
-              label: 'owner.my_equipment'.tr(),
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.campaign_rounded),
-              label: 'owner.listings'.tr(),
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.receipt_long_rounded),
-              label: 'owner.orders'.tr(),
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.chat_rounded),
-              label: 'owner.chat'.tr(),
-            ),
-          ],
+    return AppBottomNav(
+      currentIndex: currentIndex,
+      onTap: onTap,
+      items: [
+        AppBottomNavItem(
+          icon: Icons.dashboard_outlined,
+          activeIcon: Icons.dashboard_rounded,
+          label: 'owner.dashboard'.tr(),
         ),
-      ),
+        AppBottomNavItem(
+          icon: Icons.build_outlined,
+          activeIcon: Icons.build_rounded,
+          label: 'owner.my_equipment'.tr(),
+        ),
+        AppBottomNavItem(
+          icon: Icons.campaign_outlined,
+          activeIcon: Icons.campaign_rounded,
+          label: 'owner.listings'.tr(),
+        ),
+        AppBottomNavItem(
+          icon: Icons.receipt_long_outlined,
+          activeIcon: Icons.receipt_long_rounded,
+          label: 'owner.orders'.tr(),
+        ),
+        AppBottomNavItem(
+          icon: Icons.chat_bubble_outline_rounded,
+          activeIcon: Icons.chat_rounded,
+          label: 'owner.chat'.tr(),
+        ),
+      ],
     );
   }
 }

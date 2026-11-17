@@ -12,6 +12,7 @@ bo'lgan.
 from decimal import Decimal
 from typing import List, Optional
 
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -23,6 +24,7 @@ from app.models.user import User
 from app.routes.auth import get_current_user
 from app.schemas.equipment_request import (
     AcceptOfferResult,
+    AttachmentRead,
     OfferCreate,
     OfferRead,
     QuickAcceptIn,
@@ -33,9 +35,10 @@ from app.schemas.equipment_request import (
     RequestWithOffers,
     SearchAreaRead,
     SearchAreaUpdate,
+    TariffQuoteRead,
 )
-from app.core.equipment_types import DIAGNOSTIKA
-from app.services import diagnostika_service, pricing_service, request_service
+from app.core.messages import normalize_language
+from app.services import pricing_service, request_service, tariff_service
 
 router = APIRouter()
 
@@ -148,20 +151,50 @@ def owner_feed(
     return [_to_read(db, r, current_user) for r in items]
 
 
-# ------------------------------------------------------ diagnostika narxi
-# Ham /{request_id} dan oldin — aks holda "diagnostika" son deb o'qiladi.
+# ------------------------------------------- тарифный заказ «как такси»
+# Тоже ДО /{request_id}: иначе "tariffs" пытались бы прочитать как число.
 
-@router.get("/diagnostika")
-def diagnostika_price(
+@router.get("/tariffs/types", response_model=List[str])
+def tariff_types(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Типы техники, для которых админ задал тарифы — их и показывает экран."""
+    return tariff_service.types_with_tariffs(db)
+
+
+@router.get("/tariffs", response_model=List[TariffQuoteRead])
+def tariff_quotes(
+    equipment_type: str = Query(..., min_length=1, max_length=50),
+    hours: Optional[int] = Query(None, ge=1, le=24),
+    attachment_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     """
-    Diagnostika narxi — ilova uni ekranda ko'rsatadi. Ilovada yozib
-    qo'yilmaydi: adminkada o'zgarsa, yig'ilgan APK eski narxni ko'rsatardi.
-    Buyurtma yaratilganda ham aynan shu qiymat olinadi.
+    Тарифы типа с итоговой суммой. Та же функция считает сумму при
+    создании заказа — цифра на экране и списанная совпадают.
+    hours не задан или меньше минимума — берётся минимум тарифа.
     """
-    return {"code": DIAGNOSTIKA, "price": diagnostika_service.get_price(db)}
+    return [q.__dict__ for q in tariff_service.quote_all(db, equipment_type, hours, attachment_id)]
+
+
+@router.get("/attachments", response_model=List[AttachmentRead])
+def attachments(
+    equipment_type: str = Query(..., min_length=1, max_length=50),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Навесное для типа, с названием на языке пользователя."""
+    lang = normalize_language(getattr(current_user, "language", None))
+    return [
+        AttachmentRead(
+            id=a.id,
+            name=a.name_ru if lang == "ru" else a.name_uz,
+            price_per_hour=a.price_per_hour,
+        )
+        for a in tariff_service.active_attachments(db, equipment_type)
+    ]
 
 
 # --------------------------------------------- egaga: tez buyurtma
@@ -240,6 +273,9 @@ def get_request(
     har qanday ega ko'ra oladi (u shunga taklif yuborishi kerak), yopilganini
     esa faqat ishtirokchilar.
     """
+    # Muddati o'tganini shu yerda ham yopamiz: qidiruvni kutayotgan mijoz
+    # aynan shu manzilni so'raydi, va usiz zayavka abadiy "open" ko'rinardi (E4)
+    request_service.expire_stale(db)
     request = _get_request(db, request_id)
 
     is_client = request.client_id == current_user.id
@@ -274,6 +310,17 @@ def cancel_request(
 ):
     request = _get_request(db, request_id)
     request = request_service.cancel_request(db, request, current_user)
+    return _to_read(db, request)
+
+
+class _OtpIn(BaseModel):
+    otp: str = Field(min_length=4, max_length=8)
+
+
+@router.post("/{request_id}/card-otp", response_model=RequestRead)
+def card_otp(request_id: int, data: _OtpIn, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """Код из SMS для заморозки суммы на карте — после него заказ видят владельцы."""
+    request = request_service.confirm_card_otp(db, request_id, current_user, data.otp)
     return _to_read(db, request)
 
 

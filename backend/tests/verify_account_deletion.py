@@ -153,7 +153,7 @@ def main():
     photo_name = f"sinov_delete_{owner_id}.jpg"
     open(os.path.join(media_dir, photo_name), "wb").write(b"x")
     photo_url = f"/static/equipment/{photo_name}"
-    sql("INSERT INTO equipment_photos (equipment_id, url) VALUES (:e, :u)", e=eq_id, u=photo_url)
+    sql("INSERT INTO equipment_photos (equipment_id, url, is_primary) VALUES (:e, :u, false)", e=eq_id, u=photo_url)
 
     _, client_id, _ = register("client")
     today = date.today()

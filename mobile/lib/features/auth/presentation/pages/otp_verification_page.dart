@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
-import 'package:toastification/toastification.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/error_handler.dart';
+import '../../../../core/widgets/phone_input_field.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../widgets/auth_header.dart';
+import '../widgets/auth_ui.dart';
 import 'pin_page.dart';
 
 class OTPVerificationPage extends StatefulWidget {
@@ -152,20 +154,25 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
     } catch (e) {
       if (!mounted) return;
 
+      // Maket B4: xato oynada emas — kataklar qizil, ostida matn.
+      // Raqamlar ko'rinib turadi (odam nimani yozganini ko'rsin), birinchi
+      // katak belgilanadi: keyingi bosilgan raqam kodni boshidan boshlaydi.
       setState(() {
         _hasError = true;
         _errorMessage = getErrorMessage(e);
         _loading = false;
       });
-
-      // Show error dialog
-      showErrorDialog(context, e);
-
-      // Clear all fields on error
-      for (var controller in _controllers) {
-        controller.clear();
-      }
-      _focusNodes[0].requestFocus();
+      // Fokus KEYINGI kadrda: tekshiruv paytida kataklar o'chiq edi, va
+      // o'chiq maydon fokus olmaydi — darhol so'ralsa, so'rov yo'qolardi
+      // va odam yangi kodni yoza olmasdi.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _focusNodes[0].requestFocus();
+        _controllers[0].selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: _controllers[0].text.length,
+        );
+      });
     }
   }
 
@@ -181,29 +188,32 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
       );
       
       if (!mounted) return;
-
-      toastification.show(
-        context: context,
-        type: ToastificationType.success,
-        style: ToastificationStyle.flatColored,
-        title: Text('messages.otp_resent'.tr()),
-        autoCloseDuration: const Duration(seconds: 3),
-        alignment: Alignment.topCenter,
-      );
-
+      for (final c in _controllers) {
+        c.clear();
+      }
+      _focusNodes[0].requestFocus();
+      // Sanagich qaytadan boshlangani — kod ketganining belgisi (maket B1).
       _startResendTimer();
     } catch (e) {
       if (!mounted) return;
-      setState(() => _loading = false);
-
-      // Show error dialog
-      showErrorDialog(context, e);
+      setState(() {
+        _loading = false;
+        _hasError = true;
+        _errorMessage = getErrorMessage(e);
+      });
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   void _onChanged(String value, int index) {
+    // Xatodan keyin birinchi bosilgan raqam — yangi urinish: eski kod
+    // tozalanadi (sxemada «B4 Noto'g'ri kod → tozalash»).
+    if (_hasError) {
+      for (var i = 0; i < _controllers.length; i++) {
+        if (i != index) _controllers[i].clear();
+      }
+    }
     setState(() {
       _hasError = false;
       _errorMessage = '';
@@ -261,215 +271,241 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
         statusBarColor: Colors.transparent,
         statusBarBrightness: Brightness.light,
         statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Color(0xFFFFFFFF),
+        systemNavigationBarColor: AppPalette.surface,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => context.pop(),
+        backgroundColor: AppPalette.surface,
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AuthHeader(onBack: () => context.pop()),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.gutter,
+                    AppSpacing.lg,
+                    AppSpacing.gutter,
+                    AppSpacing.lg,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('auth.otp_title'.tr(), style: authTitleStyle),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'auth.otp_subtitle'.tr(args: [
+                          formatPhoneNumberGrouped(widget.phoneNumber),
+                        ]),
+                        style: authSubtitleStyle,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      // Maket: «Raqamni o'zgartirish» — oldingi ekranga.
+                      GestureDetector(
+                        onTap: () => context.pop(),
+                        child: Text(
+                          'auth.change_number'.tr(),
+                          style: _linkStyle,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      _buildOTPFields(),
+                      const SizedBox(height: AppSpacing.lg),
+                      if (_loading)
+                        _buildChecking()
+                      else ...[
+                        if (_hasError) ...[
+                          AuthFieldError(_errorMessage),
+                          const SizedBox(height: AppSpacing.lg),
+                        ],
+                        _buildResend(),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 20),
-                _buildIcon(),
-                const SizedBox(height: 30),
-                _buildHeader(),
-                const SizedBox(height: 40),
-                _buildOTPFields(),
-                if (_hasError) ...[
-                  const SizedBox(height: 16),
-                  _buildErrorMessage(),
-                ],
-                const SizedBox(height: 30),
-                _buildResendButton(),
-                const SizedBox(height: 20),
-                if (_loading) const CircularProgressIndicator(color: AppColors.primaryGreen),
-              ],
+      ),
+    );
+  }
+
+  static const TextStyle _linkStyle = TextStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+    color: AppPalette.textBrand,
+  );
+
+  static const TextStyle _hintStyle = TextStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 15,
+    fontWeight: FontWeight.w500,
+    color: AppPalette.textSecondary,
+  );
+
+  /// Maket B3: «Tekshirilmoqda...» va kichik aylana.
+  Widget _buildChecking() => Row(
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppPalette.brand,
             ),
           ),
-        ),
-      ),
-    );
-  }
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            'auth.checking'.tr(),
+            style: _hintStyle.copyWith(color: AppPalette.textBrand),
+          ),
+        ],
+      );
 
-  Widget _buildIcon() {
-    return Container(
-      width: 100,
-      height: 100,
-      decoration: BoxDecoration(
-        color: AppColors.primaryGreen.withOpacity(0.1),
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(
-        Icons.sms_outlined,
-        size: 50,
-        color: AppColors.primaryGreen,
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Column(
-      children: [
-        Text(
-          'auth.verification_code'.tr(),
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'auth.enter_4_digit_code'.tr(),
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          widget.phoneNumber,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryGreen,
-              ),
-        ),
-      ],
+  /// Maket B1/B5: sanagich tugaguncha «Kodni qayta yuborish: 0:59»
+  /// kulrang matn, tugagach — o'sha so'zlar ko'k havola.
+  Widget _buildResend() {
+    if (_canResend) {
+      return GestureDetector(
+        onTap: _resendOTP,
+        child: Text('auth.resend_code'.tr(), style: _linkStyle),
+      );
+    }
+    final m = _resendTimer ~/ 60;
+    final ss = (_resendTimer % 60).toString().padLeft(2, '0');
+    return Text(
+      '${'auth.resend_code'.tr()}: $m:$ss',
+      style: _hintStyle,
     );
   }
 
   Widget _buildOTPFields() {
+    // Maketda kataklar OLTITA, server esa TO'RT xonali kod yuboradi
+    // (verify_otp_security shuni tekshiradi), shuning uchun bu yerda
+    // to'rtta — o'lchami va oralig'i maketdagidek (48×56, 8).
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: List.generate(4, (index) {
-        return SizedBox(
-          width: 60,
-          height: 60,
-          // BO'SH katakda "o'chirish" bosilganda onChanged ishlamaydi:
-          // matn o'zgarmagan, demak hodisa ham yo'q. Shuning uchun
-          // tugmaning o'zini ushlaymiz va fokusni oldingi katakka
-          // qaytaramiz — aks holda odam har safar barmog'i bilan
-          // oldingi katakka tegishi kerak bo'lardi.
-          child: KeyboardListener(
-            focusNode: _keyNodes[index],
-            onKeyEvent: (event) {
-              if (event is! KeyDownEvent) return;
-              if (event.logicalKey != LogicalKeyboardKey.backspace) return;
-              if (_controllers[index].text.isNotEmpty) return;
-              if (index == 0) return;
-              _controllers[index - 1].clear();
-              _focusNodes[index - 1].requestFocus();
-            },
-            child: TextField(
-            controller: _controllers[index],
-            focusNode: _focusNodes[index],
-            textAlign: TextAlign.center,
-            keyboardType: TextInputType.number,
-            maxLength: 1,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-            decoration: InputDecoration(
-              counterText: '',
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: _hasError ? Colors.red : Colors.grey.shade300,
-                  width: 2,
-                ),
+      children: List.generate(_controllers.length, (index) {
+        return Padding(
+          padding: EdgeInsets.only(
+            right: index == _controllers.length - 1 ? 0 : AppSpacing.sm,
+          ),
+          child: SizedBox(
+            width: 48,
+            height: AppSpacing.fieldHeight,
+            // BO'SH katakda "o'chirish" bosilganda onChanged ishlamaydi:
+            // matn o'zgarmagan, demak hodisa ham yo'q. Shuning uchun
+            // tugmaning o'zini ushlaymiz va fokusni oldingi katakka
+            // qaytaramiz.
+            child: KeyboardListener(
+              focusNode: _keyNodes[index],
+              onKeyEvent: (event) {
+                if (event is! KeyDownEvent) return;
+                if (event.logicalKey != LogicalKeyboardKey.backspace) return;
+                if (_controllers[index].text.isNotEmpty) return;
+                if (index == 0) return;
+                _controllers[index - 1].clear();
+                _focusNodes[index - 1].requestFocus();
+              },
+              child: _OtpCell(
+                controller: _controllers[index],
+                focusNode: _focusNodes[index],
+                hasError: _hasError,
+                enabled: !_loading,
+                autofill: index == 0,
+                onChanged: (value) => _onChanged(value, index),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: _hasError ? Colors.red : Colors.grey.shade300,
-                  width: 2,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: _hasError ? Colors.red : AppColors.primaryGreen,
-                  width: 2,
-                ),
-              ),
-            ),
-            // SMS dagi kodni telefon o'zi taklif qiladi — bir tegishda
-            // to'rtala katak to'ladi.
-            autofillHints: index == 0 ? const [AutofillHints.oneTimeCode] : null,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-            ],
-            onChanged: (value) => _onChanged(value, index),
-            // Katakka tegilganda u TOZALANMAYDI, faqat kursor oxiriga
-            // o'tadi. Ilgari tegish raqamni o'chirib yuborardi: kodni
-            // tuzatmoqchi bo'lgan odam uni yo'qotardi.
-            onTap: () {
-              _controllers[index].selection = TextSelection.fromPosition(
-                TextPosition(offset: _controllers[index].text.length),
-              );
-            },
             ),
           ),
         );
       }),
     );
   }
+}
 
-  Widget _buildErrorMessage() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.shade200),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: Colors.red),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              _errorMessage,
-              style: const TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+/// Bitta katak. Maket «Auth/OTP cell»: bo'sh — kulrang, fokusda — oq va
+/// ko'k ramka, xatoda — pushti va qizil ramka, raqam 24 Semibold.
+class _OtpCell extends StatelessWidget {
+  const _OtpCell({
+    required this.controller,
+    required this.focusNode,
+    required this.hasError,
+    required this.enabled,
+    required this.autofill,
+    required this.onChanged,
+  });
 
-  Widget _buildResendButton() {
-    return Column(
-      children: [
-        Text(
-          'auth.code_not_received'.tr(),
-          style: TextStyle(color: Colors.grey[600]),
-        ),
-        const SizedBox(height: 8),
-        TextButton(
-          onPressed: _canResend ? _resendOTP : null,
-          child: Text(
-            _canResend ? 'auth.resend'.tr() : '${'auth.resend'.tr()} ($_resendTimer s)',
-            style: TextStyle(
-              color: _canResend ? AppColors.primaryGreen : Colors.grey,
-              fontWeight: FontWeight.bold,
-            ),
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool hasError;
+  final bool enabled;
+  final bool autofill;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: focusNode,
+      builder: (context, _) {
+        final focused = focusNode.hasFocus;
+        final Color fill;
+        final Color? borderColor;
+        if (hasError) {
+          fill = AppPalette.dangerSubtle;
+          borderColor = AppPalette.borderDanger;
+        } else if (focused) {
+          fill = AppPalette.surface;
+          borderColor = AppPalette.borderFocus;
+        } else {
+          fill = AppPalette.page;
+          borderColor = null;
+        }
+        final side = borderColor == null
+            ? BorderSide.none
+            : BorderSide(color: borderColor, width: 1.5);
+        final shape = OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: side,
+        );
+        return TextField(
+          controller: controller,
+          focusNode: focusNode,
+          enabled: enabled,
+          textAlign: TextAlign.center,
+          keyboardType: TextInputType.number,
+          maxLength: 1,
+          cursorColor: AppPalette.brand,
+          style: TextStyle(
+            fontFamily: AppTypography.fontFamily,
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: hasError ? AppPalette.textDanger : AppPalette.textPrimary,
           ),
-        ),
-      ],
+          decoration: InputDecoration(
+            counterText: '',
+            filled: true,
+            fillColor: fill,
+            contentPadding: EdgeInsets.zero,
+            border: shape,
+            enabledBorder: shape,
+            disabledBorder: shape,
+            focusedBorder: shape,
+          ),
+          // SMS dagi kodni telefon o'zi taklif qiladi — bir tegishda
+          // hamma katak to'ladi.
+          autofillHints: autofill ? const [AutofillHints.oneTimeCode] : null,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          onChanged: onChanged,
+          // Katakka tegilganda u TOZALANMAYDI, faqat kursor oxiriga o'tadi.
+          onTap: () {
+            controller.selection = TextSelection.fromPosition(
+              TextPosition(offset: controller.text.length),
+            );
+          },
+        );
+      },
     );
   }
 }
-

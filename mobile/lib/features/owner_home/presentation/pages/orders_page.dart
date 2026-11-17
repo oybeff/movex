@@ -1411,8 +1411,17 @@ class _OrdersPageState extends State<OrdersPage> {
                       const SizedBox(height: 12),
                     ],
 
+                    // Тарифный заказ «как такси»: ход работы, продление, опоздание
+                    if (order.status == 'confirmed' && order.tariff != null) ...[
+                      _TaxiOwnerActions(order: order, onAction: (action, {data}) {
+                        Navigator.pop(context);
+                        _ownerAction(order, action, data: data);
+                      }),
+                      const SizedBox(height: 12),
+                    ],
+
                     // Yakunlash tugmasi (faqat confirmed buyurtmalar uchun)
-                    if (order.status == 'confirmed') ...[
+                    if (order.status == 'confirmed' && order.tariff == null) ...[
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
@@ -1441,6 +1450,19 @@ class _OrdersPageState extends State<OrdersPage> {
     );
   }
 
+  Future<void> _ownerAction(OrderModel order, String action, {Map<String, dynamic>? data}) async {
+    try {
+      await _orderService.ownerAction(order.id, action, data: data);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('owner_flow.done'.tr())));
+      _loadOrders();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(getErrorMessage(e))));
+      }
+    }
+  }
+
   Widget _buildPriceRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1459,6 +1481,104 @@ class _OrdersPageState extends State<OrdersPage> {
             fontWeight: FontWeight.w600,
           ),
         ),
+      ],
+    );
+  }
+}
+
+
+/// Кнопки владельца для тарифного заказа: выехал → начал → закончил,
+/// ответ на запрос продления (B3), «опаздываю» (B2) до начала работы.
+class _TaxiOwnerActions extends StatelessWidget {
+  const _TaxiOwnerActions({required this.order, required this.onAction});
+
+  final OrderModel order;
+  final void Function(String action, {Map<String, dynamic>? data}) onAction;
+
+  Future<void> _delay(BuildContext context) async {
+    final m = await showModalBottomSheet<int>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(title: Text('owner_flow.delay_title'.tr(), style: const TextStyle(fontWeight: FontWeight.w600))),
+            for (final v in const [10, 15, 30, 60])
+              ListTile(
+                title: Text('owner_flow.minutes'.tr(args: ['$v'])),
+                onTap: () => Navigator.pop(ctx, v),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (m != null) onAction('delay', data: {'minutes': m});
+  }
+
+  ButtonStyle get _main => ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primaryGreen,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final o = order;
+    final ext = o.extendRequestedHours;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (ext != null && ext > 0) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(12)),
+            child: Text('owner_flow.extend_asked'.tr(args: ['$ext']),
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => onAction('extend/decline'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text('owner_flow.extend_decline'.tr()),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => onAction('extend/approve'),
+                  style: _main,
+                  child: Text('owner_flow.extend_approve'.tr()),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (o.finishedAt != null)
+          Text('owner_flow.wait_client'.tr(), textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[700]))
+        else if (o.startedAt != null)
+          ElevatedButton(onPressed: () => onAction('finish'), style: _main, child: Text('owner_flow.finish'.tr()))
+        else if (o.departedAt != null)
+          ElevatedButton(onPressed: () => onAction('start'), style: _main, child: Text('owner_flow.start'.tr()))
+        else
+          ElevatedButton(onPressed: () => onAction('depart'), style: _main, child: Text('owner_flow.depart'.tr())),
+        if (o.startedAt == null) ...[
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () => _delay(context),
+            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+            child: Text(o.delayMinutes == null
+                ? 'owner_flow.delay'.tr()
+                : 'owner_flow.delay_set'.tr(args: ['${o.delayMinutes}'])),
+          ),
+        ],
       ],
     );
   }

@@ -2,11 +2,13 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/services/pin_service.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/services/user_service.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../widgets/auth_header.dart';
+import '../widgets/auth_ui.dart';
 import 'otp_verification_page.dart';
 
 /// PIN ekrani. Uch vazifani bajaradi, shuning uchun rejim bilan.
@@ -186,155 +188,209 @@ class _PinPageState extends State<PinPage> {
     }
   }
 
+  String get _subtitle {
+    switch (widget.mode) {
+      case PinMode.create:
+        return _firstEntry == null
+            ? 'pin.create_subtitle'.tr()
+            : 'pin.repeat_subtitle'.tr();
+      case PinMode.unlock:
+        return 'pin.unlock_subtitle'.tr();
+      case PinMode.confirmCurrent:
+        return 'pin.hint'.tr();
+    }
+  }
+
+  /// Shapkada nima turadi. Maket: C1 va D2 — logotip; C2 (takrorlash) —
+  /// orqaga strelka, u birinchi kiritishga qaytaradi.
+  VoidCallback? get _back {
+    if (widget.mode == PinMode.create && _firstEntry != null) {
+      return () => setState(() {
+            _firstEntry = null;
+            _entered = '';
+            _error = null;
+          });
+    }
+    if (widget.mode == PinMode.unlock || widget.mandatory) return null;
+    return () => Navigator.of(context).maybePop();
+  }
+
   @override
   Widget build(BuildContext context) {
-    // unlock rejimida ortga qaytish yo'q: aks holda qulf ma'nosini
-    // yo'qotardi — "ortga" bosib ichkariga kirib bo'lardi.
     return PopScope(
       // Qulf rejimida ham, majburiy o'rnatishda ham ortga qaytish yo'q:
       // aks holda "ortga" bosib PIN kodsiz ichkariga kirib bo'lardi.
       canPop: widget.mode != PinMode.unlock && !widget.mandatory,
       child: Scaffold(
-        backgroundColor: AppColors.white,
-        appBar: (widget.mode == PinMode.unlock || widget.mandatory)
-            ? null
-            : AppBar(
-                backgroundColor: AppColors.white,
-                elevation: 0,
-                foregroundColor: AppColors.black,
-              ),
-        // Ekran past bo'lsa pastki qismi KESILMAYDI.
-        //
-        // Ilgari bu oddiy Column edi: joy yetmaganda "PIN kodni
-        // unutdingizmi?" tugmasi ekrandan chiqib ketardi va bosib
-        // bo'lmasdi — ya'ni kodni unutgan odam ilovaga umuman kira
-        // olmasdi. Endi joy yetmasa ro'yxat suriladi, yetganda esa
-        // ko'rinish o'zgarmaydi: minHeight + IntrinsicHeight Spacer
-        // larni ishlatadi.
+        backgroundColor: AppPalette.surface,
+        // Ekran past bo'lsa pastki qismi KESILMAYDI: joy yetmasa ro'yxat
+        // suriladi. Ilgari "PIN kodni unutdingizmi?" ekrandan chiqib
+        // ketardi va kodni unutgan odam ilovaga umuman kira olmasdi.
         body: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Column(
-                    children: [
-                      const Spacer(flex: 2),
-                      Icon(
-                        Icons.lock_outline_rounded,
-                        size: 46,
-                        color: AppColors.primaryGreen,
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        _title,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 20,
-                        child: _error == null
-                            ? Text(
-                                'pin.hint'.tr(),
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.grey,
-                                ),
-                              )
-                            : Text(
-                                _error!,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.error,
-                                ),
+          child: Column(
+            children: [
+              AuthHeader(onBack: _back),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) => SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints:
+                          BoxConstraints(minHeight: constraints.maxHeight),
+                      child: IntrinsicHeight(
+                        child: Column(
+                          children: [
+                            const SizedBox(height: AppSpacing.s10),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.gutter,
                               ),
-                      ),
-                      const SizedBox(height: 26),
-                      _dots(),
-                      const Spacer(),
-                      _keypad(),
-                      // "Unutdingizmi?" faqat qulf rejimida: create/confirm da
-                      // odam kodni endigina kiritmoqda, tiklash u yerda ortiqcha.
-                      if (widget.mode == PinMode.unlock)
-                        TextButton(
-                          onPressed: _forgotPin,
-                          child: Text(
-                            'pin.forgot'.tr(),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.primaryGreen,
+                              child: Column(
+                                children: [
+                                  Text(
+                                    _title,
+                                    textAlign: TextAlign.center,
+                                    style: authTitleStyle,
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    _subtitle,
+                                    textAlign: TextAlign.center,
+                                    style: authSubtitleStyle,
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: AppSpacing.xxl),
+                            _dots(),
+                            if (_error != null) ...[
+                              const SizedBox(height: AppSpacing.xl),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.gutter,
+                                ),
+                                child: _errorLine(_error!),
+                              ),
+                            ],
+                            const Spacer(),
+                            _keypad(),
+                            // "Unutdingizmi?" faqat qulf rejimida: create va
+                            // confirm da odam kodni endigina kiritmoqda.
+                            if (widget.mode == PinMode.unlock)
+                              TextButton(
+                                onPressed: _forgotPin,
+                                child: Text('pin.forgot'.tr()),
+                              )
+                            else
+                              const SizedBox(height: AppSpacing.sm),
+                            const SizedBox(height: AppSpacing.sm),
+                          ],
                         ),
-                      const SizedBox(height: 12),
-                    ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 
+  /// Maket C3/D3: xato matni nuqtalar ostida, o'rtada.
+  Widget _errorLine(String message) => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 14,
+            color: AppPalette.textDanger,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTypography.captionS
+                  .copyWith(color: AppPalette.textDanger),
+            ),
+          ),
+        ],
+      );
+
+  /// Maket «Auth/PIN dot»: 16 px, to'ldirilgan — ko'k, bo'sh — border/default.
+  /// Xatoda (C3, D3) to'rttasi ham qizil: odam kodni noto'g'ri kiritganini
+  /// nuqtalarning o'zidan ko'radi, keyingi raqam bosilguncha.
   Widget _dots() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(PinService.pinLength, (i) {
-        final filled = i < _entered.length;
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 9),
-          width: 15,
-          height: 15,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: filled ? AppColors.primaryGreen : Colors.transparent,
-            border: Border.all(
-              color: filled ? AppColors.primaryGreen : Colors.black26,
-              width: 1.5,
-            ),
-          ),
+        final Color color;
+        if (_error != null) {
+          color = AppPalette.textDanger;
+        } else if (i < _entered.length) {
+          color = AppPalette.brand;
+        } else {
+          color = AppPalette.borderDefault;
+        }
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          margin: const EdgeInsets.symmetric(horizontal: 10),
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
         );
       }),
     );
   }
 
+  /// Maket «Auth/PIN keypad»: tugma 96×64, oralig'i 24 (yonma-yon) va
+  /// 8 (qatorlar). Raqam 28 Medium.
   Widget _keypad() {
-    final rows = [
+    const rows = [
       ['1', '2', '3'],
       ['4', '5', '6'],
       ['7', '8', '9'],
     ];
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
-      child: Column(
-        children: [
-          for (final row in rows)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [for (final d in row) _digitButton(d)],
-            ),
+    return Column(
+      children: [
+        for (final row in rows) ...[
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _sideButton(
-                icon: Icons.fingerprint_rounded,
-                onTap: widget.mode == PinMode.unlock
-                    ? _tryBiometricManually
-                    : null,
-              ),
-              _digitButton('0'),
-              _sideButton(icon: Icons.backspace_outlined, onTap: _onBackspace),
+              for (final d in row) ...[
+                if (d != row.first) const SizedBox(width: AppSpacing.xl),
+                _digitButton(d),
+              ],
             ],
           ),
+          const SizedBox(height: AppSpacing.sm),
         ],
-      ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Maket D2: qulf ekranida chapda — biometriya. Boshqa
+            // rejimlarda bo'sh joy (C1, C2).
+            widget.mode == PinMode.unlock
+                ? _sideButton(
+                    icon: Theme.of(context).platform == TargetPlatform.iOS
+                        ? Icons.face_outlined
+                        : Icons.fingerprint_rounded,
+                    onTap: _tryBiometricManually,
+                    label: 'pin.biometric_reason'.tr(),
+                  )
+                : const SizedBox(width: 96, height: 64),
+            const SizedBox(width: AppSpacing.xl),
+            _digitButton('0'),
+            const SizedBox(width: AppSpacing.xl),
+            _sideButton(
+              icon: Icons.backspace_outlined,
+              onTap: _onBackspace,
+              label: 'auth.delete'.tr(),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -346,36 +402,49 @@ class _PinPageState extends State<PinPage> {
   Widget _digitButton(String digit) {
     return _tapTarget(
       onTap: () => _onDigit(digit),
+      label: digit,
       child: Text(
         digit,
         style: const TextStyle(
-          fontSize: 26,
+          fontFamily: AppTypography.fontFamily,
+          fontSize: 28,
           fontWeight: FontWeight.w500,
-          color: AppColors.black,
+          color: AppPalette.textPrimary,
         ),
       ),
     );
   }
 
-  Widget _sideButton({required IconData icon, VoidCallback? onTap}) {
+  Widget _sideButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required String label,
+  }) {
     return _tapTarget(
       onTap: onTap,
-      child: Icon(
-        icon,
-        size: 24,
-        color: onTap == null ? Colors.transparent : AppColors.grey,
-      ),
+      label: label,
+      child: Icon(icon, size: 28, color: AppPalette.iconPrimary),
     );
   }
 
-  Widget _tapTarget({required Widget child, VoidCallback? onTap}) {
-    return Material(
-      color: Colors.transparent,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(width: 72, height: 66, child: Center(child: child)),
+  Widget _tapTarget({
+    required Widget child,
+    required VoidCallback onTap,
+    required String label,
+  }) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(32),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          splashColor: AppPalette.brandSubtle,
+          highlightColor: AppPalette.page,
+          child: SizedBox(width: 96, height: 64, child: Center(child: child)),
+        ),
       ),
     );
   }

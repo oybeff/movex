@@ -76,6 +76,7 @@ dependencies:
   permission_handler: ^11.3.1
   easy_localization: ^3.0.8
   url_launcher: ^6.3.1
+  webview_flutter: ^4.10.0
   package_info_plus: ^8.1.2
   device_info_plus: ^11.2.0
   app_links: ^6.4.1
@@ -142,13 +143,59 @@ flutter:
       # Новый логотип MovexGo. Иконки приложения из него собирает
       # tool/generate_app_icons.py — руками их не режут.
       - assets/logo_full.png
+      # Shaffof fonli nusxa — to'q sariq ekranlar uchun (Start). Asl
+      # logo_full.png oq to'rtburchak ichida va rangli fonda quti bo'lib
+      # ko'rinadi. ffmpeg colorkey bilan olingan, ranglar o'zgarmagan.
+      - assets/logo_full_transparent.png
       - assets/logo_mark.png
+      # Знак логотипа второго макета (пин + экскаватор), вектор из
+      # Design System. Надпись к нему рисует виджет AppLogo шрифтом.
+      - assets/brand/
+      # Фото техники для плиток и тарифов (второй макет, «Category Tile
+      # (rasm)»). Уменьшены до 512 px по ширине: в оригинале 11 МБ на семь
+      # картинок, которые на экране занимают 70×52.
+      - assets/equipment_photos/
+      # Иконки потока заказа из макета (Home/Icon/*), одноцветные SVG.
+      - assets/icons/
       # Texnika turlari ikonkalari: .svg — interfeys uchun, .png — xarita
       # markerlari uchun. tool/generate_equipment_icons.py yasaydi.
       - assets/equipment_types/
       # Qurilish materiallari ikonkalari (g'isht, sement, qum…). Ilgari
       # ular o'rnida emoji turardi va har telefonda boshqacha ko'rinardi.
       - assets/material_types/
+      # Onboarding ekranlaridagi telefon maketlari — ikkinchi maketning
+      # o'z ekranlari (mijoz fayli, «Buyurtma oqimi»), 375×812.
+      - assets/onboarding/
+
+  # Inter — шрифт интерфейса. В макете Figma стоит SF Pro, но это системный
+  # шрифт iOS: на Android его нет, там подставился бы Roboto, и вид разошёлся
+  # бы с макетом. Inter геометрически близок к SF Pro и даёт одинаковый
+  # результат на обеих платформах; им же дизайнер подписал иконки техники.
+  # Лицензия OFL лежит рядом (assets/fonts/OFL.txt) — она требует
+  # распространять её вместе со шрифтом.
+  # Семейство переключается ОДНОЙ константой AppTypography.fontFamily.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+    # Montserrat — ТОЛЬКО для надписи логотипа «MoveX GO» и «POWER IN
+    # MOTION» (макет Design System, компонент Logo). Интерфейс на Inter.
+    # Взят из github.com/JulietaUla/Montserrat, лицензия OFL —
+    # assets/fonts/OFL-Montserrat.txt.
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Montserrat-ExtraBold.ttf
+          weight: 800
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

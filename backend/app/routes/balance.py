@@ -361,8 +361,7 @@ def internal_cash_topup(
     Naqd pul qabul qilindi (users.php → "Naqd pul qabul qilish").
 
     Sovg'adan farqi: HAQIQIY balans (type='topup', payment_method='cash'),
-    bonus_balance ga tushmaydi — kartaga yechish mumkin. Masalan,
-    diagnostikaga pulni naqd bergan mijoz uchun.
+    bonus_balance ga tushmaydi — kartaga yechish mumkin.
     """
     tx = balance_service.credit_cash_topup(db, payload.user_id, payload.amount, payload.comment)
     return {"transaction_id": tx.id, "amount": float(tx.amount)}

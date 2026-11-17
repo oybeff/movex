@@ -15,6 +15,18 @@ class OrderModel {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  /// Тарифный заказ «как такси»: часы, тариф и способ оплаты (cash/balance).
+  final int? hours;
+  final String? tariff;
+  final String paymentMethod;
+
+  /// Ход тарифного заказа: выехал → начал → закончил; запрос продления; опоздание.
+  final DateTime? departedAt;
+  final DateTime? startedAt;
+  final DateTime? finishedAt;
+  final int? extendRequestedHours;
+  final int? delayMinutes;
+
   OrderModel({
     required this.id,
     required this.userId,
@@ -31,6 +43,14 @@ class OrderModel {
     this.deliveryFee,
     required this.createdAt,
     required this.updatedAt,
+    this.hours,
+    this.tariff,
+    this.paymentMethod = 'balance',
+    this.departedAt,
+    this.startedAt,
+    this.finishedAt,
+    this.extendRequestedHours,
+    this.delayMinutes,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -50,6 +70,14 @@ class OrderModel {
       deliveryFee: json['delivery_fee'] != null ? (json['delivery_fee'] as num).toDouble() : null,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      hours: json['hours'] as int?,
+      tariff: json['tariff'] as String?,
+      paymentMethod: (json['payment_method'] as String?) ?? 'balance',
+      departedAt: DateTime.tryParse(json['departed_at'] as String? ?? '')?.toLocal(),
+      startedAt: DateTime.tryParse(json['started_at'] as String? ?? '')?.toLocal(),
+      finishedAt: DateTime.tryParse(json['finished_at'] as String? ?? '')?.toLocal(),
+      extendRequestedHours: json['extend_requested_hours'] as int?,
+      delayMinutes: json['delay_minutes'] as int?,
     );
   }
 

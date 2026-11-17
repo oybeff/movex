@@ -8,6 +8,7 @@ import '../../../../core/services/equipment_service.dart';
 import '../../../../core/models/equipment_model.dart';
 import '../../../../core/constants/app_config.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/constants/material_types.dart';
 import '../../../../core/utils/number_formatter.dart';
@@ -420,10 +421,12 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: Colors.grey[50],
+        // Maketda fon oq. Ilgari kulrang edi (grey[50]) va kulrang
+        // kartochkalar unda deyarli ko'rinmasdi.
+        backgroundColor: AppPalette.surface,
         appBar: AppBar(
           title: Text('client.catalog'.tr()),
-          backgroundColor: Colors.white,
+          backgroundColor: AppPalette.surface,
           elevation: 0,
         ),
         body: Column(
@@ -431,36 +434,52 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
             _materialsStrip(),
             // Search and filters
             Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(16),
+              color: AppPalette.surface,
+              padding: const EdgeInsets.all(AppSpacing.gutter),
               child: Column(
                 children: [
-                  // Search bar
-                  TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'equipment.search'.tr(),
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                  // Qidiruv maydoni — maketdagi ko'rinishda: kulrang fon,
+                  // ramkasiz, burchagi 12, balandligi 48.
+                  SizedBox(
+                    height: AppSpacing.inputHeight,
+                    child: TextField(
+                      controller: _searchController,
+                      style: AppTypography.hint
+                          .copyWith(color: AppPalette.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'equipment.search'.tr(),
+                        hintStyle: AppTypography.hint,
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          size: AppSpacing.icon,
+                          color: AppPalette.textSecondary,
+                        ),
+                        filled: true,
+                        fillColor: AppPalette.surfaceAlt,
+                        border: _searchBorder(),
+                        enabledBorder: _searchBorder(),
+                        focusedBorder: _searchBorder(),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      onChanged: (_) => _applyFilters(),
                     ),
-                    onChanged: (_) => _applyFilters(),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   // Filter button
                   OutlinedButton.icon(
                     onPressed: _showFilterBottomSheet,
-                    icon: const Icon(Icons.filter_list),
-                    label: Text('common.filter_sort'.tr(), style: const TextStyle(fontSize: 16)),
+                    icon: const Icon(Icons.filter_list, size: AppSpacing.icon),
+                    label: Text('common.filter_sort'.tr(),
+                        style: AppTypography.body),
                     style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 48),
+                      foregroundColor: AppPalette.textPrimary,
+                      side: const BorderSide(color: AppPalette.border),
+                      minimumSize:
+                          const Size(double.infinity, AppSpacing.inputHeight),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppRadius.card),
                       ),
                     ),
                   ),
@@ -476,12 +495,11 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.construction, size: 64, color: Colors.grey[400]),
-                              const SizedBox(height: 16),
-                              Text(
-                                'equipment.not_found'.tr(),
-                                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                              ),
+                              const Icon(Icons.construction,
+                                  size: 64, color: AppPalette.disabled),
+                              const SizedBox(height: AppSpacing.lg),
+                              Text('equipment.not_found'.tr(),
+                                  style: AppTypography.subtitle),
                             ],
                           ),
                         )
@@ -543,8 +561,11 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                       builder: (_) => const MaterialsCatalogPage(),
                     ),
                   ),
+                  // Havola brend rangida. Ilgari u mavzudan ko'k/binafsha
+                  // rang olardi — maketda bunday rang umuman yo'q.
                   child: Text('common.all'.tr(),
-                      style: const TextStyle(fontSize: 13)),
+                      style: AppTypography.small
+                          .copyWith(color: AppPalette.primary)),
                 ),
               ],
             ),
@@ -574,7 +595,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: Colors.grey[100],
+                            color: AppPalette.surfaceAlt,
                             borderRadius: BorderRadius.circular(14),
                           ),
                           alignment: Alignment.center,
@@ -587,7 +608,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                           textAlign: TextAlign.center,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              fontSize: 11, color: Colors.grey[700]),
+                              fontSize: 11, color: AppPalette.textSecondary),
                         ),
                       ],
                     ),
@@ -601,8 +622,16 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
     );
   }
 
-  static const BorderRadius _cardTopRadius =
-      BorderRadius.vertical(top: Radius.circular(16));
+  /// Qidiruv maydonining ramkasi — maketda ramka yo'q, faqat kulrang fon.
+  OutlineInputBorder _searchBorder() => OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        borderSide: BorderSide.none,
+      );
+
+  /// Rasmning yuqori burchaklari kartochkanikiga MOS kelishi kerak, aks
+  /// holda rasm chetidan kulrang chiziq chiqib qoladi.
+  static final BorderRadius _cardTopRadius =
+      BorderRadius.vertical(top: Radius.circular(AppRadius.card));
 
   Widget _buildEquipmentCard(EquipmentModel equipment) {
     // Masofa hisoblash
@@ -633,16 +662,12 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
     return GestureDetector(
       onTap: () => _showEquipmentDetails(equipment),
       child: Container(
+        // Maketda kartochka — kulrang fonli, soyasiz, burchagi 12.
+        // Soya olib tashlandi: maketda u faqat suzuvchi elementlarda bor
+        // (pastki menyu, xarita ustidagi tugmalar), ro'yxatda emas.
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: AppPalette.surfaceAlt,
+          borderRadius: BorderRadius.circular(AppRadius.card),
         ),
         child: Stack(
           children: [
@@ -683,20 +708,13 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                         EquipmentTypeChip(
                           equipment.type,
                           iconSize: 14,
-                          textStyle: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w500,
-                          ),
+                          textStyle: AppTypography.small,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppSpacing.xs),
                         Text(
                           equipment.model ?? '',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.black,
-                          ),
+                          style: AppTypography.caption
+                              .copyWith(color: AppPalette.textPrimary),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -705,18 +723,12 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                           children: [
                             Text(
                               NumberFormatter.formatCurrency(equipment.pricePerDay),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primaryGreen,
-                              ),
+                              // Maketda narx — HAR DOIM to'q sariq va qalin.
+                              style: AppTypography.price.copyWith(fontSize: 16),
                             ),
                             Text(
                               ' ${'common.currency'.tr()}/${'common.day'.tr()}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
+                              style: AppTypography.small,
                             ),
                           ],
                         ),
@@ -734,7 +746,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isAvailable ? Colors.green : Colors.red,
+                  color: isAvailable ? AppPalette.success : AppPalette.busy,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
@@ -794,13 +806,13 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.location_on, size: 12, color: Colors.grey[600]),
+                      Icon(Icons.location_on, size: 12, color: AppPalette.textSecondary),
                       const SizedBox(width: 2),
                       Text(
                         distanceText,
                         style: TextStyle(
                           fontSize: 11,
-                          color: Colors.grey[700],
+                          color: AppPalette.textSecondary,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -842,7 +854,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: AppPalette.surfaceMuted,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -860,7 +872,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
                           height: 200,
-                          color: Colors.grey[300],
+                          color: AppPalette.surfaceMuted,
                           child: Center(
                             child: EquipmentTypeIcon(equipment.type, size: 60),
                           ),
@@ -883,7 +895,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: isAvailable ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                          color: isAvailable ? AppPalette.success.withValues(alpha: 0.1) : AppPalette.busy.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -893,7 +905,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                                 ? 'Ta\'mirda'
                                 : 'messages.busy'.tr()),
                           style: TextStyle(
-                            color: isAvailable ? Colors.green : Colors.red,
+                            color: isAvailable ? AppPalette.success : AppPalette.busy,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -906,7 +918,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                   if (equipment.description != null && equipment.description!.isNotEmpty) ...[
                     Text(
                       equipment.description!,
-                      style: TextStyle(fontSize: 14, color: Colors.grey[700], height: 1.5),
+                      style: TextStyle(fontSize: 14, color: AppPalette.textSecondary, height: 1.5),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -1011,7 +1023,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
         children: [
           Text(
             label,
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            style: TextStyle(fontSize: 14, color: AppPalette.textSecondary),
           ),
           Text(
             value,
@@ -1058,7 +1070,7 @@ class _ClientCatalogPageState extends State<ClientCatalogPage> {
                 ' ${'common.currency'.tr()}/$unit',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[600],
+                  color: AppPalette.textSecondary,
                 ),
               ),
             ],

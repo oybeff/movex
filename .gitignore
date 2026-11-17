@@ -127,3 +127,7 @@ firebase-key.json
 *firebase*adminsdk*.json
 google-services.json
 GoogleService-Info.plist
+
+# Локальное состояние инструментов (Playwright MCP, Claude Code)
+.playwright-mcp/
+.claude/

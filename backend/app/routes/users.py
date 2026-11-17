@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -12,6 +13,8 @@ from app.core.messages import t
 from app.core.security import hash_password
 from app.services import account_deletion_service
 from app.utils.phone_utils import to_db_phone
+from app.core.media import delete_by_url, save_upload
+from app.models.user_address import ADDRESS_KINDS, UserAddress
 
 router = APIRouter()
 
@@ -82,6 +85,96 @@ def update_current_user(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.post("/me/avatar", response_model=UserRead)
+def upload_avatar(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Pr2 «Rasmni o'zgartirish». Старое фото удаляется с диска."""
+    url = save_upload(file, "avatars")
+    old = current_user.avatar_url
+    current_user.avatar_url = url
+    db.commit()
+    db.refresh(current_user)
+    if old:
+        delete_by_url(old)
+    return current_user
+
+
+# ------------------------------------------------ Pr4 · Saqlangan manzillar
+
+MAX_ADDRESSES = 20
+
+
+class AddressIn(BaseModel):
+    kind: str = "other"
+    title: str = Field(min_length=1, max_length=60)
+    address: str = Field(min_length=1, max_length=500)
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+
+
+def _address_out(a: UserAddress) -> dict:
+    return dict(id=a.id, kind=a.kind, title=a.title, address=a.address,
+                latitude=float(a.latitude), longitude=float(a.longitude))
+
+
+def _check_kind(kind: str) -> None:
+    if kind not in ADDRESS_KINDS:
+        raise HTTPException(400, "Manzil turi noto'g'ri")
+
+
+@router.get("/me/addresses")
+def list_addresses(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    rows = (
+        db.query(UserAddress).filter(UserAddress.user_id == current_user.id)
+        .order_by(UserAddress.id).all()
+    )
+    return [_address_out(a) for a in rows]
+
+
+@router.post("/me/addresses")
+def add_address(data: AddressIn, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    _check_kind(data.kind)
+    count = db.query(UserAddress).filter(UserAddress.user_id == current_user.id).count()
+    if count >= MAX_ADDRESSES:
+        raise HTTPException(400, f"{MAX_ADDRESSES} tadan ortiq manzil saqlab bo'lmaydi")
+    a = UserAddress(user_id=current_user.id, **data.dict())
+    db.add(a)
+    db.commit()
+    db.refresh(a)
+    return _address_out(a)
+
+
+def _own_address(db: Session, user: User, address_id: int) -> UserAddress:
+    a = db.query(UserAddress).filter(UserAddress.id == address_id).first()
+    # Чужой адрес — как несуществующий: id не подсказывают, что он есть
+    if a is None or a.user_id != user.id:
+        raise HTTPException(404, "Manzil topilmadi")
+    return a
+
+
+@router.put("/me/addresses/{address_id}")
+def update_address(address_id: int, data: AddressIn, db: Session = Depends(get_db),
+                   current_user: User = Depends(get_current_user)):
+    _check_kind(data.kind)
+    a = _own_address(db, current_user, address_id)
+    for k, v in data.dict().items():
+        setattr(a, k, v)
+    db.commit()
+    db.refresh(a)
+    return _address_out(a)
+
+
+@router.delete("/me/addresses/{address_id}")
+def delete_address(address_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    a = _own_address(db, current_user, address_id)
+    db.delete(a)
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/me/deletion-check")

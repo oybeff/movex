@@ -38,6 +38,7 @@ $query = "
         o.start_date,
         o.end_date,
         o.total_amount,
+        o.payment_method,
         o.commission,
         o.created_at,
         u.full_name as client_name,
@@ -221,7 +222,7 @@ include 'includes/header.php';
                                 <?= formatDate($order['start_date'], 'd.m.Y') ?><br>
                                 <small class="text-muted">→ <?= formatDate($order['end_date'], 'd.m.Y') ?></small>
                             </td>
-                            <td><strong><?= number_format($order['total_amount'], 0) ?></strong> so'm</td>
+                            <td><strong><?= number_format($order['total_amount'], 0) ?></strong> so'm<?php if (($order['payment_method'] ?? '') === 'cash'): ?><br><small style="color:#b45309">naqd — egaga qo'lda</small><?php endif; ?></td>
                             <td><?= number_format($order['commission'], 0) ?> so'm</td>
                             <td>
                                 <?php

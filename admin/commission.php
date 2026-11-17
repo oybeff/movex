@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Sovg'a va Rahmat shakllarida rejim va foiz maydonlari yo'q —
     // ularni tekshirish shart emas.
-    $error = in_array($form, ['bonus', 'rahmat', 'listing_fee', 'diagnostika'], true)
+    $error = in_array($form, ['bonus', 'rahmat', 'listing_fee', 'app_status'], true)
         ? null
         : validateCommission($mode, $fixed, $percent);
 
@@ -112,6 +112,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             saveSetting($db, 'rahmat_ofd_vat', $ofdVatInput);
             $message = 'Saqlandi. Yangi to\'lovlar va arizalarga qo\'llaniladi.';
         }
+    } elseif ($form === 'app_status') {
+        // Ilova holati: majburiy yangilanish (U2) va texnik ishlar (U3).
+        // Server bularni /settings/app-status orqali beradi.
+        $minVersion = trim((string)($_POST['min_app_version'] ?? ''));
+        $until = trim((string)($_POST['maintenance_until'] ?? ''));
+        if ($minVersion !== '' && !preg_match('/^\d+\.\d+\.\d+$/', $minVersion)) {
+            $error = "Versiya 1.2.0 ko'rinishida bo'lsin";
+        } elseif (mb_strlen($until) > 40) {
+            $error = "Muddat matni juda uzun";
+        } else {
+            saveSetting($db, 'min_app_version', $minVersion === '' ? '0.0.0' : $minVersion);
+            saveSetting($db, 'maintenance_enabled', isset($_POST['maintenance']) ? '1' : '0');
+            saveSetting($db, 'maintenance_until', $until);
+            $message = isset($_POST['maintenance'])
+                ? "Saqlandi. Ilova hozir «Texnik ishlar» ekranini ko'rsatadi."
+                : "Saqlandi.";
+        }
     } elseif ($form === 'listing_fee') {
         // E'lon joylash narxi. 0 — bepul. Shaxsiy narx users.php da.
         $listingFee = trim((string)($_POST['listing_fee'] ?? '0'));
@@ -125,16 +142,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = (float)$listingFee > 0
                 ? "Saqlandi. Yangi e'lonlar endi pullik."
                 : "Saqlandi. E'lon joylash bepul.";
-        }
-    } elseif ($form === 'diagnostika') {
-        // Diagnostika narxi. Mijoz to'laydi, ega olganda umumiy ulush
-        // ayirilib unga tushadi. 0 bo'lmaydi — tez buyurtmada narx > 0.
-        $diagPrice = trim((string)($_POST['diagnostika_price'] ?? ''));
-        if (!ctype_digit($diagPrice) || (int)$diagPrice <= 0) {
-            $error = "Diagnostika narxi 0 dan katta butun son bo'lsin";
-        } else {
-            saveSetting($db, 'diagnostika_price_amount', (string)(int)$diagPrice);
-            $message = "Saqlandi. Yangi diagnostika buyurtmalariga qo'llaniladi.";
         }
     } elseif ($form === 'bonus') {
         // Sovg'a — alohida shakl, ulush tekshiruviga bog'liq emas.
@@ -169,15 +176,9 @@ $bonusAmount = settingValue($db, 'signup_bonus_amount', '50000');
 
 // E'lon joylash narxi ("E'lonlar" bo'limi). 0 — bepul.
 $listingFee = settingValue($db, 'listing_fee_amount', '0');
-
-// Diagnostika narxi. Standart backend'dagi diagnostika_service.DEFAULT_PRICE
-// bilan bir xil bo'lishi kerak.
-$diagnostikaPrice = settingValue($db, 'diagnostika_price_amount', '50000');
-// Egaga tushadigan qism — pricing_service.calculate_commission bilan bir xil
-$diagnostikaTake = $mode === 'fixed'
-    ? (float)$fixed
-    : (float)$diagnostikaPrice * (float)$percent / 100;
-$diagnostikaTake = min($diagnostikaTake, (float)$diagnostikaPrice);
+$minAppVersion = settingValue($db, 'min_app_version', '0.0.0');
+$maintenanceOn = settingValue($db, 'maintenance_enabled', '0') === '1';
+$maintenanceUntil = settingValue($db, 'maintenance_until', '');
 
 // Rahmat: avtomatik o'tkazma va fiskal chek kodlari.
 // Standart qiymatlar rahmat_service.py dagilar bilan bir xil bo'lishi
@@ -459,6 +460,45 @@ include 'includes/header.php';
 
     <div class="card mb-3" style="margin-top: 24px;">
         <div class="card-header">
+            <h3 class="card-title">Ilova holati</h3>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info" style="margin-bottom: 18px;">
+                <strong>Minimal versiya</strong> — bundan eski ilova ishlamaydi va
+                «Yangi versiya chiqdi» ekranini ko'rsatadi. <strong>Texnik ishlar</strong>
+                yoqilsa, mijoz ilovasi faqat shu haqdagi ekranni ko'rsatadi (server
+                va panel ishlashda davom etadi).
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                <input type="hidden" name="form" value="app_status">
+                <div class="form-group">
+                    <label>Minimal versiya</label><br>
+                    <input type="text" name="min_app_version" placeholder="1.0.0"
+                           value="<?= htmlspecialchars($minAppVersion) ?>"
+                           style="max-width: 220px; margin-top: 6px;">
+                </div>
+                <div class="form-group" style="margin-top: 12px;">
+                    <label>
+                        <input type="checkbox" name="maintenance" <?= $maintenanceOn ? 'checked' : '' ?>>
+                        Texnik ishlar olib borilmoqda
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Qachongacha (matn, masalan «02:00»)</label><br>
+                    <input type="text" name="maintenance_until" maxlength="40"
+                           value="<?= htmlspecialchars($maintenanceUntil) ?>"
+                           style="max-width: 220px; margin-top: 6px;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
+                    💾 Saqlash
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-3" style="margin-top: 24px;">
+        <div class="card-header">
             <h3 class="card-title">E'lon joylash narxi</h3>
         </div>
         <div class="card-body">
@@ -475,38 +515,6 @@ include 'includes/header.php';
                     <label>Bitta e'lon narxi</label><br>
                     <input type="number" name="listing_fee" min="0" step="1000"
                            value="<?= htmlspecialchars($listingFee) ?>"
-                           style="max-width: 220px; margin-top: 6px;">
-                    <small class="text-muted">so'm</small>
-                </div>
-                <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
-                    💾 Saqlash
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <div class="card mb-3" style="margin-top: 24px;">
-        <div class="card-header">
-            <h3 class="card-title">Diagnostika narxi</h3>
-        </div>
-        <div class="card-body">
-            <div class="alert alert-info" style="margin-bottom: 18px;">
-                Mijoz «Diagnostika»ni buyurtma qilganda shu summa balansida
-                <strong>muzlatiladi</strong> — narxni mijoz o'zi qo'ya olmaydi.
-                Buyurtma yakunlanganda egaga yuqoridagi <strong>platforma ulushi
-                ayirilib</strong> tushadi: hozir egaga
-                <?= number_format((float)$diagnostikaPrice - $diagnostikaTake, 0, '.', ' ') ?> so'm,
-                platformaga <?= number_format($diagnostikaTake, 0, '.', ' ') ?> so'm.
-                Naqd to'lagan mijozga pulni «Foydalanuvchilar» → «Naqd pul qabul qilish»
-                orqali yozing.
-            </div>
-            <form method="POST" action="">
-                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                <input type="hidden" name="form" value="diagnostika">
-                <div class="form-group">
-                    <label>Diagnostika narxi</label><br>
-                    <input type="number" name="diagnostika_price" min="1000" step="1000"
-                           value="<?= htmlspecialchars($diagnostikaPrice) ?>"
                            style="max-width: 220px; margin-top: 6px;">
                     <small class="text-muted">so'm</small>
                 </div>

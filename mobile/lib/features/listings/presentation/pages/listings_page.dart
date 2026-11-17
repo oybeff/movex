@@ -76,7 +76,8 @@ class _ListingsPageState extends State<ListingsPage>
       appBar: AppBar(
         backgroundColor: AppColors.white,
         elevation: 0,
-        automaticallyImplyLeading: false,
+        // «Назад» показывается сам, только если есть куда вернуться: у
+        // клиента раздел открывается из профиля, у владельца — вкладка.
         title: Text(
           'listings.section_title'.tr(),
           style: const TextStyle(

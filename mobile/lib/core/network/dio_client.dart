@@ -1,9 +1,12 @@
+import '../widgets/session_expired_dialog.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_config.dart';
 import '../../main.dart';
+
+bool _sessionDialogShown = false;
 
 class DioClient {
   static Dio create() {
@@ -47,10 +50,21 @@ class DioClient {
           // 401 — token yaroqsiz: seansni tozalab, kirish sahifasiga
           if (e.response?.statusCode == 401) {
             final prefs = await SharedPreferences.getInstance();
+            final hadSession = prefs.getString('token') != null;
             await prefs.remove('token');
             await prefs.remove('role');
             await prefs.remove('user_id');
 
+            // U1 «Qayta kirish kerak»: человек должен понять, почему его
+            // выкинуло, а не оказаться на входе молча. Окно одно, даже если
+            // разом упали несколько запросов.
+            final ctx = appRouter.routerDelegate.navigatorKey.currentContext;
+            if (hadSession && ctx != null && ctx.mounted && !_sessionDialogShown) {
+              _sessionDialogShown = true;
+              // ignore: use_build_context_synchronously
+              await showSessionExpiredDialog(ctx);
+              _sessionDialogShown = false;
+            }
             appRouter.go('/login');
           }
 

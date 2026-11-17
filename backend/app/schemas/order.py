@@ -70,6 +70,18 @@ class OrderRead(BaseModel):
     delivery_fee: Optional[float]
     created_at: datetime
     updated_at: datetime
+    #: Тарифный заказ: cash — наличные владельцу, balance — эскроу.
+    payment_method: str = "balance"
+    tariff: Optional[str] = None
+    hours: Optional[int] = None
+    departed_at: Optional[datetime] = None
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    extend_requested_hours: Optional[int] = None
+    delay_minutes: Optional[int] = None
+    delay_reason: Optional[str] = None
+    cancelled_by: Optional[str] = None
+    problem_reported_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

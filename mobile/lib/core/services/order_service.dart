@@ -125,6 +125,13 @@ class OrderService {
     }
   }
 
+  /// Тарифный заказ, действие владельца: depart | start | finish |
+  /// extend/approve | extend/decline | delay (с [data] {'minutes': N}).
+  Future<OrderModel> ownerAction(int orderId, String action, {Map<String, dynamic>? data}) async {
+    final response = await _dio.post('/orders/$orderId/$action', data: data ?? const {});
+    return OrderModel.fromJson(response.data);
+  }
+
   /// Buyurtmalar statistikasini olish
   Future<OrderStatisticsModel> getOrderStatistics({
     String? startDate,

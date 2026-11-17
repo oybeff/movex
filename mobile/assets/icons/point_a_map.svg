@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="46" height="46" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="A nuqta" filter="url(#filter0_d_0_253)">
+<circle cx="23" cy="20" r="13" fill="#316DC8" stroke-width="4" stroke="white"/>
+</g>
+<defs>
+<filter id="filter0_d_0_253" x="0" y="0" width="46" height="46" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="3"/>
+<feGaussianBlur stdDeviation="4"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.09 0 0 0 0 0.14 0 0 0 0 0.22 0 0 0 0.25 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_253"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_253" result="shape"/>
+</filter>
+</defs>
+</svg>

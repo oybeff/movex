@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
-import 'package:toastification/toastification.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/error_handler.dart';
+import '../widgets/auth_header.dart';
+import '../widgets/auth_ui.dart';
 import 'pin_page.dart';
 import '/features/auth/data/repositories/auth_repository.dart';
 
@@ -24,35 +25,49 @@ class RegisterCompletePage extends StatefulWidget {
 
 class _RegisterCompletePageState extends State<RegisterCompletePage> {
   final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController();
+
+  // Maketda ikkita maydon: "Ism" va "Familiya". Serverga esa baribir BITTA
+  // satr ketadi (`fullName`) — API o'zgarmagan, faqat kiritish bo'lingan.
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
+
   final AuthRepository _authRepository = AuthRepository();
   bool _loading = false;
+
+  /// Rozilik belgisi — maketda belgilangan holatda turadi.
+  bool _agreed = true;
+
+  @override
+  void dispose() {
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _completeRegistration() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
     try {
+      // Ikki maydon bitta satrga yig'iladi. Familiya bo'sh bo'lsa ortiqcha
+      // bo'shliq qolmasligi uchun trim qilinadi — aks holda serverga
+      // "Abror " kabi nom ketardi va ro'yxatlarda shunday ko'rinardi.
+      final fullName =
+          '${_firstNameCtrl.text.trim()} ${_lastNameCtrl.text.trim()}'.trim();
+
       // 1. Ro'yxatdan o'tish. Javobda DARHOL kirish tokeni keladi:
       //    raqam SMS kodi bilan oldingi qadamda tasdiqlangan, ikkinchi
       //    marta kod so'rash ortiqcha (va ortiqcha SMS puli).
       final result = await _authRepository.register(
-        fullName: _nameCtrl.text.trim(),
+        fullName: fullName,
         phone: widget.phone,
         role: widget.role,
       );
 
       if (!mounted) return;
 
-      // 2. Muvaffaqiyatli xabar
-      toastification.show(
-        context: context,
-        type: ToastificationType.success,
-        style: ToastificationStyle.flatColored,
-        title: Text('messages.registration_success'.tr()),
-        autoCloseDuration: const Duration(seconds: 3),
-        alignment: Alignment.topCenter,
-      );
+      // 2. Xabar ko'rsatilmaydi: maketda bu yerdan to'g'ri PIN ekraniga
+      //    o'tiladi, va tepadagi bildirishnoma shapkani yopib qo'yardi.
 
       // 3. PIN kod — MAJBURIY. Keyingi kirishlarda SMS so'ralmaydi,
       //    shuning uchun ilovani himoya qiladigan narsa aynan shu kod
@@ -83,35 +98,72 @@ class _RegisterCompletePageState extends State<RegisterCompletePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Ism-familiya ekrani ikkinchi maketda YO'Q (mijoz u yerda darhol PIN ga
+    // o'tadi), lekin egasi uni qoldirishni so'radi. Ko'rinish maketning
+    // qolgan kirish ekranlaridan va egasi faylidagi «R3 · Shaxsiy
+    // ma'lumotlar» dan olingan: o'sha shapka, sarlavha, Input komponenti.
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarBrightness: Brightness.light,
         statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarColor: AppPalette.surface,
+        systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => context.pop(),
-          ),
-        ),
+        backgroundColor: AppPalette.surface,
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 20),
-                _buildProfileIcon(),
-                const SizedBox(height: 20),
-                _buildHeader(context),
-                const SizedBox(height: 30),
-                _buildForm(),
-                const SizedBox(height: 25),
+                const AuthHeader(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.gutter,
+                      AppSpacing.lg,
+                      AppSpacing.gutter,
+                      AppSpacing.lg,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text('auth.fill_information'.tr(),
+                            style: authTitleStyle),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text('auth.complete_registration'.tr(),
+                            style: authSubtitleStyle),
+                        const SizedBox(height: AppSpacing.xl),
+                        _buildField(_firstNameCtrl, 'auth.first_name'.tr(),
+                            next: true),
+                        const SizedBox(height: AppSpacing.md),
+                        _buildField(_lastNameCtrl, 'auth.last_name'.tr()),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.gutter,
+                    AppSpacing.sm,
+                    AppSpacing.gutter,
+                    AppSpacing.md,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildAgreement(),
+                      const SizedBox(height: AppSpacing.lg),
+                      AuthPrimaryButton(
+                        label: 'auth.continue'.tr(),
+                        loading: _loading,
+                        onPressed: _agreed ? _completeRegistration : null,
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -120,134 +172,64 @@ class _RegisterCompletePageState extends State<RegisterCompletePage> {
     );
   }
 
-  Widget _buildProfileIcon() {
-    return Container(
-      width: 100,
-      height: 100,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primaryGreen, AppColors.secondaryGreen],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryGreen.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(24),
-      child: const Icon(Icons.person_add, size: 50, color: Colors.white),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          'auth.fill_information'.tr(),
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'auth.complete_registration'.tr(),
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildForm() {
-    return Form(
-      key: _formKey,
-      child: Column(
-        children: [
-          _buildTextField(_nameCtrl, 'auth.full_name'.tr(), Icons.person),
-          const SizedBox(height: 30),
-          _loading
-              ? const CircularProgressIndicator(color: AppColors.primaryGreen)
-              : _buildGradientButton('auth.register_button'.tr(), _completeRegistration),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTextField(
+  /// Design System «Input»: kulrang, ramkasiz, 56 px, ichki (suzuvchi)
+  /// yorliq. Ko'rinish mavzudan keladi (AppTheme.inputDecorationTheme).
+  Widget _buildField(
     TextEditingController ctrl,
-    String hint,
-    IconData icon, {
-    bool obscure = false,
-    bool required = true,
+    String label, {
+    bool next = false,
   }) {
     return TextFormField(
       controller: ctrl,
-      obscureText: obscure,
-      // Ism — formadagi yagona maydon: klaviaturadagi "Tayyor" darhol
-      // ro'yxatdan o'tkazadi. Ilgari u shunchaki klaviaturani yopardi.
-      textInputAction: TextInputAction.done,
-      onFieldSubmitted: (_) => _loading ? null : _completeRegistration(),
+      // Birinchi maydondan — ikkinchisiga, ikkinchisidan — yuborishga.
+      textInputAction: next ? TextInputAction.next : TextInputAction.done,
+      textCapitalization: TextCapitalization.words,
+      onFieldSubmitted:
+          next ? null : (_) => _loading ? null : _completeRegistration(),
       validator: (v) {
-        if (required && (v == null || v.isEmpty)) {
-          return 'messages.enter_field'.tr(args: [hint]);
+        if (v == null || v.trim().isEmpty) {
+          return 'messages.enter_field'.tr(args: [label]);
         }
         return null;
       },
-      style: const TextStyle(fontSize: 16),
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: AppColors.primaryGreen),
-        hintText: hint,
-        filled: true,
-        fillColor: AppColors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
-        ),
-      ),
+      style: AppTypography.bodyMedium,
+      cursorColor: AppPalette.brand,
+      decoration: InputDecoration(labelText: label),
     );
   }
 
-  Widget _buildGradientButton(String text, VoidCallback onPressed) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: double.infinity,
-        height: 55,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primaryGreen, AppColors.secondaryGreen],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primaryGreen.withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
+  /// Rozilik. Design System «Checkbox»: 20 px, radius 6, belgilangan —
+  /// ko'k fon, oq galochka.
+  Widget _buildAgreement() => GestureDetector(
+        onTap: () => setState(() => _agreed = !_agreed),
+        behavior: HitTestBehavior.opaque,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: Checkbox(
+                value: _agreed,
+                onChanged: (v) => setState(() => _agreed = v ?? false),
+                activeColor: AppPalette.brand,
+                checkColor: AppPalette.textOnBrand,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                side: const BorderSide(
+                  color: AppPalette.borderStrong,
+                  width: 1.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Text('auth.agreement'.tr(), style: AppTypography.captionS),
             ),
           ],
         ),
-        child: Text(
-          text,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: AppColors.white,
-              ),
-        ),
-      ),
-    );
-  }
+      );
 }
-

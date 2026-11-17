@@ -19,6 +19,39 @@ class PhoneInputField extends StatefulWidget {
   /// odam yana ekrandagi tugmani qidirishi kerak bo'lardi.
   final VoidCallback? onSubmitted;
 
+  /// Maydon ichida "+998 " prefiksi KO'RINADIMI.
+  ///
+  /// `true` (eski xatti-harakat) — matn doim "+998 901234567" ko'rinishida.
+  /// `false` — maydonda faqat 9 ta raqam, "+998" esa yonidagi alohida
+  /// qutida turadi (Figma maketi shunday). Maketga o'tkazilgan ekranlarda
+  /// `false`, qolganlarida — `true`.
+  ///
+  /// MUHIM: bu faqat KO'RINISHni o'zgartiradi. Raqamni ajratish baribir
+  /// [normalizeUzbekPhoneDigits] orqali ketadi, u esa prefiksni ham,
+  /// "998" ni ham, qo'yilgan (paste) to'liq raqamni ham bir xil tushunadi.
+  /// Shuning uchun prefiksni olib tashlash tekshiruvni buzmaydi — aksincha,
+  /// matnda prefiks umuman bo'lmaydi.
+  final bool showInlinePrefix;
+
+  /// Maydonning tashqi ko'rinishi. Berilmasa — eski ko'rinish.
+  /// Maketga o'tkazilgan ekranlar o'z bezagini uzatadi.
+  final InputDecoration? decoration;
+
+  /// Matnni markazga tekislash (maketda raqam markazda turadi).
+  final TextAlign textAlign;
+
+  /// Matn uslubi. Berilmasa — mavzudan keladigan standart.
+  final TextStyle? style;
+
+  final FocusNode? focusNode;
+  final bool autofocus;
+  final Color? cursorColor;
+
+  /// Raqamni guruhlab ko'rsatish: "90 123 45 67" (ikkinchi maket).
+  /// Faqat KO'RINISH — ajratish baribir [normalizeUzbekPhoneDigits]
+  /// orqali, u bo'shliqlarni tashlab yuboradi.
+  final bool groupDigits;
+
   const PhoneInputField({
     Key? key,
     required this.controller,
@@ -28,6 +61,14 @@ class PhoneInputField extends StatefulWidget {
     this.enabled = true,
     this.onChanged,
     this.onSubmitted,
+    this.showInlinePrefix = true,
+    this.decoration,
+    this.textAlign = TextAlign.start,
+    this.style,
+    this.focusNode,
+    this.autofocus = false,
+    this.cursorColor,
+    this.groupDigits = false,
   }) : super(key: key);
 
   @override
@@ -38,8 +79,12 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
   @override
   void initState() {
     super.initState();
-    // Set initial value with +998 prefix if empty
-    if (widget.controller.text.isEmpty) {
+    // Set initial value with +998 prefix if empty.
+    //
+    // Prefiks alohida qutida turganda (showInlinePrefix == false) maydonni
+    // urug'lantirish SHART EMAS: "+998 " o'sha yerda raqam bo'lib qolardi,
+    // va odam bo'sh maydon o'rniga allaqachon to'ldirilganini ko'rardi.
+    if (widget.showInlinePrefix && widget.controller.text.isEmpty) {
       widget.controller.text = '+998 ';
       widget.controller.selection = TextSelection.fromPosition(
         TextPosition(offset: widget.controller.text.length),
@@ -51,7 +96,12 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
   Widget build(BuildContext context) {
     return TextFormField(
       controller: widget.controller,
+      focusNode: widget.focusNode,
+      autofocus: widget.autofocus,
+      cursorColor: widget.cursorColor,
       enabled: widget.enabled,
+      textAlign: widget.textAlign,
+      style: widget.style,
       keyboardType: TextInputType.phone,
       // Telefon — formadagi oxirgi (ko'pincha yagona) maydon, shuning
       // uchun klaviaturada "Tayyor" va u darhol davom ettiradi.
@@ -64,9 +114,13 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
         // olib tashlash qoidasi (u faqat 9 tadan uzun raqamda ishlaydi)
         // hech qachon ishga tushmasdi. Uzunlikni formatterning o'zi
         // cheklaydi.
-        _PhoneNumberFormatter(),
+        _PhoneNumberFormatter(
+          showPrefix: widget.showInlinePrefix,
+          group: widget.groupDigits,
+        ),
       ],
-      decoration: InputDecoration(
+      decoration: widget.decoration ??
+          InputDecoration(
         hintText: widget.hintText ?? '+998 901234567',
         prefixIcon: Icon(
           widget.prefixIcon ?? Icons.phone,
@@ -162,9 +216,21 @@ String normalizeUzbekPhoneDigits(String input) {
   return digits;
 }
 
-/// +998 prefiksini doim saqlab turadigan formatter.
-/// 901234567 -> +998 901234567
+/// Raqamni bir ko'rinishga keltiradigan formatter.
+///
+/// [showPrefix] == true  -> 901234567 -> "+998 901234567" (eski xatti-harakat)
+/// [showPrefix] == false -> 901234567 -> "901234567" (prefiks yonidagi qutida)
+///
+/// Ikkala holatda ham matn AVVAL [normalizeUzbekPhoneDigits] dan o'tadi, ya'ni
+/// qo'yilgan "+998901234567" ham, "998901234567" ham, "(90) 123-45-67" ham
+/// bir xil 9 ta raqamga keladi. Prefiksni ko'rsatish-ko'rsatmaslik faqat
+/// natijani yig'ishga ta'sir qiladi, ajratishga emas.
 class _PhoneNumberFormatter extends TextInputFormatter {
+  const _PhoneNumberFormatter({required this.showPrefix, this.group = false});
+
+  final bool showPrefix;
+  final bool group;
+
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
@@ -175,12 +241,29 @@ class _PhoneNumberFormatter extends TextInputFormatter {
     // TOZALAB tashlanardi — ya'ni to'liq raqamni qo'ygan odam bo'sh
     // maydon olardi.
     final digits = normalizeUzbekPhoneDigits(newValue.text);
-    final formatted = '+998 $digits';
+    final body = group ? groupUzbekPhoneDigits(digits) : digits;
+    final formatted = showPrefix ? '+998 $body' : body;
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
+}
+
+/// 9 raqamni "90 123 45 67" ko'rinishida guruhlaydi (2-3-2-2).
+/// To'liq bo'lmagan raqam ham shu tartibda: "901" -> "90 1".
+String groupUzbekPhoneDigits(String digits) {
+  const sizes = [2, 3, 2, 2];
+  final buf = StringBuffer();
+  var i = 0;
+  for (final size in sizes) {
+    if (i >= digits.length) break;
+    if (buf.isNotEmpty) buf.write(' ');
+    final end = (i + size).clamp(0, digits.length);
+    buf.write(digits.substring(i, end));
+    i = end;
+  }
+  return buf.toString();
 }
 
 /// Helper function to get clean phone number (only digits with 998 prefix)
@@ -198,4 +281,11 @@ String getCleanPhoneNumber(String formattedPhone) {
 String formatPhoneNumber(String phone) {
   final digits = normalizeUzbekPhoneDigits(phone);
   return digits.length == 9 ? '+998 $digits' : phone;
+}
+
+/// Raqamni guruhlab KO'RSATADI: 998901234567 -> "+998 90 123 45 67".
+/// Ikkinchi maketdagi ko'rinish (kod ekranining izohi).
+String formatPhoneNumberGrouped(String phone) {
+  final digits = normalizeUzbekPhoneDigits(phone);
+  return digits.length == 9 ? '+998 ${groupUzbekPhoneDigits(digits)}' : phone;
 }

@@ -15,5 +15,9 @@ from .payout_request import PayoutRequest
 from .notification import DeviceToken, Notification
 from .eskiz_token import EskizToken
 from .equipment_request import EquipmentRequest, RequestOffer
+from .tariff import EquipmentAttachment, Tariff
+from .order_problem import OrderProblem
 from .listing import Listing, ListingOffer, ListingPhoto, ListingReaction
 from .material import MaterialOrder, MaterialPhoto, MaterialProduct
+from app.models.user_address import UserAddress  # noqa: E402,F401
+from app.models.card import CardBindSession, CardPayment, UserCard  # noqa: E402,F401

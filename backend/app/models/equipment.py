@@ -34,6 +34,8 @@ class Equipment(Base):
     # характеристики
     payload_kg = Column(Integer)    # грузоподъемность
     dimensions = Column(String(100)) # размеры
+    # Госномер («Davlat raqami»): показывается клиенту в карточке исполнителя.
+    plate_number = Column(String(20), nullable=True)
     description = Column(Text)
 
     # старое поле (можно забыть, раз фото вынесли)

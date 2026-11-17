@@ -5,7 +5,6 @@ import 'package:yandex_mapkit/yandex_mapkit.dart';
 
 import '../../../../core/models/equipment_request_model.dart';
 import '../../../../core/services/equipment_request_service.dart';
-import '../../../../core/widgets/equipment_type_icon.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
 
 /// "Yangi buyurtma" — tez buyurtma egaga shu ekran bilan keladi.
@@ -225,22 +224,7 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (o.isService)
-                  Row(
-                    children: [
-                      EquipmentTypeIcon(o.equipmentType, size: 18),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          'requests.diag_go'.tr(),
-                          style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  Text(
+                Text(
                     'requests.quick_title'.tr(args: [o.typeLabel, '${o.days}']),
                     style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                   ),

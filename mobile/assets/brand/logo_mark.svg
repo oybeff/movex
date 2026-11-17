@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="80" height="104" viewBox="0 0 80 104" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Pin + ekskavator">
+<path id="Vector" d="M40 104C32 94 0 68 0 40C0 29.3913 4.21427 19.2172 11.7157 11.7157C19.2172 4.21427 29.3913 0 40 0C50.6087 0 60.7828 4.21427 68.2843 11.7157C75.7857 19.2172 80 29.3913 80 40C80 68 48 94 40 104Z" fill="#F6C849"/>
+<path id="Vector_2" d="M40 69C56.0163 69 69 56.0163 69 40C69 23.9837 56.0163 11 40 11C23.9837 11 11 23.9837 11 40C11 56.0163 23.9837 69 40 69Z" fill="#162438"/>
+<path id="Vector_3" d="M26 50L38 26L54 34" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" stroke="#F6C849"/>
+<path id="Vector_4" d="M51 32C57 32 62 35 62 40V50C56 50 51 47 50 42L51 32Z" fill="#F6C849"/>
+<path id="Vector_5" d="M16 58V48H28L32 52V58H16Z" fill="#F6C849"/>
+<path id="Vector_6" d="M24 50H20C19.4477 50 19 50.4477 19 51V53C19 53.5523 19.4477 54 20 54H24C24.5523 54 25 53.5523 25 53V51C25 50.4477 24.5523 50 24 50Z" fill="#162438"/>
+<path id="Vector_7" d="M41 60H15C13.3431 60 12 61.3431 12 63C12 64.6569 13.3431 66 15 66H41C42.6569 66 44 64.6569 44 63C44 61.3431 42.6569 60 41 60Z" fill="#F6C849"/>
+</g>
+</svg>

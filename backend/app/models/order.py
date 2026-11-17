@@ -25,6 +25,28 @@ class Order(Base):
     delivery_distance = Column(Numeric(10,2), nullable=True)  # Yetkazish masofasi (km)
     delivery_fee = Column(Numeric(10,2), nullable=True)  # Yetkazish narxi
 
+    # Тарифный заказ (второй макет). balance — эскроу как раньше; cash —
+    # клиент платит владельцу наличными, frozen_amount = 0, а на балансе
+    # ВЛАДЕЛЬЦА при принятии замораживается комиссия (owner_frozen) и
+    # списывается при завершении. Без этой заморозки владелец успел бы
+    # вывести деньги, и комиссию было бы не с чего взять.
+    payment_method = Column(String(10), nullable=False, default='balance', server_default='balance')
+    owner_frozen = Column(Numeric(10,2), nullable=False, default=0, server_default='0')
+    tariff = Column(String(10), nullable=True)
+    hours = Column(Integer, nullable=True)
+    # Ход тарифного заказа: владелец «Ketdik» → «Boshlash» → «Yakunlash»,
+    # затем клиент подтверждает (status='completed').
+    departed_at = Column(DateTime(timezone=True), nullable=True)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+    # Макет B1–B5: продление по согласию владельца, опоздание, кто отменил,
+    # жалоба (жалоба останавливает автоподтверждение через 10 минут).
+    extend_requested_hours = Column(Integer, nullable=True)
+    delay_minutes = Column(Integer, nullable=True)
+    delay_reason = Column(Text, nullable=True)
+    cancelled_by = Column(String(10), nullable=True)
+    problem_reported_at = Column(DateTime(timezone=True), nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -35,4 +57,8 @@ class Order(Base):
         CheckConstraint("frozen_amount >= 0", name="check_order_frozen_amount"),
         CheckConstraint("delivery_distance IS NULL OR delivery_distance >= 0", name="check_order_delivery_distance"),
         CheckConstraint("delivery_fee IS NULL OR delivery_fee >= 0", name="check_order_delivery_fee"),
+        CheckConstraint("payment_method IN ('balance','cash','card')", name="check_order_payment_method"),
+        CheckConstraint("owner_frozen >= 0", name="check_order_owner_frozen"),
+        # У наличного заказа нет эскроу клиента — только заморозка владельца.
+        CheckConstraint("payment_method = 'balance' OR frozen_amount = 0", name="check_order_cash_no_escrow"),
     )

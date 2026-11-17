@@ -240,6 +240,25 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
     if not equipment:
         raise HTTPException(status_code=404, detail="Texnika topilmadi")
 
+    # Kim bekor qildi — mijozga B1 «egasi bekor qildi» shu bo'yicha ko'rsatiladi
+    if new_status == 'cancelled':
+        db_order.cancelled_by = 'client' if current_user_id == db_order.user_id else (
+            'owner' if current_user_id == equipment.owner_id else 'admin')
+
+    # Naqd buyurtma — o'zining alohida yo'li bor (pastda). Mijozning puli
+    # tizimda yo'q, unga tegilmaydi; muzlatilgan narsa — egasining komissiyasi.
+    #
+    # MUHIM: naqd buyurtmada frozen_amount doim 0. Uni umumiy yo'lga qo'yib
+    # bo'lmaydi: "confirmed -> cancelled" shoxobchasi frozen_amount == 0 ni
+    # ESKI tizim deb hisoblab, to'liq summani EGADAN MIJOZGA o'tkazardi.
+    if (getattr(db_order, 'payment_method', None) or 'balance') == 'cash':
+        return _update_cash_order(db, db_order, equipment, old_status, new_status, current_user_id)
+    # Карта: деньги в холде на карте клиента, на балансе их нет. Общая ветка
+    # «confirmed → cancelled» с frozen_amount == 0 перевела бы владельцу
+    # деньги клиента — поэтому своя ветка, как у наличных.
+    if db_order.payment_method == 'card':
+        return _update_card_order(db, db_order, equipment, old_status, new_status, current_user_id)
+
     # Balance ni olish
     balance = db.query(Balance).filter(Balance.user_id == db_order.user_id).first()
     if not balance:
@@ -516,6 +535,23 @@ def delete_order(db: Session, order_id: int):
                 current_frozen - frozen if current_frozen >= frozen else Decimal("0")
             )
 
+    # Naqd buyurtmada muzlatilgan — egasining komissiyasi, uni ham qaytaramiz.
+    owner_frozen = Decimal(str(getattr(db_order, "owner_frozen", 0) or 0))
+    if owner_frozen > 0:
+        equipment = db.query(Equipment).filter(Equipment.id == db_order.equipment_id).first()
+        if equipment is not None:
+            ob = (
+                db.query(Balance)
+                .filter(Balance.user_id == equipment.owner_id)
+                .with_for_update()
+                .first()
+            )
+            if ob is not None:
+                current_frozen = Decimal(str(ob.frozen_balance))
+                ob.frozen_balance = (
+                    current_frozen - owner_frozen if current_frozen >= owner_frozen else Decimal("0")
+                )
+
     db.delete(db_order)
     db.commit()
     return db_order
@@ -620,3 +656,186 @@ def get_order_statistics(
         "orders_by_equipment": orders_by_equipment_list,
         "average_order_value": average_order_value
     }
+
+
+def _update_cash_order(db: Session, db_order: Order, equipment, old_status: str,
+                       new_status: str, current_user_id: int):
+    """
+    Naqd to'lovli tarifli buyurtma: mijoz egaga qo'lda to'laydi.
+
+    Pul harakati faqat egada:
+    - olganda (request_service.quick_accept) komissiya egasining balansida
+      MUZLATILGAN — order.owner_frozen;
+    - yakunlanganda muzlatish olinadi va komissiya balansdan YECHILADI,
+      budjetga yoziladi;
+    - bekor qilinganda faqat muzlatish olinadi.
+    Mijozning balansiga hech qachon tegilmaydi.
+    """
+    owner_id = equipment.owner_id
+    is_party = current_user_id in (db_order.user_id, owner_id)
+
+    def _owner_balance():
+        ob = (
+            db.query(Balance).filter(Balance.user_id == owner_id).with_for_update().first()
+        )
+        if ob is None:
+            ob = Balance(user_id=owner_id, balance=Decimal('0.0'), frozen_balance=Decimal('0.0'))
+            db.add(ob)
+            db.flush()
+        return ob
+
+    def _release(ob):
+        frozen = Decimal(str(ob.frozen_balance or 0)) - Decimal(str(db_order.owner_frozen or 0))
+        ob.frozen_balance = frozen if frozen > 0 else Decimal('0.0')
+        db_order.owner_frozen = Decimal('0.0')
+
+    if old_status == 'confirmed' and new_status == 'completed':
+        if not is_party:
+            raise HTTPException(status_code=403, detail="Faqat buyurtma egasi yoki texnika egasi yakunlashi mumkin")
+        ob = _owner_balance()
+        _release(ob)
+        commission = Decimal(str(db_order.commission or 0))
+        if commission > 0:
+            ob.balance = Decimal(str(ob.balance)) - commission
+            db.add(BudgetReserve(
+                order_id=db_order.id,
+                amount=commission,
+                description=t("tx.order_commission", None,
+                              order_id=db_order.id, what=_what(equipment, None)),
+            ))
+            db.add(BalanceTransaction(
+                user_id=owner_id,
+                amount=commission,
+                type='payment',
+                status='completed',
+                description=t("tx.order_cash_commission", _lang(db, owner_id),
+                              order_id=db_order.id, what=_what(equipment, _lang(db, owner_id))),
+                order_id=db_order.id,
+            ))
+        db_order.status = 'completed'
+
+    elif new_status == 'cancelled' and old_status in ('pending', 'confirmed'):
+        if not is_party:
+            raise HTTPException(status_code=403, detail="Faqat buyurtma egasi yoki texnika egasi bekor qilishi mumkin")
+        _release(_owner_balance())
+        db_order.status = 'cancelled'
+
+    elif old_status == 'pending' and new_status == 'rejected':
+        if owner_id != current_user_id:
+            raise HTTPException(status_code=403, detail="Faqat texnika egasi rad etishi mumkin")
+        _release(_owner_balance())
+        db_order.status = 'rejected'
+
+    elif old_status == 'pending' and new_status == 'confirmed':
+        if owner_id != current_user_id:
+            raise HTTPException(status_code=403, detail="Faqat texnika egasi tasdiqlashi mumkin")
+        db_order.status = 'confirmed'
+
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Status o'zgarishi mumkin emas: {old_status} -> {new_status}",
+        )
+
+    db.commit()
+    db.refresh(db_order)
+    # Xabarnoma pul harakatidan KEYIN; ichida xatolar yutiladi.
+    notification_service.notify_order_event(db, db_order, new_status_event(new_status))
+    return db_order
+
+
+def _card_hold(db: Session, order: Order):
+    from app.models.card import CardPayment
+
+    return (
+        db.query(CardPayment)
+        .filter(CardPayment.order_id == order.id)
+        .order_by(CardPayment.id.desc())
+        .first()
+    )
+
+
+def settle_card_paid(db: Session, db_order: Order, equipment) -> None:
+    """
+    Деньги с карты списаны — владельцу на баланс сумма минус комиссия,
+    комиссия в бюджет. Баланс клиента не трогаем: платил картой.
+    Commit делает вызывающий.
+    """
+    owner_id = equipment.owner_id
+    ob = db.query(Balance).filter(Balance.user_id == owner_id).with_for_update().first()
+    if ob is None:
+        ob = Balance(user_id=owner_id, balance=Decimal('0.0'), frozen_balance=Decimal('0.0'))
+        db.add(ob)
+        db.flush()
+    total = Decimal(str(db_order.total_amount))
+    commission = Decimal(str(db_order.commission or 0))
+    owner_amount = total - commission
+    ob.balance = Decimal(str(ob.balance)) + owner_amount
+    if commission > 0:
+        db.add(BudgetReserve(
+            order_id=db_order.id, amount=commission,
+            description=t("tx.order_commission", None, order_id=db_order.id, what=_what(equipment, None)),
+        ))
+    lang_c, lang_o = _lang(db, db_order.user_id), _lang(db, owner_id)
+    db.add(BalanceTransaction(
+        user_id=db_order.user_id, amount=total, type='payment', status='completed',
+        payment_method='card',
+        description=t("tx.order_completed", lang_c, order_id=db_order.id, what=_what(equipment, lang_c)),
+        order_id=db_order.id,
+    ))
+    db.add(BalanceTransaction(
+        user_id=owner_id, amount=owner_amount, type='income', status='completed',
+        description=t("tx.order_income", lang_o, order_id=db_order.id, what=_what(equipment, lang_o)),
+        order_id=db_order.id,
+    ))
+    db_order.status = 'completed'
+
+
+def _update_card_order(db: Session, db_order: Order, equipment, old_status: str,
+                       new_status: str, current_user_id: int):
+    """
+    Заказ, оплаченный картой (холд в Multicard):
+    - завершение — списываем холд; удалось → деньги владельцу; холд пропал
+      (истёк, снят банком) → 402 card_payment_failed, клиент выбирает
+      другую карту / наличные / повтор (макет E7);
+    - отмена — снимаем холд, деньги возвращаются на карту.
+    """
+    from app.services import card_service
+
+    owner_id = equipment.owner_id
+    is_party = current_user_id in (db_order.user_id, owner_id)
+    cp = _card_hold(db, db_order)
+
+    if old_status == 'confirmed' and new_status == 'completed':
+        if not is_party:
+            raise HTTPException(status_code=403, detail="Faqat buyurtma egasi yoki texnika egasi yakunlashi mumkin")
+        if cp is None:
+            raise HTTPException(status_code=402, detail="card_payment_failed")
+        status = cp.status
+        if status == 'unknown':
+            status = card_service.sync_unknown(cp)
+        elif status == 'active':
+            status = card_service.charge_hold(cp)
+        if status == 'charged':
+            settle_card_paid(db, db_order, equipment)
+        elif status == 'unknown':
+            db.commit()
+            raise HTTPException(status_code=409, detail="To'lov tekshirilmoqda. Birozdan keyin qayta urinib ko'ring")
+        else:
+            db.commit()
+            raise HTTPException(status_code=402, detail="card_payment_failed")
+
+    elif new_status == 'cancelled' and old_status in ('pending', 'confirmed'):
+        if not is_party:
+            raise HTTPException(status_code=403, detail="Faqat buyurtma egasi yoki texnika egasi bekor qilishi mumkin")
+        card_service.cancel_hold(cp)
+        db_order.status = 'cancelled'
+
+    else:
+        raise HTTPException(status_code=400, detail=f"Status o'zgarishi mumkin emas: {old_status} -> {new_status}")
+
+    db.commit()
+    db.refresh(db_order)
+    # notify_order_event сам глотает ошибки — уведомление не ломает оплату
+    notification_service.notify_order_event(db, db_order, new_status_event(db_order.status))
+    return db_order

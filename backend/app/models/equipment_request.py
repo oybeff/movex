@@ -76,6 +76,28 @@ class EquipmentRequest(Base):
     frozen_amount = Column(Numeric(12, 2), nullable=False, default=0, server_default="0")
     comment = Column(Text, nullable=True)
 
+    # --- Тарифный заказ «как такси» (второй макет, 12.11.2026) ---
+    # Заполнены — значит цену посчитал сервер по тарифу (tariff_service),
+    # а budget = итоговая сумма. Пусто — обычный быстрый заказ или тендер.
+    tariff = Column(String(10), nullable=True)
+    hours = Column(Integer, nullable=True)
+    attachment_id = Column(
+        Integer, ForeignKey("equipment_attachments.id", ondelete="SET NULL"), nullable=True
+    )
+    # Цена навесного за час В МОМЕНТ заказа: админ поменяет — история не
+    # перепишется.
+    attachment_price = Column(Numeric(12, 2), nullable=True)
+    # balance — как раньше, сумма замораживается на балансе клиента;
+    # cash    — клиент платит владельцу наличными, ничего не замораживается,
+    #           а комиссия списывается с баланса ВЛАДЕЛЬЦА при завершении.
+    payment_method = Column(
+        String(10), nullable=False, default="balance", server_default="balance"
+    )
+    # «Qayerdan» — откуда (макет). «Qayerga» — это delivery_*.
+    origin_latitude = Column(String(50), nullable=True)
+    origin_longitude = Column(String(50), nullable=True)
+    origin_address = Column(Text, nullable=True)
+
     # open      — takliflar kutilmoqda
     # assigned  — taklif tanlandi, buyurtma yaratildi
     # cancelled — mijoz bekor qildi
@@ -88,6 +110,9 @@ class EquipmentRequest(Base):
         Integer, ForeignKey("orders.id", ondelete="SET NULL"), nullable=True
     )
 
+    # Оплата картой: какая карта, холд — в card_payments
+    card_id = Column(Integer, ForeignKey("user_cards.id", ondelete="SET NULL"), nullable=True)
+
     expires_at = Column(DateTime(timezone=True), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(
@@ -96,7 +121,7 @@ class EquipmentRequest(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('open','assigned','cancelled','expired')",
+            "status IN ('awaiting_payment','open','assigned','cancelled','expired')",
             name="check_request_status",
         ),
         CheckConstraint("end_date >= start_date", name="check_request_dates"),
@@ -106,6 +131,19 @@ class EquipmentRequest(Base):
         CheckConstraint(
             "mode <> 'quick' OR (budget IS NOT NULL AND start_time IS NOT NULL)",
             name="check_quick_request_budget",
+        ),
+        CheckConstraint(
+            "payment_method IN ('balance','cash','card')", name="check_request_payment_method"
+        ),
+        CheckConstraint(
+            "tariff IS NULL OR (tariff IN ('econom','fast','day') AND hours > 0 AND mode = 'quick')",
+            name="check_request_tariff",
+        ),
+        # Наличные — только в тарифном заказе: в тендере и каталоге деньги
+        # всегда идут через эскроу.
+        CheckConstraint(
+            "payment_method = 'balance' OR tariff IS NOT NULL",
+            name="check_request_cash_only_tariff",
         ),
     )
 

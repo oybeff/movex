@@ -104,14 +104,6 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "{start} dan {end} gacha. Kim birinchi olsa — o'shaniki. Pul mijoz balansida muzlatilgan.",
         "ru": "С {start} по {end}. Кто первый возьмёт — тому и заказ. Деньги заморожены на балансе клиента.",
     },
-    "diagnostika_request.title": {
-        "uz": "Diagnostikaga borish — {price} so'm",
-        "ru": "Выезд на диагностику — {price} сум",
-    },
-    "diagnostika_request.body": {
-        "uz": "{start} {time}. Kim birinchi olsa — o'shaniki. Pul mijoz balansida muzlatilgan.",
-        "ru": "{start} {time}. Кто первый возьмёт — тому и заказ. Деньги заморожены на балансе клиента.",
-    },
     "request_offer.title": {
         "uz": "Zayavkangizga taklif keldi",
         "ru": "На вашу заявку прислали предложение",
@@ -231,6 +223,12 @@ MESSAGES: Dict[str, Dict[str, str]] = {
     "tx.order_commission": {
         "uz": "Buyurtma #{order_id} dan komissiya — {what}",
         "ru": "Комиссия с заказа #{order_id} — {what}",
+    },
+    # Naqd buyurtma: mijoz egaga qo'lda to'ladi, platforma komissiyasi
+    # egasining balansidan yechiladi.
+    "tx.order_cash_commission": {
+        "uz": "Buyurtma #{order_id} komissiyasi (naqd to'lov) — {what}",
+        "ru": "Комиссия за заказ #{order_id} (оплата наличными) — {what}",
     },
     "tx.order_rejected": {
         "uz": "Buyurtma #{order_id} rad etildi — {what}",

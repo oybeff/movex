@@ -32,6 +32,8 @@ class User(Base):
     # telefon ekranida uni qayta tarjima qilib bo'lmaydi. Shuning uchun til
     # bazada ham turishi kerak.
     language = Column(String(5), nullable=False, default="uz")
+    # Фото профиля (Pr2): свой файл из /static/avatars/
+    avatar_url = Column(Text, nullable=True)
 
     # Adminkadan boshqariladi.
     #

@@ -178,6 +178,26 @@ def delete_account(db: Session, user: User) -> None:
     db.query(DeviceToken).filter(DeviceToken.user_id == user.id).delete(
         synchronize_session=False
     )
+    # Saqlangan manzillar va profil rasmi — shaxsiy ma'lumot
+    from app.models.user_address import UserAddress
+
+    db.query(UserAddress).filter(UserAddress.user_id == user.id).delete(
+        synchronize_session=False
+    )
+    if user.avatar_url:
+        media.delete_by_url(user.avatar_url)
+        user.avatar_url = None
+    # Привязанные карты — отвязываем и в Multicard (токен аннулируется)
+    from app.models.card import UserCard
+    from app.services import rahmat_service
+
+    for card in db.query(UserCard).filter(UserCard.user_id == user.id, UserCard.status == "active").all():
+        try:
+            rahmat_service._request("DELETE", f"/payment/card/{card.token}")
+        except Exception:  # noqa: BLE001 — удаление аккаунта не должно падать из-за шлюза
+            pass
+        card.status = "deleted"
+        card.is_default = False
 
     # --- shaxsiy ma'lumot ---
     user.full_name = t("account_delete.deleted_name", "uz")

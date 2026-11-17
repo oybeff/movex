@@ -7,6 +7,9 @@ class UserModel {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  /// Фото профиля, путь от корня сервера (/static/avatars/…).
+  final String? avatarUrl;
+
   UserModel({
     required this.id,
     required this.fullName,
@@ -15,6 +18,7 @@ class UserModel {
     required this.role,
     required this.createdAt,
     required this.updatedAt,
+    this.avatarUrl,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,7 @@ class UserModel {
       role: json['role'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      avatarUrl: json['avatar_url'] as String?,
     );
   }
 

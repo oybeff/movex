@@ -48,6 +48,12 @@ $adminUser = getAdminUser();
                         </a>
                     </li>
                     <li>
+                        <a href="problems.php" class="<?= ($currentPage ?? '') === 'problems' ? 'active' : '' ?>">
+                            <span>⚠️</span>
+                            Shikoyatlar
+                        </a>
+                    </li>
+                    <li>
                         <a href="requests.php" class="<?= ($currentPage ?? '') === 'requests' ? 'active' : '' ?>">
                             <span>📣</span>
                             Zayavkalar
@@ -149,6 +155,12 @@ $adminUser = getAdminUser();
                         <a href="commission.php" class="<?= ($currentPage ?? '') === 'commission' ? 'active' : '' ?>">
                             <span>💰</span>
                             Platforma ulushi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="tariffs.php" class="<?= ($currentPage ?? '') === 'tariffs' ? 'active' : '' ?>">
+                            <span>🚕</span>
+                            Tariflar
                         </a>
                     </li>
                     <li>

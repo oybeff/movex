@@ -10,6 +10,7 @@ MoveX GO — O‘zbekistonda qurilish texnikasini ijaraga olish va qurilish mate
 • Ism va familiya — majburiy. Bitimning ikkinchi tomoniga ko‘rsatiladi.
 • Rol (buyurtmachi yoki texnika egasi) va interfeys tili — kerakli bo‘limlarni ko‘rsatish va xabarnomalarni sizning tilingizda yuborish uchun.
 • Joylashuv — ixtiyoriy. Yaqin atrofdagi texnikani topish, yetkazib berish nuqtasi va qidiruv hududi uchun. Qidiruv hududi uchun tanlangan nuqta profilda saqlanadi. Egasi o‘z texnikasi uchun ko‘rsatgan nuqta boshqa foydalanuvchilarga xaritada ko‘rinadi. Joriy joylashuvingiz fonda kuzatilmaydi va hech qayerga yuborilmaydi.
+• Profil rasmi va saqlangan manzillar (uy, ish, obyekt) — ixtiyoriy. Faqat sizga ko'rinadi, manzillar buyurtma berishda taklif qilinadi. Akkaunt bilan birga o'chiriladi.
 • O‘zingiz yuklaydigan suratlar va matnlar: texnika, e’lonlar, qurilish materiallari, sharhlar.
 • Buyurtma chatidagi yozishmalar — serverda saqlanadi, faqat buyurtma ishtirokchilariga ko‘rinadi.
 • Buyurtmalar, balans va to‘lovlar: buyurtmalar, to‘ldirishlar, yechib olishlar, komissiyalar tarixi.

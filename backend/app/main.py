@@ -23,6 +23,7 @@ from app.routes import (
     admin,
 )
 from app.routes import settings as settings_routes
+from app.routes import cards as card_routes
 from app.db.base import Base
 from app.db.session import engine
 from app.core import legal, media
@@ -130,6 +131,7 @@ app.include_router(notifications.router, prefix="/notifications", tags=["Notific
 app.include_router(balance.router, prefix="/balance", tags=["Balance"])
 app.include_router(settings_routes.router, prefix="/settings", tags=["Settings"])
 app.include_router(admin.router, prefix="/admin", tags=["Admin"])
+app.include_router(card_routes.router, prefix="/cards", tags=["Cards"])
 
 # Раздача загруженных файлов.
 #

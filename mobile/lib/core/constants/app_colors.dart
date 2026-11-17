@@ -1,18 +1,38 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_tokens.dart';
+
+/// Цвета приложения.
+///
+/// С ноября 2026 реальные значения живут в [AppPalette]
+/// (`core/theme/app_tokens.dart`) и сняты с макета Figma. Здесь остались
+/// ИМЕНА, на которые завязан старый код: одних только `primaryGreen` в
+/// проекте больше 450 штук. Имена указывают на новые значения, поэтому
+/// приложение стало оранжевым целиком, без правки каждого экрана.
+///
+/// В НОВОМ коде используй [AppPalette], а не этот класс. Имена отсюда
+/// вычищаются по мере переделки экранов по макету.
+///
+/// Аннотации `@Deprecated` здесь СОЗНАТЕЛЬНО не стоят: на них завязано
+/// больше 700 мест, и `flutter analyze` выдал бы столько же предупреждений,
+/// похоронив настоящие. Ставить их можно только вместе с вычисткой
+/// последних обращений.
 class AppColors {
-  // Основные цвета
-  static const Color primaryGreen = Color(0xFF2ECC71);
-  static const Color secondaryGreen = Color(0xFF27AE60);
-  static const Color accentGreen = Color(0xFF1ABC9C);
+  // Основные цвета.
+  //
+  // Названия врут про цвет — бренд стал оранжевым, зелёного в макете нет.
+  // Это временная плата за то, чтобы не править 450 мест вслепую.
+  static const Color primaryGreen = AppPalette.primary;
+  static const Color secondaryGreen = AppPalette.primary;
+  static const Color accentGreen = AppPalette.primary;
 
   // Фон, текст
-  static const Color background = Color(0xFFF9F9F9);
-  static const Color white = Colors.white;
-  static const Color black = Color(0xFF1C1C1C);
-  static const Color grey = Color(0xFF8E8E8E);
-  static const Color lightGrey = Color(0xFFF2F2F2);
+  static const Color background = AppPalette.surface;
+  static const Color white = AppPalette.surface;
+  static const Color black = AppPalette.textPrimary;
+  static const Color grey = AppPalette.textSecondary;
+  static const Color lightGrey = AppPalette.surfaceMuted;
 
   // Ошибки
-  static const Color error = Colors.redAccent;
+  static const Color error = AppPalette.error;
 }

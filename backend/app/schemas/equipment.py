@@ -1,13 +1,21 @@
 # app/schemas/equipment.py
-from pydantic import BaseModel, Field, condecimal
+from pydantic import BaseModel, Field, condecimal, field_validator
 from typing import Optional, List
 from datetime import datetime
 
 class EquipmentPhotoRead(BaseModel):
     id: int
     url: str
-    is_primary: bool
+    is_primary: bool = False
     created_at: datetime
+
+    # Колонка в базе допускает NULL (default=False есть только в ORM), и
+    # строка, вставленная мимо ORM, приходила с None. Одна такая строка
+    # роняла ВЕСЬ каталог /equipment/ в 500, а не одну карточку.
+    @field_validator("is_primary", mode="before")
+    @classmethod
+    def _null_is_not_primary(cls, v):
+        return False if v is None else v
 
     class Config:
         from_attributes = True
@@ -30,6 +38,7 @@ class EquipmentBase(BaseModel):
     payload_kg: Optional[int] = None
     dimensions: Optional[str] = None
     description: Optional[str] = None
+    plate_number: Optional[str] = Field(default=None, max_length=20)
 
     status: Optional[str] = Field(default="available")  # available | busy | maintenance
     available: Optional[bool] = True
@@ -57,6 +66,7 @@ class EquipmentUpdate(BaseModel):
     payload_kg: Optional[int] = None
     dimensions: Optional[str] = None
     description: Optional[str] = None
+    plate_number: Optional[str] = Field(default=None, max_length=20)
 
     status: Optional[str] = None
     available: Optional[bool] = None

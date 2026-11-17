@@ -211,9 +211,6 @@ $searchQuery = $_GET['search'] ?? '';
 // Build query
 $db = getDbConnection();
 
-// "Naqd pul qabul qilish" shaklidagi standart summa — diagnostika narxi
-// (commission.php; standart backend'dagi diagnostika_service bilan bir xil)
-$diagnostikaPrice = appSettingValue($db, 'diagnostika_price_amount', '50000');
 $whereConditions = [];
 $params = [];
 
@@ -509,7 +506,6 @@ include 'includes/header.php';
                                         <div>
                                             <label style="font-size:12px;">Naqd pul qabul qilish</label>
                                             <input type="number" name="amount" min="1000" step="1000"
-                                                   value="<?= (int)$diagnostikaPrice ?>"
                                                    placeholder="so'm" style="max-width:120px;">
                                         </div>
                                         <div>
