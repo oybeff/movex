@@ -271,7 +271,7 @@ class _MyAppState extends State<MyApp> {
             statusBarColor: Colors.transparent,
             statusBarBrightness: Brightness.light,
             statusBarIconBrightness: Brightness.dark,
-            systemNavigationBarColor: AppPalette.surface,
+            systemNavigationBarColor: Color(0xFFFFFFFF), // AppPalette.surface
             systemNavigationBarIconBrightness: Brightness.dark,
           ),
           child: child ?? const SizedBox.shrink(),
