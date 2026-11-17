@@ -22,6 +22,10 @@ import YandexMapsMobile
       ?? "d4a9d1e8-3f25-47a4-8ae1-ebbf04682c3d"
 
     YMKMapKit.setApiKey(apiKey)
+    // Язык карты и адресов — язык приложения (как в MainActivity.kt).
+    // Без него MapKit берёт язык системы и отдаёт адреса по-английски.
+    let lang = UserDefaults.standard.string(forKey: "flutter.selected_language")
+    YMKMapKit.setLocale(lang == "ru" ? "ru_RU" : "uz_UZ")
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Internet ruxsati -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+: без этой строки запрос разрешения на уведомления
+         сразу возвращал отказ, и кнопка «Yoqish» (U5) ничего не делала. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Location ruxsatlari -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

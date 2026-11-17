@@ -29,7 +29,11 @@ class _OrdersPageState extends State<OrdersPage> {
   @override
   void initState() {
     super.initState();
-    _load();
+    // После первого кадра: _load читает context.locale и показывает
+    // SnackBar, а из initState это падало (в debug список был всегда пуст).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _load();
+    });
   }
 
   Future<void> _load() async {

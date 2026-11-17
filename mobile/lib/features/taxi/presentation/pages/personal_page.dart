@@ -246,6 +246,8 @@ class _Field extends StatelessWidget {
                           style: AppTypography.bodyMedium,
                           decoration: InputDecoration(
                             isCollapsed: true,
+                            // minHeight 56 из темы растягивал поле, и текст стоял у верхнего края
+                            constraints: const BoxConstraints(),
                             filled: false,
                             contentPadding: EdgeInsets.zero,
                             border: InputBorder.none,

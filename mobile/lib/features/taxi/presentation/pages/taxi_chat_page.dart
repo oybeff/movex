@@ -351,6 +351,8 @@ class _TaxiChatPageState extends State<TaxiChatPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(AppSpacing.gutter, 10, AppSpacing.gutter, 8),
               child: Column(
+                // Быстрые ответы — от левого края, как в макете M4
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -403,6 +405,8 @@ class _TaxiChatPageState extends State<TaxiChatPage> {
                             ),
                             decoration: InputDecoration(
                               isCollapsed: true,
+                              // minHeight 56 из темы растягивал поле, и текст стоял у верхнего края
+                              constraints: const BoxConstraints(),
                               filled: false,
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,

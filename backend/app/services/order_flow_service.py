@@ -341,11 +341,20 @@ def executor(db: Session, order: Order) -> dict:
         .filter(Order.equipment_id.in_(eq_ids), Order.status == "completed")
         .scalar()
     )
+    # Куда едет техника. Макет (кадр 8): «Manzil» — точка «Qayerdan», где
+    # техника нужна в начале; у тарифного заказа она в заявке (origin_*).
+    # Нет её (старые заказы) — адрес заказа, как раньше.
+    from app.models.equipment_request import EquipmentRequest
+
+    req = db.query(EquipmentRequest).filter(EquipmentRequest.order_id == order.id).first()
+    dest_lat, dest_lon = order.delivery_latitude, order.delivery_longitude
+    if req is not None and req.origin_latitude and req.origin_longitude:
+        dest_lat, dest_lon = req.origin_latitude, req.origin_longitude
     eta: Optional[int] = None
     try:
         km = pricing_service.distance_km(
             float(eq.latitude), float(eq.longitude),
-            float(order.delivery_latitude), float(order.delivery_longitude),
+            float(dest_lat), float(dest_lon),
         )
         eta = max(5, int((Decimal(km) / AVG_SPEED_KMH * 60).to_integral_value()))
     except (TypeError, ValueError):
@@ -364,7 +373,20 @@ def executor(db: Session, order: Order) -> dict:
         equipment_model=eq.model,
         plate_number=eq.plate_number,
         eta_minutes=eta,
+        # Точка, выбранная владельцем при добавлении техники (живого
+        # слежения нет): клиент рисует по ней машину и линию до адреса.
+        equipment_latitude=_float_or_none(eq.latitude),
+        equipment_longitude=_float_or_none(eq.longitude),
+        destination_latitude=_float_or_none(dest_lat),
+        destination_longitude=_float_or_none(dest_lon),
     )
+
+
+def _float_or_none(v) -> Optional[float]:
+    try:
+        return float(v) if v is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 # ------------------------------------------------- M1–M3 · Buyurtmalarim

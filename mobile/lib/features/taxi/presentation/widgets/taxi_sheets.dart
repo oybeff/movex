@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/theme/app_tokens.dart';
@@ -1212,8 +1213,12 @@ class _DonePanelState extends State<DonePanel> {
     final total = (o['total_amount'] as num?) ?? widget.request?.budget ?? 0;
     final hours = (o['hours'] ?? widget.request?.hours ?? 0) as int;
     final tier = (o['tariff'] ?? widget.request?.tariff ?? 'econom') as String;
-    final cash = (o['payment_method'] ?? widget.request?.paymentMethod) == 'cash';
-    final perHour = hours > 0 ? total / hours : total;
+    final method = (o['payment_method'] ?? widget.request?.paymentMethod) as String?;
+    final cash = method == 'cash';
+    // Цена часа тарифа — без навесного: оно идёт своей строкой. Раньше
+    // «Tezkor · 400 000/soat» включало гидромолот 80 000.
+    final att = widget.request?.attachmentPrice ?? 0;
+    final perHour = hours > 0 ? total / hours - att : total;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1223,7 +1228,7 @@ class _DonePanelState extends State<DonePanel> {
             height: 56,
             decoration: const BoxDecoration(color: AppPrimitives.green500, shape: BoxShape.circle),
             child: const Icon(Icons.check_rounded, color: Colors.white, size: 32),
-          ),
+          ).animate().scale(begin: const Offset(.4, .4), duration: 600.ms, curve: Curves.elasticOut),
         ),
         const SizedBox(height: AppSpacing.md),
         Text('taxi.done_title'.tr(), textAlign: TextAlign.center, style: AppTypography.h2),
@@ -1247,6 +1252,9 @@ class _DonePanelState extends State<DonePanel> {
               InfoRow('taxi.tariff'.tr(),
                   "${'taxi.tier_$tier'.tr()} · ${formatSum(perHour)} ${'common.currency'.tr()}/${'taxi.hour_short'.tr()}"),
               InfoRow('taxi.work_time'.tr(), 'taxi.hours_n'.tr(args: ['$hours'])),
+              if (att > 0)
+                InfoRow('taxi.attachment'.tr(),
+                    "${formatSum(att * hours)} ${'common.currency'.tr()}"),
               InfoRow(
                 'taxi.delivery'.tr(),
                 ((o['delivery_fee'] as num?) ?? 0) > 0
@@ -1255,7 +1263,14 @@ class _DonePanelState extends State<DonePanel> {
               ),
               const Divider(height: 16),
               InfoRow('taxi.total'.tr(), "${formatSum(total)} ${'common.currency'.tr()}", bold: true),
-              InfoRow('taxi.payment'.tr(), cash ? 'taxi.pay_cash_done'.tr() : 'taxi.pay_balance_done'.tr()),
+              InfoRow(
+                'taxi.payment'.tr(),
+                cash
+                    ? 'taxi.pay_cash_done'.tr()
+                    : method == 'card'
+                        ? 'taxi.pay_card_done'.tr()
+                        : 'taxi.pay_balance_done'.tr(),
+              ),
             ],
           ),
         ),

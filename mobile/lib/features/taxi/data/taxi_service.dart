@@ -235,6 +235,10 @@ class TaxiExecutor {
     this.type,
     this.plate,
     this.etaMinutes,
+    this.lat,
+    this.lon,
+    this.destLat,
+    this.destLon,
   });
 
   factory TaxiExecutor.fromJson(Map<String, dynamic> j) => TaxiExecutor(
@@ -247,6 +251,10 @@ class TaxiExecutor {
         type: j['equipment_type'] as String?,
         plate: j['plate_number'] as String?,
         etaMinutes: j['eta_minutes'] as int?,
+        lat: j['equipment_latitude'] == null ? null : _num(j['equipment_latitude']),
+        lon: j['equipment_longitude'] == null ? null : _num(j['equipment_longitude']),
+        destLat: j['destination_latitude'] == null ? null : _num(j['destination_latitude']),
+        destLon: j['destination_longitude'] == null ? null : _num(j['destination_longitude']),
       );
 
   final String? name;
@@ -258,6 +266,15 @@ class TaxiExecutor {
   final String? type;
   final String? plate;
   final int? etaMinutes;
+
+  /// Точка техники, которую владелец выбрал при добавлении (живого
+  /// слежения нет) — по ней рисуется машина на карте шагов 8–9.
+  final double? lat;
+  final double? lon;
+
+  /// Куда едет техника — точка «Qayerdan» заказа (макет, кадр 8).
+  final double? destLat;
+  final double? destLon;
 }
 
 class TaxiAttachment {

@@ -15,7 +15,11 @@ import '../widgets/taxi_ui.dart';
 /// «2 · Qayerga — manzilni qidirish». Возвращает выбранную точку
 /// ([TaxiPlace]) через Navigator.pop.
 class AddressPickPage extends StatefulWidget {
-  const AddressPickPage({super.key, required this.from, this.recent = const []});
+  const AddressPickPage({super.key, required this.from, this.recent = const [], this.forSaving = false});
+
+  /// Pr4 «Manzil qo'shish»: выбирается один адрес, не маршрут — без строки
+  /// «Qayerdan», заголовок и подпись поля свои.
+  final bool forSaving;
 
   final TaxiPlace from;
 
@@ -31,6 +35,7 @@ class _AddressPickPageState extends State<AddressPickPage> {
   Timer? _debounce;
   List<TaxiPlace> _results = const [];
   bool _searching = false;
+  bool _searchFailed = false; // E2: поиск не ответил
   // Pr4: «Saqlangan manzillar buyurtma berishda birinchi bo'lib taklif qilinadi»
   List<SavedAddress> _saved = const [];
 
@@ -60,7 +65,8 @@ class _AddressPickPageState extends State<AddressPickPage> {
       final found = await TaxiGeo.search(value, widget.from);
       if (!mounted) return;
       setState(() {
-        _results = found;
+        _results = found ?? const [];
+        _searchFailed = found == null && value.trim().length >= 3;
         _searching = false;
       });
     });
@@ -112,7 +118,12 @@ class _AddressPickPageState extends State<AddressPickPage> {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
-                  Expanded(child: Text('taxi.where_to_title'.tr(), style: AppTypography.h2)),
+                  Expanded(
+                    child: Text(
+                      widget.forSaving ? 'taxi.choose_address'.tr() : 'taxi.where_to_title'.tr(),
+                      style: AppTypography.h2,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -121,19 +132,21 @@ class _AddressPickPageState extends State<AddressPickPage> {
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
               child: Column(
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppPalette.page,
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                  if (!widget.forSaving) ...[
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppPalette.page,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                      ),
+                      child: AddressRow(
+                        isFrom: true,
+                        label: 'taxi.from'.tr(),
+                        value: widget.from.address ?? 'taxi.my_location'.tr(),
+                        onTap: () => Navigator.of(context).pop(),
+                      ),
                     ),
-                    child: AddressRow(
-                      isFrom: true,
-                      label: 'taxi.from'.tr(),
-                      value: widget.from.address ?? 'taxi.my_location'.tr(),
-                      onTap: () => Navigator.of(context).pop(),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
                   Container(
                     height: 52,
                     padding: const EdgeInsets.only(left: 14, right: 10),
@@ -154,7 +167,8 @@ class _AddressPickPageState extends State<AddressPickPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('taxi.to'.tr(), style: AppTypography.captionS),
+                              Text(widget.forSaving ? 'taxi.address'.tr() : 'taxi.to'.tr(),
+                                  style: AppTypography.captionS),
                               TextField(
                                 controller: _text,
                                 autofocus: true,
@@ -235,6 +249,13 @@ class _AddressPickPageState extends State<AddressPickPage> {
                         TaxiPlace(widget.from.lat, widget.from.lon, typed),
                       ),
                     ),
+                  if (_searchFailed && typed.isNotEmpty)
+                    _PlaceTile(
+                      icon: Icons.wifi_off_rounded,
+                      title: 'taxi.offline_title'.tr(),
+                      subtitle: 'taxi.search_offline_body'.tr(),
+                      onTap: () => _onChanged(_text.text),
+                    ),
                   if (typed.isEmpty)
                     for (final a in _saved)
                       _PlaceTile(
@@ -247,7 +268,7 @@ class _AddressPickPageState extends State<AddressPickPage> {
                   for (final p in list)
                     _PlaceTile(
                       icon: Icons.location_on_outlined,
-                      title: (p.address ?? '').split(',').first,
+                      title: p.label,
                       subtitle: p.address ?? '',
                       trailing: '${_km(widget.from, p).toStringAsFixed(1)} km',
                       onTap: () => Navigator.of(context).pop(p),

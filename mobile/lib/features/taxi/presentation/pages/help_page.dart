@@ -143,6 +143,8 @@ class _HelpPageState extends State<HelpPage> {
                             style: AppTypography.body,
                             decoration: InputDecoration(
                               isCollapsed: true,
+                              // minHeight 56 из темы растягивал поле, и текст стоял у верхнего края
+                              constraints: const BoxConstraints(),
                               filled: false,
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,

@@ -5,7 +5,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/app_config.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/theme/app_tokens.dart';
-import '../../../../core/widgets/equipment_type_icon.dart';
 
 /// Куски экранов заказа «как такси». Размеры и цвета — из макета (клиентский
 /// файл, страница «01 Asosiy», компоненты Home/* и Oqim/*).
@@ -73,10 +72,28 @@ class EquipmentPhoto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!_photos.contains(type)) {
+      // Фото в макете есть только у семи типов. У остальных — круг с
+      // машиной из старой метки, без самой булавки и подписи под ней:
+      // целиком она в плитке читалась как логотип с нечитаемым текстом.
+      final side = height / .56;
       return SizedBox(
         width: width,
         height: height,
-        child: Center(child: EquipmentTypeIcon(type, size: height * 0.7)),
+        child: Center(
+          child: ClipOval(
+            child: Align(
+              alignment: const Alignment(0, -.5),
+              widthFactor: .56,
+              heightFactor: .56,
+              child: Image.asset(
+                EquipmentTypes.markerAsset(type, context.locale.languageCode),
+                width: side,
+                height: side,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+        ),
       );
     }
     return Image.asset(

@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
@@ -12,12 +14,15 @@ import '../../../../core/utils/error_handler.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
 import '../../data/taxi_geo.dart';
 import '../../data/taxi_service.dart';
+import '../widgets/taxi_map_layer.dart';
 import '../widgets/taxi_sheets.dart';
 import '../widgets/taxi_ui.dart';
 import 'address_pick_page.dart';
 import '../../data/app_status.dart';
 import '../../../../core/services/permission_service.dart';
 import 'package:dio/dio.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'problem_page.dart';
 import '../../data/card_api.dart';
 import 'taxi_chat_page.dart';
@@ -53,6 +58,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   TaxiPlace _from = TaxiGeo.tashkent;
   TaxiPlace? _to;
   List<TaxiPlace> _recent = const [];
+  List<SavedAddress> _saved = const []; // Pr4: на главной первыми
   Timer? _addressDebounce;
 
   List<String> _types = const [];
@@ -76,11 +82,27 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   Timer? _clock; // экран 9: таймер работы тикает раз в секунду
   bool _delayDismissed = false; // B2: нажали «Kutaman»
   String? _attachmentName; // B4: строка навесного
-  bool _offline = false; // E2
+  bool _offline = false; // E2: на главной — плашка и приглушение
+  bool _netLost = false; // E2 на остальных шагах — жёлтая полоса сверху
+  Timer? _netWatch; // пока нет сети — пробуем каждые 5 секунд
   bool _outOfArea = false; // E3
   bool _activeBanner = false; // E5: есть живой заказ, клиент на главной
   int _surge = 0; // E4: «+10% narx» за каждый повторный поиск
   AppStatus? _status;
+
+  // Карта шагов 3–10 (кадры макета): метки А/Б, линия маршрута, техника,
+  // круги поиска. Объекты пересобираются, когда меняется _mapStateKey.
+  List<MapObject> _mapObjects = const [];
+  String? _mapKey;
+  final _sheetKey = GlobalKey();
+  Offset? _pulseAt; // шаг 7: где на экране точка «откуда»
+  bool _justFound = false; // шаг 8 только что открылся — «нашли!»
+  Timer? _foundTimer;
+
+  /// Часы по умолчанию — «Hozir · 4 soat» в макете. Все тарифы считаются
+  /// за одно и то же время (сервер поднимет до минимума тарифа), иначе
+  /// «Tezkor» за 2 часа выглядел дешевле «Ekonom» за 4.
+  static const _defaultHours = 4;
 
   @override
   void initState() {
@@ -93,6 +115,8 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     _poll?.cancel();
     _clock?.cancel();
     _addressDebounce?.cancel();
+    _foundTimer?.cancel();
+    _netWatch?.cancel();
     super.dispose();
   }
 
@@ -101,7 +125,10 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     if (!mounted) return;
     setState(() => _from = here);
     _moveMap(here);
-    _resolveFromAddress();
+    // E1: геолокации нет — центр Ташкента не выдаём за адрес человека,
+    // «Qayerdan» остаётся «Manzilni kiriting» (макет), пока он не выберет.
+    if (!TaxiGeo.denied) _resolveFromAddress();
+    _askNotificationsOnce();
     _status = AppStatus.last ?? await AppStatus.fetch();
     try {
       final types = await _api.tariffTypes();
@@ -113,13 +140,59 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
       }
     } on DioException catch (e) {
       // E2: нет сети — главная остаётся, но приглушена, и есть «Qayta urinish»
-      final net = e.type == DioExceptionType.connectionError ||
-          e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout;
-      if (mounted && net) setState(() => _offline = true);
+      if (_isNetErr(e)) _lostNetwork();
       return;
     } catch (_) {}
     await _resume();
+  }
+
+  static bool _isNetErr(Object e) =>
+      e is DioException &&
+      (e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout);
+
+  /// E2: сеть пропала. На главной — плашка из макета, на остальных шагах —
+  /// полоса «Qayta ulanmoqda…». Как только сервер ответил — всё убирается
+  /// само, без «Qayta urinish» («Ulanish tiklangach … yangilanadi»).
+  void _lostNetwork() {
+    if (!mounted) return;
+    setState(() {
+      if (_step == _Step.route) _offline = true;
+      _netLost = true;
+    });
+    _netWatch ??= Timer.periodic(const Duration(seconds: 5), (_) async {
+      try {
+        await AppStatus.fetch();
+        _netWatch?.cancel();
+        _netWatch = null;
+        if (!mounted) return;
+        final wasHome = _offline;
+        setState(() {
+          _offline = false;
+          _netLost = false;
+        });
+        if (wasHome) _init();
+      } catch (_) {}
+    });
+  }
+
+  void _netBack() {
+    if (_netLost && mounted) setState(() => _netLost = false);
+  }
+
+  /// Android 13+ и iOS: «Texnika yo'lda» и «Ish yakunlandi» приходят
+  /// уведомлением — спрашиваем один раз после геолокации. Отказ не
+  /// повторяем: дальше это баннер U5 в «Bildirishnomalar».
+  Future<void> _askNotificationsOnce() async {
+    if (MapOrPlaceholder.isWeb) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('notif_asked') ?? false) return;
+      await prefs.setBool('notif_asked', true);
+      await Permission.notification.request();
+    } catch (_) {}
   }
 
   /// E1: «Ruxsat berish». Отказ навсегда — только через настройки телефона.
@@ -151,7 +224,15 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
 
   /// E5 «Faol buyurtma bor»: вернувшись в приложение, клиент видит свой
   /// заказ, а не пустую главную.
+  Future<void> _loadSaved() async {
+    try {
+      final a = await ProfileApi().addresses();
+      if (mounted) setState(() => _saved = a);
+    } catch (_) {}
+  }
+
   Future<void> _resume() async {
+    _loadSaved();
     try {
       final mine = await _api.myRequests();
       if (!mounted) return;
@@ -189,11 +270,31 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   }
 
   Future<void> _resolveFromAddress() async {
-    final a = await TaxiGeo.addressAt(_from);
-    if (mounted && a != null) setState(() => _from = _from.withAddress(a));
+    final at = _from;
+    var a = await TaxiGeo.addressAt(at);
+    // Первый запрос после запуска MapKit бывает пустым — ещё одна попытка,
+    // иначе «Qayerdan» оставалось «Mening joylashuvim», пока карту не сдвинешь.
+    if (a == null && mounted) {
+      await Future<void>.delayed(const Duration(seconds: 2));
+      a = await TaxiGeo.addressAt(at);
+    }
+    // Пока искали, человек мог сдвинуть карту — старый адрес не нужен.
+    if (mounted && a != null && _from.lat == at.lat && _from.lon == at.lon) {
+      setState(() => _from = _from.withAddress(a));
+    }
   }
 
   // ------------------------------------------------------------- шаги
+
+  /// «Qayerdan» — тот же поиск адреса; карта переезжает к выбранной точке.
+  Future<void> _pickFrom() async {
+    final place = await Navigator.of(context).push<TaxiPlace>(
+      MaterialPageRoute(builder: (_) => AddressPickPage(from: _from, forSaving: true)),
+    );
+    if (place == null || !mounted) return;
+    setState(() => _from = place);
+    _moveMap(place);
+  }
 
   Future<void> _pickTo() async {
     final place = await Navigator.of(context).push<TaxiPlace>(
@@ -219,12 +320,13 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     });
     try {
       final results = await Future.wait([
-        _api.tariffs(type),
+        _api.tariffs(type, hours: _defaultHours),
         _api.attachments(type),
       ]);
       if (!mounted) return;
       final quotes = results[0] as List<TariffQuote>;
       final atts = results[1] as List<TaxiAttachment>;
+      _netBack();
       setState(() {
         _quotes = quotes;
         _attachments = atts;
@@ -235,7 +337,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
         _step = _Step.tariff;
       });
     } catch (e) {
-      _toast(getErrorMessage(e));
+      _isNetErr(e) ? _lostNetwork() : _toast(getErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -244,10 +346,11 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   Future<void> _reloadQuotes() async {
     if (_type == null) return;
     try {
-      final quotes = await _api.tariffs(_type!, hours: _hours, attachmentId: _attachment?.id);
+      final quotes = await _api.tariffs(_type!, hours: _hours ?? _defaultHours, attachmentId: _attachment?.id);
       if (mounted) setState(() => _quotes = quotes);
+      _netBack();
     } catch (e) {
-      _toast(getErrorMessage(e));
+      _isNetErr(e) ? _lostNetwork() : _toast(getErrorMessage(e));
     }
   }
 
@@ -349,9 +452,15 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
         await CardApi().confirmOtp(req.id, otp);
         if (!mounted) return;
       }
+      final to = _to!;
       setState(() {
         _request = req;
         _step = _Step.searching;
+        // «So'nggi manzillar» — без перезапуска приложения
+        _recent = [
+          to,
+          ..._recent.where((p) => (p.address ?? '').toLowerCase() != (to.address ?? '').toLowerCase()),
+        ].take(3).toList();
       });
       _startPolling();
     } catch (e) {
@@ -371,7 +480,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
         }
         return;
       }
-      _toast(getErrorMessage(e));
+      _isNetErr(e) ? _lostNetwork() : _toast(getErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -392,7 +501,16 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
         _request = r;
         if (r.status == 'assigned' && r.orderId != null) {
           await _loadOrder(r.orderId!);
-          if (mounted) setState(() => _step = _Step.active);
+          if (!mounted) return;
+          taxiHaptic(strong: true);
+          setState(() {
+            _step = _Step.active;
+            _justFound = true;
+          });
+          _foundTimer?.cancel();
+          _foundTimer = Timer(const Duration(seconds: 6), () {
+            if (mounted) setState(() => _justFound = false);
+          });
         } else if (r.status == 'expired' || r.status == 'cancelled') {
           _poll?.cancel();
           setState(() => _step = _Step.notFound);
@@ -430,8 +548,10 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
           setState(() => _step = _Step.done);
         }
       }
-    } catch (_) {
-      // Сеть пропала — следующий тик попробует снова.
+      _netBack();
+    } catch (e) {
+      // Сеть пропала — полоса сверху, следующий тик попробует снова.
+      if (_isNetErr(e)) _lostNetwork();
     }
   }
 
@@ -675,7 +795,12 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
       _surge = 0;
       _outOfArea = false;
       _activeBanner = false;
+      _justFound = false;
+      _pulseAt = null;
     });
+    // Карта стояла над местом работ — вернуть её к точке «откуда», иначе
+    // булавка и адрес в «Qayerdan» показывали разные места.
+    _moveMap(_from);
   }
 
   /// Профиль → «Buyurtmalarim»: «Kuzatish» возвращает к живому заказу,
@@ -688,6 +813,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     final r = nav.repeat;
     if (r == null) {
       await _resume();
+      _moveMap(_from);
       return;
     }
     setState(() {
@@ -726,9 +852,161 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
 
   // --------------------------------------------------------------- вид
 
+  // ------------------------------------------------------------ карта
+
+  String get _mapStateKey {
+    if (_step == _Step.route) return 'route';
+    final o = _order;
+    return [
+      _step.name, _from.lat, _from.lon, _from.address, _to?.lat, _to?.lon, _to?.address,
+      _exec?.lat, _exec?.destLat, _exec?.etaMinutes, o?['departed_at'] != null, o?['started_at'] != null,
+    ].join('|');
+  }
+
+  TaxiPlace? get _dest => _to ??
+      (_request?.toLat != null ? TaxiPlace(_request!.toLat!, _request!.toLon!, _request!.toAddress) : null);
+
+  /// Куда едет техника (кадр 8) — точка «откуда» заказа.
+  Point get _workPoint => _exec?.destLat != null
+      ? Point(latitude: _exec!.destLat!, longitude: _exec!.destLon!)
+      : (_request?.fromLat != null
+          ? Point(latitude: _request!.fromLat!, longitude: _request!.fromLon!)
+          : _from.point);
+
+  /// Метки и линии под текущий шаг; потом камера — так, чтобы всё было
+  /// видно над шторкой.
+  Future<void> _refreshMap() async {
+    final step = _step;
+    if (step == _Step.route) {
+      if (_mapObjects.isNotEmpty || _pulseAt != null) {
+        setState(() {
+          _mapObjects = const [];
+          _pulseAt = null;
+        });
+      }
+      return;
+    }
+    final objs = <MapObject>[];
+    var fit = <Point>[];
+    final started = _order?['started_at'] != null;
+    try {
+      if (step == _Step.searching) {
+        // Кадр 7: только точка и расходящиеся круги
+        objs.add((await TaxiMarkers.pointA(null)).at('a', _from.point, z: 2));
+        fit = [_from.point];
+      } else if (step == _Step.active && !started) {
+        // Кадр 8: техника, пунктир до адреса, плашка «12 daq»
+        final eta = _exec?.etaMinutes;
+        final work = _workPoint;
+        objs.add((await TaxiMarkers.pointA(
+          eta != null ? 'taxi.minutes_n'.tr(args: ['$eta']) : null,
+          darkLabel: true,
+        )).at('a', work, z: 2));
+        fit = [work];
+        if (_exec?.lat != null) {
+          final eq = Point(latitude: _exec!.lat!, longitude: _exec!.lon!);
+          final line = await TaxiRoute.between(eq, work);
+          objs.add(PolylineMapObject(
+            mapId: const MapObjectId('eq_line'),
+            polyline: Polyline(points: line),
+            strokeColor: AppPalette.brand,
+            strokeWidth: 4,
+            dashLength: 6,
+            gapLength: 5,
+            zIndex: 1,
+          ));
+          objs.add((await TaxiMarkers.equipment(null)).at('eq', eq, z: 3));
+          fit = [...line, work];
+        }
+      } else if (step == _Step.active || step == _Step.confirm || step == _Step.done) {
+        // Кадр 9: техника на месте работ
+        final at = _workPoint;
+        objs.add(CircleMapObject(
+          mapId: const MapObjectId('zone'),
+          circle: Circle(center: at, radius: 90),
+          strokeColor: AppPalette.textSuccess.withValues(alpha: .55),
+          strokeWidth: 1.5,
+          fillColor: AppPalette.textSuccess.withValues(alpha: .10),
+        ));
+        objs.add((await TaxiMarkers.equipment(null)).at('eq', at, z: 3));
+        fit = [at];
+      } else {
+        // Кадры 3–6 и E4: линия А→Б по дорогам с подписями точек
+        final b = _dest;
+        objs.add((await TaxiMarkers.pointA(_from.address == null ? null : _from.label)).at('a', _from.point, z: 2));
+        fit = [_from.point];
+        if (b != null) {
+          final line = await TaxiRoute.between(_from.point, b.point);
+          objs.add(PolylineMapObject(
+            mapId: const MapObjectId('route'),
+            polyline: Polyline(points: line),
+            strokeColor: AppPalette.brand,
+            strokeWidth: 5,
+            outlineColor: Colors.white,
+            outlineWidth: 2,
+            zIndex: 1,
+          ));
+          objs.add((await TaxiMarkers.pointB(b.label.isEmpty ? null : b.label)).at('b', b.point, z: 2));
+          fit = line;
+        }
+      }
+    } catch (_) {
+      // Картинка метки не собралась — без меток, но с камерой
+    }
+    if (!mounted || step != _step) return;
+    setState(() => _mapObjects = objs);
+    await _fit(fit);
+    if (step == _Step.searching) _updatePulse();
+  }
+
+  /// Камера показывает [pts] в части экрана над шторкой.
+  Future<void> _fit(List<Point> pts) async {
+    final map = _map;
+    if (map == null || pts.isEmpty || !mounted) return;
+    final mq = MediaQuery.of(context);
+    final dpr = mq.devicePixelRatio;
+    final sheet = _sheetKey.currentContext?.size?.height ?? mq.size.height * .5;
+    final top = mq.padding.top + 72;
+    final bottom = math.max(mq.size.height - sheet - 24, top + 120);
+    final rect = ScreenRect(
+      topLeft: ScreenPoint(x: 32 * dpr, y: top * dpr),
+      bottomRight: ScreenPoint(x: (mq.size.width - 32) * dpr, y: bottom * dpr),
+    );
+    final BoundingBox box;
+    if (pts.length == 1) {
+      final p = pts.first;
+      box = BoundingBox(
+        northEast: Point(latitude: p.latitude + .004, longitude: p.longitude + .005),
+        southWest: Point(latitude: p.latitude - .004, longitude: p.longitude - .005),
+      );
+    } else {
+      box = TaxiRoute.bounds(pts);
+    }
+    try {
+      await map.moveCamera(
+        CameraUpdate.newGeometry(Geometry.fromBoundingBox(box), focusRect: rect),
+        animation: const MapAnimation(duration: .6),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _updatePulse() async {
+    final p = await _map?.getScreenPoint(_from.point);
+    if (!mounted || p == null || _step != _Step.searching) return;
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    setState(() => _pulseAt = Offset(p.x / dpr, p.y / dpr));
+  }
+
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
+    final key = _mapStateKey;
+    if (key != _mapKey) {
+      _mapKey = key;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _refreshMap();
+      });
+    }
     final canGoBack = _step == _Step.type || _step == _Step.tariff;
     return Scaffold(
       backgroundColor: AppPalette.page,
@@ -738,11 +1016,13 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
             child: MapOrPlaceholder(
               hintKey: 'taxi.map_web_hint',
               mapBuilder: (_) => YandexMap(
+                mapObjects: _mapObjects,
                 onMapCreated: (c) {
                   _map = c;
                   _moveMap(_from);
                 },
                 onCameraPositionChanged: (pos, reason, finished) {
+                  if (_step == _Step.searching && finished) _updatePulse();
                   // Точку «откуда» двигает только сам человек и только на
                   // первом шаге — дальше карта лишь фон.
                   if (_step != _Step.route || reason != CameraUpdateReason.gestures) return;
@@ -756,6 +1036,12 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
             ),
           ),
           if (_step == _Step.route && !MapOrPlaceholder.isWeb) _centerPin(),
+          if (_step == _Step.searching && _pulseAt != null)
+            Positioned(
+              left: _pulseAt!.dx - 120,
+              top: _pulseAt!.dy - 120,
+              child: const SearchPulse(size: 240),
+            ),
           Positioned(
             top: top + AppSpacing.sm,
             left: AppSpacing.gutter,
@@ -789,6 +1075,37 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
             ),
           if (_step == _Step.confirm)
             const Positioned.fill(child: ColoredBox(color: Color(0x730B1220))),
+          // Кадр 10 — отдельный белый экран с крестиком, не шторка над картой
+          if (_step == _Step.done)
+            Positioned.fill(
+              child: ColoredBox(
+                color: AppPalette.surface,
+                child: SafeArea(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, AppSpacing.gutter, 0),
+                          child: Semantics(
+                            button: true,
+                            label: 'common.close'.tr(),
+                            child: TaxiRoundButton(icon: 'close', onTap: () => _finish(0, '')),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.lg),
+                          child: _panel(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           if (_offline) const Positioned.fill(child: ColoredBox(color: Color(0xCCE9ECF0))),
           if (_step == _Step.route)
             Positioned(
@@ -826,12 +1143,32 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
                             )
                           : const SizedBox.shrink(),
             ),
+          if (_netLost && !_offline)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                color: const Color(0xFFFFF6E0),
+                padding: EdgeInsets.fromLTRB(AppSpacing.gutter, top + 8, AppSpacing.gutter, 8),
+                child: Row(
+                  children: [
+                    const TaxiIcon('wifi_off', size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text('taxi.chat_offline'.tr(), style: AppTypography.captionS.copyWith(
+                      color: AppPalette.textPrimary, fontWeight: FontWeight.w500))),
+                  ],
+                ),
+              ).animate().slideY(begin: -1, duration: 250.ms),
+            ),
           if (_showDelay) Positioned(top: top + 58, left: AppSpacing.gutter, right: AppSpacing.gutter, child: _delayBanner()),
+          if (_step != _Step.done)
           Align(
             alignment: Alignment.bottomCenter,
             child: ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.78),
                 child: TaxiSheet(
+                  key: _sheetKey,
                   // Панель доходит до низа экрана, а отступ под полоской
                   // жестов — внутри неё (нижнего меню у клиента нет).
                   bottomInset: MediaQuery.of(context).padding.bottom,
@@ -852,26 +1189,34 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   }
 
   /// Булавка «Texnika shu yerdan olinadi» в центре карты (шаг 1).
+  /// Острие булавки (y = 59.5 из 62 в map_pin_a.svg) стоит ровно в
+  /// центре карты — туда, по чему берётся адрес. Раньше булавку поднимал
+  /// отступ 280, и «Qayerdan» показывал место на ~100 dp ниже острия.
   Widget _centerPin() => IgnorePointer(
         child: Center(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 280),
+          child: Transform.translate(
+            // высота колонки 26 + 6 + 62 = 94, острие на 91.5 от верха
+            offset: const Offset(0, -(91.5 - 47)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  height: 26,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
                     color: AppPalette.surface,
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: AppShadows.floating,
                   ),
-                  child: Text(
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(
                     'taxi.pickup_here'.tr(),
                     style: AppTypography.captionS.copyWith(
                       color: AppPalette.textPrimary,
                       fontWeight: FontWeight.w500,
                     ),
+                  ),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -995,8 +1340,9 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
                   AddressRow(
                     isFrom: true,
                     label: 'taxi.from'.tr(),
-                    value: _from.address ?? 'taxi.my_location'.tr(),
-                    onTap: () {},
+                    value: _from.address ?? (TaxiGeo.denied ? 'taxi.enter_address'.tr() : 'taxi.my_location'.tr()),
+                    placeholder: _from.address == null && TaxiGeo.denied,
+                    onTap: _pickFrom,
                   ),
                   Padding(
                     padding: const EdgeInsets.only(left: 50),
@@ -1013,18 +1359,15 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
               ),
             ),
           ),
-          if (_recent.isNotEmpty && !_outOfArea) ...[
+          if (_places.isNotEmpty && !_outOfArea) ...[
             const SizedBox(height: 14),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
               child: Text('taxi.recent'.tr(), style: AppTypography.h3),
             ),
-            for (final p in _recent)
+            for (final e in _places)
               InkWell(
-                onTap: () => setState(() {
-                  _to = p;
-                  _step = _Step.type;
-                }),
+                onTap: () => _chooseTo(e.place),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
                   child: SizedBox(
@@ -1036,7 +1379,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
                           height: 40,
                           decoration: const BoxDecoration(color: AppPalette.page, shape: BoxShape.circle),
                           alignment: Alignment.center,
-                          child: const TaxiIcon('building', size: 20),
+                          child: TaxiIcon(e.icon, size: 20),
                         ),
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
@@ -1045,13 +1388,13 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                (p.address ?? '').split(',').first,
+                                e.title,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: AppTypography.bodyMedium,
                               ),
                               Text(
-                                p.address ?? '',
+                                e.place.address ?? '',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -1064,7 +1407,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
                           ),
                         ),
                         Text(
-                          '${TaxiGeo.distanceKm(_from, p).toStringAsFixed(1)} km',
+                          '${TaxiGeo.distanceKm(_from, e.place).toStringAsFixed(1)} km',
                           style: const TextStyle(
                             fontFamily: AppTypography.fontFamily,
                             fontSize: 13,
@@ -1081,19 +1424,47 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
         ],
       );
 
+  /// Строки «So'nggi manzillar»: сохранённые (Uy, Ish…) первыми, затем
+  /// последние из заказов без повторов — не больше четырёх, как в макете.
+  List<({String icon, String title, TaxiPlace place})> get _places {
+    final seen = <String>{};
+    final out = <({String icon, String title, TaxiPlace place})>[];
+    for (final a in _saved) {
+      if (seen.add(a.address.trim().toLowerCase())) {
+        out.add((icon: a.icon, title: a.title, place: TaxiPlace(a.lat, a.lon, a.address)));
+      }
+    }
+    for (final p in _recent) {
+      if (seen.add((p.address ?? '').trim().toLowerCase())) {
+        out.add((icon: 'building', title: p.label, place: p));
+      }
+    }
+    return out.take(4).toList();
+  }
+
+  /// Выбор адреса из списка на главной — та же проверка зоны, что и после поиска.
+  void _chooseTo(TaxiPlace place) {
+    final outside = _status != null && !_status!.inArea(place.lat, place.lon);
+    setState(() {
+      _to = place;
+      _outOfArea = outside;
+      if (!outside) _step = _Step.type;
+    });
+  }
+
   Widget _routeLine() => Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
         child: Row(
           children: [
             SvgPicture.asset('assets/brand/point_a.svg', width: 16, height: 16),
             const SizedBox(width: 6),
-            Flexible(child: _routeText(_from.address ?? 'taxi.my_location'.tr())),
+            Flexible(child: _routeText(_from.address == null ? 'taxi.my_location'.tr() : _from.label)),
             const SizedBox(width: 6),
             _routeText('→'),
             const SizedBox(width: 6),
             SvgPicture.asset('assets/brand/point_b.svg', width: 16, height: 16),
             const SizedBox(width: 6),
-            Flexible(child: _routeText(_to?.address ?? '')),
+            Flexible(child: _routeText(_to?.label ?? '')),
           ],
         ),
       );
@@ -1165,7 +1536,13 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
         chunk.add(const SizedBox(width: 76));
       }
       if (rows.isNotEmpty) rows.add(const SizedBox(height: 14));
-      rows.add(Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: chunk));
+      // По верху: плитка с подписью в две строки («Frontal yuklagich») выше
+      // соседних, и по центру ряд «плясал».
+      rows.add(Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: chunk,
+      ));
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1472,11 +1849,26 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   Widget _onTheWayPanel() {
     final departed = _order?['departed_at'] != null;
     final eta = _exec?.etaMinutes;
-    return Padding(
+    final panel = Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (_justFound && !departed) ...[
+            Center(
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: const BoxDecoration(color: AppPalette.successSubtle, shape: BoxShape.circle),
+                alignment: Alignment.center,
+                child: const TaxiIcon('check_circle', size: 30),
+              )
+                  .animate()
+                  .scale(begin: const Offset(.3, .3), duration: 650.ms, curve: Curves.elasticOut)
+                  .fadeIn(duration: 200.ms),
+            ),
+            const SizedBox(height: 10),
+          ],
           Row(
             children: [
               const TaxiIcon('status_dot', size: 10),
@@ -1520,8 +1912,11 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
                           Text(_ownerName, style: AppTypography.bodyMedium),
                           Row(
                             children: [
-                              const TaxiIcon('star_fill', size: 14),
-                              const SizedBox(width: 4),
+                              // Звезда без числа (отзывов ещё нет) читалась как поломка
+                              if (_exec?.rating != null) ...[
+                                const TaxiIcon('star_fill', size: 14),
+                                const SizedBox(width: 4),
+                              ],
                               Text(
                                 [
                                   if (_exec?.rating != null) _exec!.rating!.toStringAsFixed(1),
@@ -1596,12 +1991,15 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
             ],
           ),
           const SizedBox(height: 14),
-          InfoRow('taxi.address'.tr(), _request?.toAddress ?? _to?.address ?? '—'),
+          // Макет, кадр 8: «Manzil» — куда едет техника, точка «Qayerdan»
+          InfoRow('taxi.address'.tr(), _request?.fromAddress ?? _from.address ?? _request?.toAddress ?? '—'),
           InfoRow('taxi.tariff'.tr(), _tariffLine),
           InfoRow('taxi.price'.tr(), _priceLine),
         ],
       ),
     );
+    if (!_justFound || departed) return panel;
+    return panel.animate().fadeIn(duration: 250.ms).slideY(begin: .06, duration: 350.ms, curve: Curves.easeOutCubic);
   }
 
   // 9 · Ish jarayonida
@@ -1726,7 +2124,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
               height: 40,
               decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(12)),
               alignment: Alignment.center,
-              child: TaxiIcon(icon, size: 24),
+              child: TaxiIcon(icon, size: 24).animate().shake(hz: 4, rotation: .06, delay: 250.ms, duration: 500.ms),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1750,7 +2148,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
             ),
           ],
         ),
-      );
+      ).animate().fadeIn(duration: 250.ms).slideY(begin: -.25, duration: 350.ms, curve: Curves.easeOutCubic);
 
   /// E5: «● Ekskavator yo'lda · 12 daqiqada keladi · Jasur T.»
   Widget _activeNotice() {
@@ -1826,7 +2224,19 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('taxi.not_found_title'.tr(), style: AppTypography.h2),
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(color: AppPalette.accentSubtle, shape: BoxShape.circle),
+                alignment: Alignment.center,
+                child: const TaxiIcon('search', size: 22),
+              ).animate().shake(hz: 3, rotation: .08, duration: 700.ms),
+              const SizedBox(width: 12),
+              Expanded(child: Text('taxi.not_found_title'.tr(), style: AppTypography.h2)),
+            ],
+          ),
           const SizedBox(height: 10),
           Text(
             'taxi.not_found_body'.tr(args: [EquipmentTypes.label(_type).toLowerCase()]),
@@ -2014,6 +2424,8 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     final worked = started != null && finished != null ? finished.difference(started) : null;
     final hours = (o['hours'] as int?) ?? _request?.hours ?? 0;
     final attPrice = _request?.attachmentPrice ?? 0;
+    final total = ((o['total_amount'] as num?) ?? 0).toDouble();
+    final tariffPerHour = hours > 0 ? (total / hours - attPrice) : 0.0;
     final problem = o['problem_reported_at'] != null;
     Widget row(String l, String v, {bool bold = false}) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
@@ -2076,6 +2488,14 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
                 if (worked != null)
                   row('taxi.worked_time'.tr(),
                       'taxi.hours_minutes'.tr(args: ['${worked.inHours}', '${worked.inMinutes % 60}'])),
+                // Тариф отдельной строкой: без неё «навесное 160 000» и
+                // «к оплате 800 000» не складывались у человека в голове.
+                if (hours > 0 && tariffPerHour > 0)
+                  row(
+                    '${_tierName((o['tariff'] ?? _request?.tariff ?? _tier) as String)} · '
+                        '${'taxi.hours_n'.tr(args: ['$hours'])} × ${formatSum(tariffPerHour)}',
+                    "${formatSum(tariffPerHour * hours)} ${'common.currency'.tr()}",
+                  ),
                 if (attPrice > 0)
                   row(_attachmentName ?? 'taxi.attachment'.tr(),
                       "${formatSum(attPrice * hours)} ${'common.currency'.tr()}"),
