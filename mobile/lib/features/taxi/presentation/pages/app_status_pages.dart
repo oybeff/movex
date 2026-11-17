@@ -35,7 +35,9 @@ class HaloState extends StatelessWidget {
           Container(
             width: 140,
             height: 140,
-            decoration: BoxDecoration(color: halo.withValues(alpha: .45), shape: BoxShape.circle),
+            // Внешнее кольцо в макете всегда голубое (U2, U3, B6), цветной —
+            // только внутренний круг
+            decoration: BoxDecoration(color: AppPalette.brandSubtle.withValues(alpha: .7), shape: BoxShape.circle),
             alignment: Alignment.center,
             child: Container(
               width: 100,
@@ -46,7 +48,7 @@ class HaloState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-          Text(title, textAlign: TextAlign.center, style: AppTypography.h2.copyWith(fontSize: 22, height: 30 / 22)),
+          Text(title, textAlign: TextAlign.center, style: AppTypography.h2.copyWith(fontSize: 24, height: 32 / 24)),
           const SizedBox(height: 10),
           Text(
             body,

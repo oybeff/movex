@@ -45,6 +45,8 @@ class Order(Base):
     delay_minutes = Column(Integer, nullable=True)
     delay_reason = Column(Text, nullable=True)
     cancelled_by = Column(String(10), nullable=True)
+    # E6: plans | long_wait | wrong_address | other — mijoz tanlagan sabab
+    cancel_reason = Column(String(30), nullable=True)
     problem_reported_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

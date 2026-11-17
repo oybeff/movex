@@ -1366,7 +1366,8 @@
     "pay_card_done": "Kartadan yechildi",
     "notif_on": "Yoqilgan",
     "notif_off": "O'chirilgan",
-    "search_offline_body": "Ulanish tiklangach qayta qidiramiz. Bosing — hozir urinib ko'ramiz."
+    "search_offline_body": "Ulanish tiklangach qayta qidiramiz. Bosing — hozir urinib ko'ramiz.",
+    "blocked_title": "Hisobingiz bloklangan"
   },
   "owner_flow": {
     "done": "Bajarildi",

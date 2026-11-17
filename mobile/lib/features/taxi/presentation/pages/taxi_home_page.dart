@@ -722,8 +722,8 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
 
   Future<void> _cancelSearch() async {
     if (_request == null) return;
-    final ok = await confirmCancel(context);
-    if (ok != true) return;
+    final reason = await confirmCancel(context);
+    if (reason == null) return;
     setState(() => _busy = true);
     try {
       await _api.cancelRequest(_request!.id);
@@ -738,11 +738,11 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
 
   Future<void> _cancelOrder() async {
     if (_order == null) return;
-    final ok = await confirmCancel(context, departed: _order?['departed_at'] != null);
-    if (ok != true) return;
+    final reason = await confirmCancel(context, departed: _order?['departed_at'] != null);
+    if (reason == null) return;
     setState(() => _busy = true);
     try {
-      await _api.setOrderStatus(_order!['id'] as int, 'cancelled');
+      await _api.setOrderStatus(_order!['id'] as int, 'cancelled', reason: reason);
       _poll?.cancel();
       _reset();
     } catch (e) {
@@ -890,9 +890,20 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     var fit = <Point>[];
     final started = _order?['started_at'] != null;
     try {
-      if (step == _Step.searching) {
-        // Кадр 7: только точка и расходящиеся круги
+      if (step == _Step.searching || step == _Step.notFound) {
+        // Кадр 7: точка и расходящиеся круги. E4: те же круги, но застывшие
         objs.add((await TaxiMarkers.pointA(null)).at('a', _from.point, z: 2));
+        if (step == _Step.notFound) {
+          for (final r in const [350.0, 700.0]) {
+            objs.add(CircleMapObject(
+              mapId: MapObjectId('ring_$r'),
+              circle: Circle(center: _from.point, radius: r),
+              strokeWidth: 0,
+              strokeColor: Colors.transparent,
+              fillColor: AppPalette.brand.withValues(alpha: .07),
+            ));
+          }
+        }
         fit = [_from.point];
       } else if (step == _Step.active && !started) {
         // Кадр 8: техника, пунктир до адреса, плашка «12 daq»

@@ -105,8 +105,9 @@ class TaxiService {
     return r.data as Map<String, dynamic>;
   }
 
-  Future<void> setOrderStatus(int id, String status) async {
-    await _dio.put('/orders/$id', data: {'status': status});
+  /// [reason] — E6, только для отмены: plans, long_wait, wrong_address, other.
+  Future<void> setOrderStatus(int id, String status, {String? reason}) async {
+    await _dio.put('/orders/$id', data: {'status': status, if (reason != null) 'cancel_reason': reason});
   }
 
   Future<Map<String, dynamic>> getEquipment(int id) async {

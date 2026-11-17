@@ -207,6 +207,9 @@ def get_orders(db: Session, skip: int = 0, limit: int = 100, current_user=None):
     return query.order_by(Order.created_at.desc()).offset(skip).limit(limit).all()
 
 
+#: E6 «Buyurtmani bekor qilasizmi?» — ilovadagi variantlar bilan bir xil.
+CANCEL_REASONS = ("plans", "long_wait", "wrong_address", "other")
+
 def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id: int):
     """
     Buyurtmani yangilash (faqat status o'zgartiriladi)
@@ -244,6 +247,8 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
     if new_status == 'cancelled':
         db_order.cancelled_by = 'client' if current_user_id == db_order.user_id else (
             'owner' if current_user_id == equipment.owner_id else 'admin')
+        if order.cancel_reason in CANCEL_REASONS:
+            db_order.cancel_reason = order.cancel_reason
 
     # Naqd buyurtma — o'zining alohida yo'li bor (pastda). Mijozning puli
     # tizimda yo'q, unga tegilmaydi; muzlatilgan narsa — egasining komissiyasi.

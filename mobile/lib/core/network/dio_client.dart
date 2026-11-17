@@ -47,8 +47,18 @@ class DioClient {
             debugPrint('✕ ${e.response?.statusCode} ${e.requestOptions.path}');
           }
 
+          // 403 с X-Account-Blocked — администратор заблокировал аккаунт.
+          // Раньше приложение молча показывало «?» и прочерки.
+          final blocked = e.response?.statusCode == 403 &&
+              e.response?.headers.value('x-account-blocked') == '1';
+          String? reason;
+          if (blocked) {
+            final data = e.response?.data;
+            reason = data is Map ? data['detail']?.toString() : null;
+          }
+
           // 401 — token yaroqsiz: seansni tozalab, kirish sahifasiga
-          if (e.response?.statusCode == 401) {
+          if (e.response?.statusCode == 401 || blocked) {
             final prefs = await SharedPreferences.getInstance();
             final hadSession = prefs.getString('token') != null;
             await prefs.remove('token');
@@ -62,7 +72,7 @@ class DioClient {
             if (hadSession && ctx != null && ctx.mounted && !_sessionDialogShown) {
               _sessionDialogShown = true;
               // ignore: use_build_context_synchronously
-              await showSessionExpiredDialog(ctx);
+              await showSessionExpiredDialog(ctx, blockedReason: blocked ? (reason ?? '') : null);
               _sessionDialogShown = false;
             }
             appRouter.go('/login');

@@ -56,14 +56,14 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   Future<void> _cancel(OrderCard c) async {
-    final ok = await confirmCancel(context);
-    if (ok != true) return;
+    final reason = await confirmCancel(context);
+    if (reason == null) return;
     setState(() => _busy = true);
     try {
       if (c.isRequest) {
         await _api.cancelRequest(c.requestId!);
       } else {
-        await _api.setOrderStatus(c.orderId!, 'cancelled');
+        await _api.setOrderStatus(c.orderId!, 'cancelled', reason: reason);
       }
       await _load();
     } catch (e) {

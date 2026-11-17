@@ -27,6 +27,17 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise credentials_exception
+    # Та же проверка, что в routes/auth.get_current_user. Без неё
+    # заблокированный (и удалённый — у него тоже is_blocked) человек
+    # продолжал работать с заказами, картами, чатом, балансом и платежами:
+    # отказ приходил только от роутов, которые берут пользователя из auth.
+    if getattr(user, "is_blocked", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(user.blocked_reason
+                    or "Hisobingiz bloklangan. Administrator bilan bog'laning."),
+            headers={"X-Account-Blocked": "1"},
+        )
     return user
 
 def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:

@@ -94,6 +94,14 @@ r = requests.get(f"{API}/users/me", headers=client)
 check("СТАРЫЙ токен перестал работать", r.status_code == 403, f"{r.status_code}")
 check("причина показана", "Тест" in str(r.json().get("detail", "")),
       str(r.json().get("detail"))[:60])
+check("приложению видно, что это блокировка", r.headers.get("x-account-blocked") == "1",
+      str(r.headers.get("x-account-blocked")))
+
+# Роуты на app/dependencies.get_current_user (заказы, карты, чат, баланс,
+# платежи, отзывы) пускали заблокированного: проверка была только в auth.
+for path in ("/orders/", "/cards/", "/chats/", "/balance/me", "/payments/", "/reviews/"):
+    r = requests.get(f"{API}{path}", headers=client)
+    check(f"заблокированному закрыт {path}", r.status_code == 403, f"{r.status_code}")
 
 r = requests.post(f"{API}/auth/verify-otp",
                   json={"phone": CLIENT_PHONE, "otp_code": otp_code(CLIENT_PHONE)})

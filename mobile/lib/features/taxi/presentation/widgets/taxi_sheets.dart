@@ -1085,7 +1085,9 @@ Future<bool?> showOwnerCancelledDialog(BuildContext context) => showDialog<bool>
 
 /// E6 · Bekor qilishni tasdiqlash. [departed] — техника уже выехала.
 /// Штрафа за отмену в проекте нет, поэтому про него не пишем.
-Future<bool?> confirmCancel(BuildContext context, {bool departed = false}) => showModalBottomSheet<bool>(
+/// E6. Возвращает выбранную причину (plans, long_wait, wrong_address,
+/// other) или null — «Kutishda davom etish».
+Future<String?> confirmCancel(BuildContext context, {bool departed = false}) => showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppPalette.surface,
@@ -1155,13 +1157,13 @@ class _CancelSheetState extends State<_CancelSheet> {
               ),
             const SizedBox(height: 12),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () => Navigator.of(context).pop(),
               child: Text('taxi.keep_waiting'.tr()),
             ),
             SizedBox(
               height: AppSpacing.buttonHeight,
               child: TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
+                onPressed: () => Navigator.of(context).pop(_reason),
                 style: TextButton.styleFrom(
                   foregroundColor: AppPalette.textDanger,
                   textStyle: AppTypography.buttonLarge,
