@@ -129,6 +129,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     // «Qayerdan» остаётся «Manzilni kiriting» (макет), пока он не выберет.
     if (!TaxiGeo.denied) _resolveFromAddress();
     _askNotificationsOnce();
+    _pickDefaultCard();
     _status = AppStatus.last ?? await AppStatus.fetch();
     try {
       final types = await _api.tariffTypes();
@@ -180,6 +181,20 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
 
   void _netBack() {
     if (_netLost && mounted) setState(() => _netLost = false);
+  }
+
+  /// K4 «Asosiy karta qilish — keyingi buyurtmalarda avtomatik tanlanadi»:
+  /// есть основная карта — заказ по умолчанию оплачивается ею, а не наличными.
+  Future<void> _pickDefaultCard() async {
+    try {
+      final cards = await CardApi().list();
+      final card = cards.where((c) => c.isDefault).firstOrNull;
+      if (card == null || !mounted || _payment != 'cash') return;
+      setState(() {
+        _payment = 'card:${card.id}';
+        _card = card;
+      });
+    } catch (_) {}
   }
 
   /// Android 13+ и iOS: «Texnika yo'lda» и «Ish yakunlandi» приходят
@@ -410,11 +425,17 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   }
 
   /// Подпись способа оплаты в сводках: «Naqd», «Uzcard •• 9012», «Balans».
-  String get _payName {
-    final m = (_order?['payment_method'] ?? _request?.paymentMethod ?? _payMethod) as String;
-    if (m == 'card') return _card?.label ?? 'taxi.bank_card'.tr();
-    return m == 'cash' ? 'taxi.pay_cash'.tr() : 'taxi.pay_balance'.tr();
-  }
+  String get _payName =>
+      _payLabel((_order?['payment_method'] ?? _request?.paymentMethod ?? _payMethod) as String);
+
+  /// Подпись по методу: «Naqd», «Uzcard •• 8829», «Balans». Раньше сводка
+  /// поиска решала «наличные или нет» отдельно и при оплате картой
+  /// показывала «Naqd».
+  String _payLabel(String method) => switch (method) {
+        'cash' => 'taxi.pay_cash'.tr(),
+        'card' => _card?.label ?? 'taxi.bank_card'.tr(),
+        _ => 'taxi.pay_balance'.tr(),
+      };
 
   String get _payMethod => _payment.startsWith('card:') ? 'card' : _payment;
   int? get _cardId => _payment.startsWith('card:') ? int.tryParse(_payment.substring(5)) : null;
@@ -1702,7 +1723,6 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   Widget _summaryCard() {
     final r = _request;
     final price = r?.budget ?? _quote?.total ?? 0;
-    final cash = (r?.paymentMethod ?? _payment) == 'cash';
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -1722,7 +1742,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
                       style: AppTypography.bodyMMedium,
                     ),
                     Text(
-                      "${formatSum(price)} ${'common.currency'.tr()} · ${cash ? 'taxi.pay_cash'.tr() : _payName}",
+                      "${formatSum(price)} ${'common.currency'.tr()} · ${_payLabel(r?.paymentMethod ?? _payMethod)}",
                       style: AppTypography.captionS,
                     ),
                   ],
@@ -2229,7 +2249,6 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   Widget _notFoundPanel() {
     final r = _request;
     final price = r?.budget ?? _quote?.total ?? 0;
-    final cash = (r?.paymentMethod ?? _payment) == 'cash';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
       child: Column(
@@ -2270,7 +2289,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
                           Text('${EquipmentTypes.label(_type)} · ${_tierName(r?.tariff ?? _tier)}',
                               style: AppTypography.bodyMedium.copyWith(fontSize: 15)),
                           Text(
-                            "${formatSum(price)} ${'common.currency'.tr()} · ${cash ? 'taxi.pay_cash'.tr() : _payName}",
+                            "${formatSum(price)} ${'common.currency'.tr()} · ${_payLabel(r?.paymentMethod ?? _payMethod)}",
                             style: AppTypography.captionS.copyWith(fontSize: 13),
                           ),
                         ],
