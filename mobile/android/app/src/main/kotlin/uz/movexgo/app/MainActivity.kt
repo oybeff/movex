@@ -8,15 +8,26 @@ import com.yandex.mapkit.MapKitFactory
 // aks holda ishga tushganda yiqiladi.
 class MainActivity: FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
-        // Важно: сначала ключ
-        MapKitFactory.setApiKey("d4a9d1e8-3f25-47a4-8ae1-ebbf04682c3d")
-        // Язык карты, адресов и поиска. Без него MapKit берёт язык
-        // системы, и на телефоне с английским интерфейсом адреса
-        // приходили как «Uzbekistan, Tashkent, Writers' Alley». Язык
-        // меняется только до инициализации — новый вступит после
-        // перезапуска приложения.
-        MapKitFactory.setLocale(mapLocale())
+        // Ключ и язык задаются ОДИН раз за жизнь процесса. Activity
+        // пересоздаётся при живом процессе (вышел кнопкой «Назад» и снова
+        // открыл), а MapKit к этому моменту уже инициализирован — повторный
+        // setApiKey() падает с AssertionError, приложение закрывалось.
+        if (!mapKitConfigured) {
+            // Важно: сначала ключ
+            MapKitFactory.setApiKey("d4a9d1e8-3f25-47a4-8ae1-ebbf04682c3d")
+            // Язык карты, адресов и поиска. Без него MapKit берёт язык
+            // системы, и на телефоне с английским интерфейсом адреса
+            // приходили как «Uzbekistan, Tashkent, Writers' Alley». Язык
+            // меняется только до инициализации — новый вступит после
+            // перезапуска приложения.
+            MapKitFactory.setLocale(mapLocale())
+            mapKitConfigured = true
+        }
         super.onCreate(savedInstanceState)
+    }
+
+    companion object {
+        private var mapKitConfigured = false
     }
 
     /** Язык приложения: shared_preferences пишет ключ с префиксом «flutter.». */
