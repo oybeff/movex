@@ -1,10 +1,10 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../../core/services/balance_service.dart';
 import '../../../../core/services/order_service.dart';
 import '../../../../core/services/pin_service.dart';
 import '../../../../core/services/user_service.dart';
@@ -44,11 +44,11 @@ class _TaxiProfilePageState extends State<TaxiProfilePage> {
   String? _phone;
   int? _orders;
   int? _hours;
-  double? _balance;
   int? _addresses;
   List<BankCard>? _cards;
   String? _avatar;
   String _version = '';
+  bool? _notifOn; // «Bildirishnomalar · Yoqilgan» как в макете Pr1
 
   @override
   void initState() {
@@ -79,16 +79,16 @@ class _TaxiProfilePageState extends State<TaxiProfilePage> {
       }
     } catch (_) {}
     try {
-      final b = await BalanceService().getBalance();
-      if (mounted) setState(() => _balance = b.balance);
-    } catch (_) {}
-    try {
       final c = await CardApi().list();
       if (mounted) setState(() => _cards = c);
     } catch (_) {}
     try {
       final a = await ProfileApi().addresses();
       if (mounted) setState(() => _addresses = a.length);
+    } catch (_) {}
+    try {
+      final st = await Permission.notification.status;
+      if (mounted) setState(() => _notifOn = st.isGranted);
     } catch (_) {}
     try {
       final info = await PackageInfo.fromPlatform();
@@ -378,7 +378,8 @@ class _TaxiProfilePageState extends State<TaxiProfilePage> {
                       icon: 'menu_card',
                       title: 'taxi.payment_methods'.tr(),
                       value: (_cards ?? const <BankCard>[]).where((c) => c.isDefault).firstOrNull?.label ??
-                          (_balance == null ? null : "${formatSum(_balance!)} ${'common.currency'.tr()}"),
+                          (_cards ?? const <BankCard>[]).firstOrNull?.label ??
+                          (_cards == null ? null : 'taxi.pay_cash'.tr()),
                       onTap: () => _push(const PaymentMethodsPage()),
                     ),
                     MenuRow(
@@ -400,8 +401,12 @@ class _TaxiProfilePageState extends State<TaxiProfilePage> {
                   GroupLabel('profile.section_settings'.tr()),
                   const SizedBox(height: 8),
                   MenuCard(children: [
-                    MenuRow(icon: 'menu_bell', title: 'notifications.title'.tr(),
-                        onTap: () => _open(const TaxiNotificationsPage())),
+                    MenuRow(
+                      icon: 'menu_bell',
+                      title: 'notifications.title'.tr(),
+                      value: _notifOn == null ? null : (_notifOn! ? 'taxi.notif_on'.tr() : 'taxi.notif_off'.tr()),
+                      onTap: () => _push(const TaxiNotificationsPage()),
+                    ),
                     MenuRow(icon: 'menu_globe', title: 'settings.language'.tr(), value: lang, onTap: _language),
                     MenuRow(icon: 'menu_help', title: 'profile.help'.tr(), onTap: () => _open(const HelpPage())),
                   ]),

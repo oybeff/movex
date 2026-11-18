@@ -179,7 +179,7 @@ class _AddressSheetState extends State<_AddressSheet> {
     final from = _place ?? await TaxiGeo.current();
     if (!mounted) return;
     final p = await Navigator.of(context).push<TaxiPlace>(
-      MaterialPageRoute(builder: (_) => AddressPickPage(from: from)),
+      MaterialPageRoute(builder: (_) => AddressPickPage(from: from, forSaving: true)),
     );
     if (p != null && mounted) setState(() => _place = p);
   }

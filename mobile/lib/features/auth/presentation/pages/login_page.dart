@@ -212,6 +212,8 @@ class _LoginPageState extends State<LoginPage> {
                   errorBorder: InputBorder.none,
                   focusedErrorBorder: InputBorder.none,
                   isCollapsed: true,
+                  // minHeight 56 из темы растягивал поле, и текст стоял у верхнего края
+                  constraints: const BoxConstraints(),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:movex_go/core/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -260,6 +261,21 @@ class _MyAppState extends State<MyApp> {
         supportedLocales: context.supportedLocales,
         localizationsDelegates: context.localizationDelegates,
         routerConfig: widget.router,
+        // Системные панели по умолчанию — светлые, как большинство экранов.
+        // Экран со своим AnnotatedRegion (заставка, онбординг) перекрывает
+        // это значение. Без него экраны без своего региона (U3, U2, ПИН)
+        // наследовали тёмную полосу навигации и белые значки статус-бара
+        // на белом фоне — от заставки.
+        builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+          value: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarBrightness: Brightness.light,
+            statusBarIconBrightness: Brightness.dark,
+            systemNavigationBarColor: Color(0xFFFFFFFF), // AppPalette.surface
+            systemNavigationBarIconBrightness: Brightness.dark,
+          ),
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
     );
   }

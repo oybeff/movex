@@ -29,7 +29,11 @@ class _OrdersPageState extends State<OrdersPage> {
   @override
   void initState() {
     super.initState();
-    _load();
+    // После первого кадра: _load читает context.locale и показывает
+    // SnackBar, а из initState это падало (в debug список был всегда пуст).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _load();
+    });
   }
 
   Future<void> _load() async {
@@ -52,14 +56,14 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   Future<void> _cancel(OrderCard c) async {
-    final ok = await confirmCancel(context);
-    if (ok != true) return;
+    final reason = await confirmCancel(context);
+    if (reason == null) return;
     setState(() => _busy = true);
     try {
       if (c.isRequest) {
-        await _api.cancelRequest(c.requestId!);
+        await _api.cancelRequest(c.requestId!, reason: reason);
       } else {
-        await _api.setOrderStatus(c.orderId!, 'cancelled');
+        await _api.setOrderStatus(c.orderId!, 'cancelled', reason: reason);
       }
       await _load();
     } catch (e) {

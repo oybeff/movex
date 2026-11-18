@@ -135,7 +135,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
               left: 0,
               right: 0,
               bottom: 0,
-              height: 344,
+              // 400 и ранний непрозрачный край градиента: при 344 заголовок
+              // ложился на текст макета внутри картинки, и тот просвечивал.
+              height: 400,
               child: _buildFooter(),
             ),
           ],
@@ -177,7 +179,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               Color(0xD8162438),
               AppPalette.inverse,
             ],
-            stops: [0.0, 0.35, 0.64],
+            stops: [0.0, 0.16, 0.34],
           ),
         ),
         child: SafeArea(

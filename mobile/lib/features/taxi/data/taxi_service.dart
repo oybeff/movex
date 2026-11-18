@@ -96,8 +96,11 @@ class TaxiService {
         .toList();
   }
 
-  Future<void> cancelRequest(int id) async {
-    await _dio.post('/requests/$id/cancel');
+  Future<void> cancelRequest(int id, {String? reason}) async {
+    await _dio.post(
+      '/requests/$id/cancel',
+      data: reason == null ? null : {'cancel_reason': reason},
+    );
   }
 
   Future<Map<String, dynamic>> getOrder(int id) async {
@@ -105,8 +108,9 @@ class TaxiService {
     return r.data as Map<String, dynamic>;
   }
 
-  Future<void> setOrderStatus(int id, String status) async {
-    await _dio.put('/orders/$id', data: {'status': status});
+  /// [reason] — E6, только для отмены: plans, long_wait, wrong_address, other.
+  Future<void> setOrderStatus(int id, String status, {String? reason}) async {
+    await _dio.put('/orders/$id', data: {'status': status, if (reason != null) 'cancel_reason': reason});
   }
 
   Future<Map<String, dynamic>> getEquipment(int id) async {
@@ -235,6 +239,10 @@ class TaxiExecutor {
     this.type,
     this.plate,
     this.etaMinutes,
+    this.lat,
+    this.lon,
+    this.destLat,
+    this.destLon,
   });
 
   factory TaxiExecutor.fromJson(Map<String, dynamic> j) => TaxiExecutor(
@@ -247,6 +255,10 @@ class TaxiExecutor {
         type: j['equipment_type'] as String?,
         plate: j['plate_number'] as String?,
         etaMinutes: j['eta_minutes'] as int?,
+        lat: j['equipment_latitude'] == null ? null : _num(j['equipment_latitude']),
+        lon: j['equipment_longitude'] == null ? null : _num(j['equipment_longitude']),
+        destLat: j['destination_latitude'] == null ? null : _num(j['destination_latitude']),
+        destLon: j['destination_longitude'] == null ? null : _num(j['destination_longitude']),
       );
 
   final String? name;
@@ -258,6 +270,15 @@ class TaxiExecutor {
   final String? type;
   final String? plate;
   final int? etaMinutes;
+
+  /// Точка техники, которую владелец выбрал при добавлении (живого
+  /// слежения нет) — по ней рисуется машина на карте шагов 8–9.
+  final double? lat;
+  final double? lon;
+
+  /// Куда едет техника — точка «Qayerdan» заказа (макет, кадр 8).
+  final double? destLat;
+  final double? destLon;
 }
 
 class TaxiAttachment {

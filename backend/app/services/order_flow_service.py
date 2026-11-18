@@ -63,14 +63,36 @@ def _owner_only(db: Session, order: Order, user: User) -> Equipment:
     return eq
 
 
+def _notify(db: Session, order: Order, to_user_id: int, type_: str, **params) -> None:
+    """
+    Xabarnoma ikkinchi tomonga (M5). Xato bo'lsa buyurtmani to'xtatmaydi:
+    notification_service o'zi jurnalga yozadi va davom etadi.
+    """
+    from app.core.equipment_types import type_name
+    from app.services import notification_service
+
+    eq = db.query(Equipment).filter(Equipment.id == order.equipment_id).first()
+    owner = db.query(User).filter(User.id == eq.owner_id).first() if eq else None
+    lang = notification_service.user_language(db, to_user_id)
+    what = " ".join(p for p in (type_name(eq.type, lang) if eq else None, eq.model if eq else None) if p)
+    notification_service.create_localized(
+        db, to_user_id, type_, f"{type_}.title", f"{type_}.body",
+        order.id, eq.type if eq else None, eq.model if eq else None,
+        language=lang, what=what, owner=(owner.full_name if owner else ""), **params,
+    )
+
+
 def depart(db: Session, order_id: int, user: User) -> Order:
     """«Ketdik»: владелец выехал. Повторное нажатие ничего не ломает."""
     order = _lock_order(db, order_id)
     _owner_only(db, order, user)
-    if order.departed_at is None:
+    first = order.departed_at is None
+    if first:
         order.departed_at = _now()
     db.commit()
     db.refresh(order)
+    if first:
+        _notify(db, order, order.user_id, "order_departed")
     return order
 
 
@@ -79,12 +101,15 @@ def start(db: Session, order_id: int, user: User) -> Order:
     order = _lock_order(db, order_id)
     _owner_only(db, order, user)
     now = _now()
+    first = order.started_at is None
     if order.departed_at is None:
         order.departed_at = now
-    if order.started_at is None:
+    if first:
         order.started_at = now
     db.commit()
     db.refresh(order)
+    if first:
+        _notify(db, order, order.user_id, "order_started")
     return order
 
 
@@ -98,10 +123,13 @@ def finish(db: Session, order_id: int, user: User) -> Order:
     _owner_only(db, order, user)
     if order.started_at is None:
         raise HTTPException(409, "Ish hali boshlanmagan")
-    if order.finished_at is None:
+    first = order.finished_at is None
+    if first:
         order.finished_at = _now()
     db.commit()
     db.refresh(order)
+    if first:
+        _notify(db, order, order.user_id, "order_finished")
     return order
 
 
@@ -126,6 +154,8 @@ def request_extend(db: Session, order_id: int, user: User, hours: int) -> Order:
     order.extend_requested_hours = hours
     db.commit()
     db.refresh(order)
+    owner_id = _equipment(db, order).owner_id
+    _notify(db, order, owner_id, "order_extend_requested", hours=hours)
     return order
 
 
@@ -138,15 +168,20 @@ def approve_extend(db: Session, order_id: int, user: User) -> Order:
         raise HTTPException(409, "Uzaytirish so'rovi yo'q")
     client = db.query(User).filter(User.id == order.user_id).first()
     order.extend_requested_hours = None
-    return _apply_extend(db, order, client, hours)
+    order = _apply_extend(db, order, client, hours)
+    _notify(db, order, order.user_id, "order_extend_approved", hours=hours)
+    return order
 
 
 def decline_extend(db: Session, order_id: int, user: User) -> Order:
     order = _lock_order(db, order_id)
     _owner_only(db, order, user)
+    had_request = order.extend_requested_hours is not None
     order.extend_requested_hours = None
     db.commit()
     db.refresh(order)
+    if had_request:
+        _notify(db, order, order.user_id, "order_extend_declined")
     return order
 
 
@@ -161,6 +196,7 @@ def report_delay(db: Session, order_id: int, user: User, minutes: int,
     order.delay_reason = (reason or "").strip()[:300] or None
     db.commit()
     db.refresh(order)
+    _notify(db, order, order.user_id, "order_delayed", minutes=minutes)
     return order
 
 
@@ -305,11 +341,20 @@ def executor(db: Session, order: Order) -> dict:
         .filter(Order.equipment_id.in_(eq_ids), Order.status == "completed")
         .scalar()
     )
+    # Куда едет техника. Макет (кадр 8): «Manzil» — точка «Qayerdan», где
+    # техника нужна в начале; у тарифного заказа она в заявке (origin_*).
+    # Нет её (старые заказы) — адрес заказа, как раньше.
+    from app.models.equipment_request import EquipmentRequest
+
+    req = db.query(EquipmentRequest).filter(EquipmentRequest.order_id == order.id).first()
+    dest_lat, dest_lon = order.delivery_latitude, order.delivery_longitude
+    if req is not None and req.origin_latitude and req.origin_longitude:
+        dest_lat, dest_lon = req.origin_latitude, req.origin_longitude
     eta: Optional[int] = None
     try:
         km = pricing_service.distance_km(
             float(eq.latitude), float(eq.longitude),
-            float(order.delivery_latitude), float(order.delivery_longitude),
+            float(dest_lat), float(dest_lon),
         )
         eta = max(5, int((Decimal(km) / AVG_SPEED_KMH * 60).to_integral_value()))
     except (TypeError, ValueError):
@@ -328,7 +373,20 @@ def executor(db: Session, order: Order) -> dict:
         equipment_model=eq.model,
         plate_number=eq.plate_number,
         eta_minutes=eta,
+        # Точка, выбранная владельцем при добавлении техники (живого
+        # слежения нет): клиент рисует по ней машину и линию до адреса.
+        equipment_latitude=_float_or_none(eq.latitude),
+        equipment_longitude=_float_or_none(eq.longitude),
+        destination_latitude=_float_or_none(dest_lat),
+        destination_longitude=_float_or_none(dest_lon),
     )
+
+
+def _float_or_none(v) -> Optional[float]:
+    try:
+        return float(v) if v is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 # ------------------------------------------------- M1–M3 · Buyurtmalarim

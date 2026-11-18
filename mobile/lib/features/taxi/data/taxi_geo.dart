@@ -8,13 +8,22 @@ import '../../../core/services/permission_service.dart';
 
 /// Точка с адресом — «Qayerdan» и «Qayerga».
 class TaxiPlace {
-  const TaxiPlace(this.lat, this.lon, [this.address]);
+  const TaxiPlace(this.lat, this.lon, [this.address, this.title]);
 
   final double lat;
   final double lon;
+
+  /// Адрес без страны и города: «Chilonzor tumani, 9-kvartal, 12».
+  /// Он уходит в заказ и показывается в полях «Qayerdan»/«Qayerga».
   final String? address;
 
+  /// Короткое имя места для списка подсказок: «Sergeli tumani»,
+  /// «Amir Temur ko'chasi, 108». null — первая часть адреса.
+  final String? title;
+
   Point get point => Point(latitude: lat, longitude: lon);
+
+  String get label => title ?? (address ?? '').split(',').first;
 
   TaxiPlace withAddress(String? a) => TaxiPlace(lat, lon, a);
 }
@@ -73,14 +82,16 @@ class TaxiGeo {
       final r = await res.result.timeout(const Duration(seconds: 8));
       await res.session.close();
       final item = (r.items ?? const []).isEmpty ? null : r.items!.first;
-      return item?.toponymMetadata?.address.formattedAddress ?? item?.name;
+      final meta = item?.toponymMetadata;
+      return meta != null ? shortAddress(meta.address) : item?.name;
     } catch (_) {
       return null;
     }
   }
 
-  /// Поиск адреса по тексту рядом с точкой. Пусто — браузер или ничего.
-  static Future<List<TaxiPlace>> search(String text, TaxiPlace near) async {
+  /// Поиск адреса по тексту рядом с точкой. Пусто — браузер или ничего,
+  /// null — поиск не ответил (нет сети): экран скажет об этом прямо.
+  static Future<List<TaxiPlace>?> search(String text, TaxiPlace near) async {
     if (kIsWeb || text.trim().length < 3) return const [];
     try {
       final res = YandexSearch.searchByText(
@@ -100,12 +111,39 @@ class TaxiGeo {
         out.add(TaxiPlace(
           meta.balloonPoint.latitude,
           meta.balloonPoint.longitude,
-          meta.address.formattedAddress,
+          shortAddress(meta.address),
+          item.name,
         ));
       }
+      if (r.error != null && out.isEmpty) return null;
       return out;
     } catch (_) {
-      return const [];
+      return null;
     }
+  }
+
+  /// Адрес для человека: без «Uzbekistan», области и «Tashkent» —
+  /// все заказы и так в Ташкенте и области. В списке подсказок все
+  /// результаты начинались с одной и той же страны, и заголовком у всех
+  /// восьми было «Uzbekistan».
+  static String shortAddress(SearchAddress a) {
+    const drop = {
+      SearchComponentKind.country,
+      SearchComponentKind.region,
+      SearchComponentKind.province,
+      SearchComponentKind.locality,
+    };
+    final skip = {
+      for (final e in a.addressComponents.entries)
+        if (drop.contains(e.key)) e.value.trim().toLowerCase(),
+    };
+    final parts = a.formattedAddress
+        .split(',')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+    final kept = parts.where((p) => !skip.contains(p.toLowerCase())).toList();
+    // Совсем пусто (искали сам город) — оставить последнюю часть.
+    return kept.isEmpty ? (parts.isEmpty ? a.formattedAddress : parts.last) : kept.join(', ');
   }
 }

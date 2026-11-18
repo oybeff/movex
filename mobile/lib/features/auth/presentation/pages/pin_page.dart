@@ -206,10 +206,10 @@ class _PinPageState extends State<PinPage> {
   VoidCallback? get _back {
     if (widget.mode == PinMode.create && _firstEntry != null) {
       return () => setState(() {
-            _firstEntry = null;
-            _entered = '';
-            _error = null;
-          });
+        _firstEntry = null;
+        _entered = '';
+        _error = null;
+      });
     }
     if (widget.mode == PinMode.unlock || widget.mandatory) return null;
     return () => Navigator.of(context).maybePop();
@@ -221,76 +221,88 @@ class _PinPageState extends State<PinPage> {
       // Qulf rejimida ham, majburiy o'rnatishda ham ortga qaytish yo'q:
       // aks holda "ortga" bosib PIN kodsiz ichkariga kirib bo'lardi.
       canPop: widget.mode != PinMode.unlock && !widget.mandatory,
-      child: Scaffold(
-        backgroundColor: AppPalette.surface,
-        // Ekran past bo'lsa pastki qismi KESILMAYDI: joy yetmasa ro'yxat
-        // suriladi. Ilgari "PIN kodni unutdingizmi?" ekrandan chiqib
-        // ketardi va kodni unutgan odam ilovaga umuman kira olmasdi.
-        body: SafeArea(
-          child: Column(
-            children: [
-              AuthHeader(onBack: _back),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) => SingleChildScrollView(
-                    child: ConstrainedBox(
-                      constraints:
-                          BoxConstraints(minHeight: constraints.maxHeight),
-                      child: IntrinsicHeight(
-                        child: Column(
-                          children: [
-                            const SizedBox(height: AppSpacing.s10),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.gutter,
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    _title,
-                                    textAlign: TextAlign.center,
-                                    style: authTitleStyle,
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  Text(
-                                    _subtitle,
-                                    textAlign: TextAlign.center,
-                                    style: authSubtitleStyle,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.xxl),
-                            _dots(),
-                            if (_error != null) ...[
-                              const SizedBox(height: AppSpacing.xl),
+      // Свой цвет системных панелей: без него экран наследовал тёмно-синюю
+      // полосу навигации от онбординга и заставки.
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarBrightness: Brightness.light,
+          statusBarIconBrightness: Brightness.dark,
+          systemNavigationBarColor: AppPalette.surface,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
+        child: Scaffold(
+          backgroundColor: AppPalette.surface,
+          // Ekran past bo'lsa pastki qismi KESILMAYDI: joy yetmasa ro'yxat
+          // suriladi. Ilgari "PIN kodni unutdingizmi?" ekrandan chiqib
+          // ketardi va kodni unutgan odam ilovaga umuman kira olmasdi.
+          body: SafeArea(
+            child: Column(
+              children: [
+                AuthHeader(onBack: _back),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: IntrinsicHeight(
+                          child: Column(
+                            children: [
+                              const SizedBox(height: AppSpacing.s10),
                               Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: AppSpacing.gutter,
                                 ),
-                                child: _errorLine(_error!),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      _title,
+                                      textAlign: TextAlign.center,
+                                      style: authTitleStyle,
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      _subtitle,
+                                      textAlign: TextAlign.center,
+                                      style: authSubtitleStyle,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ],
-                            const Spacer(),
-                            _keypad(),
-                            // "Unutdingizmi?" faqat qulf rejimida: create va
-                            // confirm da odam kodni endigina kiritmoqda.
-                            if (widget.mode == PinMode.unlock)
-                              TextButton(
-                                onPressed: _forgotPin,
-                                child: Text('pin.forgot'.tr()),
-                              )
-                            else
+                              const SizedBox(height: AppSpacing.xxl),
+                              _dots(),
+                              if (_error != null) ...[
+                                const SizedBox(height: AppSpacing.xl),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.gutter,
+                                  ),
+                                  child: _errorLine(_error!),
+                                ),
+                              ],
+                              const Spacer(),
+                              _keypad(),
+                              // "Unutdingizmi?" faqat qulf rejimida: create va
+                              // confirm da odam kodni endigina kiritmoqda.
+                              if (widget.mode == PinMode.unlock)
+                                TextButton(
+                                  onPressed: _forgotPin,
+                                  child: Text('pin.forgot'.tr()),
+                                )
+                              else
+                                const SizedBox(height: AppSpacing.sm),
                               const SizedBox(height: AppSpacing.sm),
-                            const SizedBox(height: AppSpacing.sm),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -299,24 +311,23 @@ class _PinPageState extends State<PinPage> {
 
   /// Maket C3/D3: xato matni nuqtalar ostida, o'rtada.
   Widget _errorLine(String message) => Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            size: 14,
-            color: AppPalette.textDanger,
-          ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              message,
-              textAlign: TextAlign.center,
-              style: AppTypography.captionS
-                  .copyWith(color: AppPalette.textDanger),
-            ),
-          ),
-        ],
-      );
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      const Icon(
+        Icons.error_outline_rounded,
+        size: 14,
+        color: AppPalette.textDanger,
+      ),
+      const SizedBox(width: 6),
+      Flexible(
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: AppTypography.captionS.copyWith(color: AppPalette.textDanger),
+        ),
+      ),
+    ],
+  );
 
   /// Maket «Auth/PIN dot»: 16 px, to'ldirilgan — ko'k, bo'sh — border/default.
   /// Xatoda (C3, D3) to'rttasi ham qizil: odam kodni noto'g'ri kiritganini

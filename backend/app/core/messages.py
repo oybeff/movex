@@ -70,6 +70,63 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "Buyurtma yakunlandi: {what}",
         "ru": "Заказ завершён: {what}",
     },
+    # --- buyurtma bosqichlari (maket M5, B2–B4) ---
+    "order_departed.title": {
+        "uz": "Texnika yo'lda: {what}",
+        "ru": "Техника в пути: {what}",
+    },
+    "order_departed.body": {
+        "uz": "{owner} yo'lga chiqdi. Xaritada kuzating.",
+        "ru": "{owner} выехал. Следите на карте.",
+    },
+    "order_started.title": {
+        "uz": "Ish boshlandi: {what}",
+        "ru": "Работа началась: {what}",
+    },
+    "order_started.body": {
+        "uz": "Buyurtma #{order_id} — vaqt hisoblanmoqda",
+        "ru": "Заказ #{order_id} — время пошло",
+    },
+    "order_finished.title": {
+        "uz": "Ish yakunlandi — tasdiqlang",
+        "ru": "Работа закончена — подтвердите",
+    },
+    "order_finished.body": {
+        "uz": "{owner} ishni yakunladi. 10 daqiqada javob bermasangiz, avtomatik tasdiqlanadi.",
+        "ru": "{owner} закончил работу. Без ответа за 10 минут заказ подтвердится сам.",
+    },
+    "order_delayed.title": {
+        "uz": "Texnika kechikmoqda",
+        "ru": "Техника задерживается",
+    },
+    "order_delayed.body": {
+        "uz": "{owner} taxminan {minutes} daqiqaga kechikadi",
+        "ru": "{owner} задержится примерно на {minutes} мин",
+    },
+    "order_extend_requested.title": {
+        "uz": "Ish vaqtini uzaytirish so'rovi",
+        "ru": "Запрос на продление",
+    },
+    "order_extend_requested.body": {
+        "uz": "Mijoz yana {hours} soat so'radi — buyurtma #{order_id}",
+        "ru": "Клиент просит ещё {hours} ч — заказ #{order_id}",
+    },
+    "order_extend_approved.title": {
+        "uz": "Uzaytirish tasdiqlandi",
+        "ru": "Продление подтверждено",
+    },
+    "order_extend_approved.body": {
+        "uz": "Ish vaqti {hours} soatga uzaytirildi",
+        "ru": "Время работы продлено на {hours} ч",
+    },
+    "order_extend_declined.title": {
+        "uz": "Uzaytirish rad etildi",
+        "ru": "Продление отклонено",
+    },
+    "order_extend_declined.body": {
+        "uz": "Texnika egasi uzaytirishga rozi bo'lmadi",
+        "ru": "Владелец не согласился продлить",
+    },
     # --- buyurtmalar: matn ---
     "order_created.body": {
         "uz": "Buyurtma #{order_id}, {start} — {end}",

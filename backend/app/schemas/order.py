@@ -51,6 +51,8 @@ class OrderPricePreview(BaseModel):
 class OrderUpdate(BaseModel):
     """Order yangilash uchun schema (faqat status o'zgartiriladi)"""
     status: Optional[str] = Field(None, description="Order status: pending, confirmed, rejected, cancelled, completed")
+    # E6: bekor qilish sababi; faqat status=cancelled bilan hisobga olinadi
+    cancel_reason: Optional[str] = Field(None, max_length=30)
 
 class OrderRead(BaseModel):
     id: int
@@ -81,6 +83,7 @@ class OrderRead(BaseModel):
     delay_minutes: Optional[int] = None
     delay_reason: Optional[str] = None
     cancelled_by: Optional[str] = None
+    cancel_reason: Optional[str] = None
     problem_reported_at: Optional[datetime] = None
 
     class Config:

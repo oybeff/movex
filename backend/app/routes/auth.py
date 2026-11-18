@@ -51,6 +51,9 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(user.blocked_reason
                     or "Hisobingiz bloklangan. Administrator bilan bog'laning."),
+            # Приложение по этому заголовку отличает блокировку от «нет прав»
+            # и выходит из аккаунта, показав причину.
+            headers={"X-Account-Blocked": "1"},
         )
 
     return user

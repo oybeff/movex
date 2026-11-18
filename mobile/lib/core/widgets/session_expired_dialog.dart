@@ -4,8 +4,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme/app_tokens.dart';
 
-/// U1 · Sessiya muddati tugadi.
-Future<void> showSessionExpiredDialog(BuildContext context) => showDialog<void>(
+/// U1 · Sessiya muddati tugadi. [blockedReason] — аккаунт заблокирован
+/// администратором: то же окно, но с причиной от сервера.
+Future<void> showSessionExpiredDialog(BuildContext context, {String? blockedReason}) => showDialog<void>(
       context: context,
       barrierDismissible: false,
       barrierColor: const Color(0x730B1220),
@@ -29,9 +30,17 @@ Future<void> showSessionExpiredDialog(BuildContext context) => showDialog<void>(
                 ),
               ),
               const SizedBox(height: 10),
-              Text('taxi.session_title'.tr(), textAlign: TextAlign.center, style: AppTypography.h3),
+              Text(
+                blockedReason == null ? 'taxi.session_title'.tr() : 'taxi.blocked_title'.tr(),
+                textAlign: TextAlign.center,
+                style: AppTypography.h3,
+              ),
               const SizedBox(height: 10),
-              Text('taxi.session_body'.tr(), textAlign: TextAlign.center, style: AppTypography.subtitle),
+              Text(
+                blockedReason ?? 'taxi.session_body'.tr(),
+                textAlign: TextAlign.center,
+                style: AppTypography.subtitle,
+              ),
               const SizedBox(height: 16),
               ElevatedButton(onPressed: () => Navigator.of(ctx).pop(), child: Text('taxi.login_again'.tr())),
             ],
