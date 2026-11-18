@@ -747,7 +747,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     if (reason == null) return;
     setState(() => _busy = true);
     try {
-      await _api.cancelRequest(_request!.id);
+      await _api.cancelRequest(_request!.id, reason: reason);
       _poll?.cancel();
       if (mounted) setState(() => _step = _Step.tariff);
     } catch (e) {

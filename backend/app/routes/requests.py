@@ -30,6 +30,7 @@ from app.schemas.equipment_request import (
     QuickAcceptIn,
     QuickAcceptResult,
     QuickIncoming,
+    RequestCancelIn,
     RequestCreate,
     RequestRead,
     RequestWithOffers,
@@ -305,11 +306,13 @@ def get_request(
 @router.post("/{request_id}/cancel", response_model=RequestRead)
 def cancel_request(
     request_id: int,
+    data: Optional[RequestCancelIn] = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     request = _get_request(db, request_id)
-    request = request_service.cancel_request(db, request, current_user)
+    reason = data.cancel_reason if data else None
+    request = request_service.cancel_request(db, request, current_user, reason=reason)
     return _to_read(db, request)
 
 

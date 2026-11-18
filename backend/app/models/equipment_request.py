@@ -103,6 +103,7 @@ class EquipmentRequest(Base):
     # cancelled — mijoz bekor qildi
     # expired   — muddati o'tdi
     status = Column(String(20), nullable=False, default="open", index=True)
+    cancel_reason = Column(String(30), nullable=True)
 
     # Tanlangan taklif va undan kelib chiqqan buyurtma
     selected_offer_id = Column(Integer, nullable=True)

@@ -49,6 +49,10 @@ class RequestCreate(BaseModel):
     surge_percent: int = Field(default=0, ge=0, le=30)
 
 
+class RequestCancelIn(BaseModel):
+    cancel_reason: Optional[str] = Field(default=None, max_length=30)
+
+
 class TariffQuoteRead(BaseModel):
     """Один тариф на экране выбора: цена часа, часы и итог — от сервера."""
     tier: str
@@ -126,6 +130,7 @@ class RequestRead(BaseModel):
 
     selected_offer_id: Optional[int] = None
     order_id: Optional[int] = None
+    cancel_reason: Optional[str] = None
     expires_at: Optional[datetime] = None
     created_at: datetime
 

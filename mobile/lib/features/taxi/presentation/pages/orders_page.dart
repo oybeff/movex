@@ -61,7 +61,7 @@ class _OrdersPageState extends State<OrdersPage> {
     setState(() => _busy = true);
     try {
       if (c.isRequest) {
-        await _api.cancelRequest(c.requestId!);
+        await _api.cancelRequest(c.requestId!, reason: reason);
       } else {
         await _api.setOrderStatus(c.orderId!, 'cancelled', reason: reason);
       }

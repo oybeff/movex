@@ -96,8 +96,11 @@ class TaxiService {
         .toList();
   }
 
-  Future<void> cancelRequest(int id) async {
-    await _dio.post('/requests/$id/cancel');
+  Future<void> cancelRequest(int id, {String? reason}) async {
+    await _dio.post(
+      '/requests/$id/cancel',
+      data: reason == null ? null : {'cancel_reason': reason},
+    );
   }
 
   Future<Map<String, dynamic>> getOrder(int id) async {

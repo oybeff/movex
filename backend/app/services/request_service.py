@@ -441,13 +441,20 @@ def _declined_ids(db: Session, owner_id: int) -> set:
     }
 
 
-def cancel_request(db: Session, request: EquipmentRequest, user: User) -> EquipmentRequest:
+CANCEL_REASONS = ("plans", "long_wait", "wrong_address", "other")
+
+
+def cancel_request(
+    db: Session, request: EquipmentRequest, user: User, reason: Optional[str] = None
+) -> EquipmentRequest:
     if request.client_id != user.id and user.role != "admin":
         raise HTTPException(403, "Bu zayavka sizniki emas")
     if request.status not in ("open", "awaiting_payment"):
         raise HTTPException(400, "Faqat ochiq zayavkani bekor qilish mumkin")
 
     request.status = "cancelled"
+    if reason in CANCEL_REASONS:
+        request.cancel_reason = reason
     _release_quick(db, request)
     # Kutayotgan takliflarni ham yopamiz, aks holda ular osilib qoladi
     offers = (
