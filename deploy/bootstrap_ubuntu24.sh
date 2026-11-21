@@ -220,7 +220,7 @@ ok "права 640 $APP_USER:$APP_USER"
 # ---------------------------------------------------------------- 6. python
 
 step "6/12 Python-окружение"
-mkdir -p "$APP_DIR/backend/media" "$APP_DIR/backend/logs" "$APP_DIR/backend/database/backups"
+mkdir -p "$APP_DIR/backend/media" "$APP_DIR/backend/private_media" "$APP_DIR/backend/logs" "$APP_DIR/backend/database/backups"
 if [ ! -d "$APP_DIR/backend/venv" ]; then
     python3 -m venv "$APP_DIR/backend/venv"
     ok "venv создан"
@@ -270,7 +270,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=$APP_DIR/backend/media $APP_DIR/backend/logs $APP_DIR/backend/database/backups
+ReadWritePaths=$APP_DIR/backend/media $APP_DIR/backend/private_media $APP_DIR/backend/logs $APP_DIR/backend/database/backups
 
 StandardOutput=journal
 StandardError=journal

@@ -12,6 +12,7 @@ MoveX GO — O‘zbekistonda qurilish texnikasini ijaraga olish va qurilish mate
 • Joylashuv — ixtiyoriy. Yaqin atrofdagi texnikani topish, yetkazib berish nuqtasi va qidiruv hududi uchun. Qidiruv hududi uchun tanlangan nuqta profilda saqlanadi. Egasi o‘z texnikasi uchun ko‘rsatgan nuqta boshqa foydalanuvchilarga xaritada ko‘rinadi. Joriy joylashuvingiz fonda kuzatilmaydi va hech qayerga yuborilmaydi.
 • Profil rasmi va saqlangan manzillar (uy, ish, obyekt) — ixtiyoriy. Faqat sizga ko'rinadi, manzillar buyurtma berishda taklif qilinadi. Akkaunt bilan birga o'chiriladi.
 • O‘zingiz yuklaydigan suratlar va matnlar: texnika, e’lonlar, qurilish materiallari, sharhlar.
+• Haydovchi hujjatlari — faqat MoveX GO Driver ilovasida, texnika egalari uchun: pasport (ID karta), haydovchilik guvohnomasi, texnika texpasporti va texnikaning o‘z surati, xohishga ko‘ra — sug‘urta polisi. Buyurtmalarni bajarishdan oldin shaxsni tekshirish uchun kerak. Suratlar e’lon qilinmaydi: ularni faqat siz va hujjatlarni tekshiradigan administratorlar ko‘radi.
 • Buyurtma chatidagi yozishmalar — serverda saqlanadi, faqat buyurtma ishtirokchilariga ko‘rinadi.
 • Buyurtmalar, balans va to‘lovlar: buyurtmalar, to‘ldirishlar, yechib olishlar, komissiyalar tarixi.
 • Karta raqami va karta egasining ismi — faqat pul yechib olsangiz. Pulni o‘tkazish uchun kerak va pul yechish arizasi bilan birga saqlanadi.
@@ -53,6 +54,7 @@ Ilovada: Sozlamalar → «Hisobni o‘chirish». Balansda yechib olish mumkin bo
 O‘chirilgandan keyin:
 • ismingiz va telefon raqamingiz o‘chiriladi, hisobga kirish darhol yopiladi;
 • texnika, e’lonlar va tovarlar e’londan olinadi, suratlar o‘chiriladi;
+• haydovchi hujjatlarining suratlari serverdan o‘chiriladi;
 • sovg‘a balansi yo‘qoladi — uni baribir yechib bo‘lmaydi;
 • yakunlangan buyurtmalar tarixi ikkinchi tomonda sizning ma’lumotlaringizsiz qoladi;
 • shu telefon raqam bilan keyin qaytadan ro‘yxatdan o‘tish mumkin.

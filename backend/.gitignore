@@ -106,3 +106,4 @@ nginx/ssl/*.crt
 # Alembic
 alembic/versions/*.pyc
 
+private_media/

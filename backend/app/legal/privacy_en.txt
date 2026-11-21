@@ -12,6 +12,7 @@ MoveX GO is a service for renting construction equipment and buying building mat
 • Location — optional. Used to find equipment nearby, to set an order's delivery point and your search area. The point you choose as your search area is saved in your profile. The point an owner sets for their equipment is visible to other users on the map. We do not track your current location in the background and do not send it anywhere.
 • Profile photo and saved addresses (home, work, site) — optional. Visible only to you; addresses are suggested when you order. Deleted together with the account.
 • Photos and texts you upload yourself: equipment, listings, building materials, reviews.
+• Driver documents — only in the MoveX GO Driver app, for equipment owners: photos of your passport (ID card), driving licence, vehicle registration certificate and the equipment itself, optionally your insurance policy. We need them to verify you before you start taking orders. The photos are never published: only you and the administrators who review documents can see them.
 • Order chat messages — stored on the server, visible only to the participants of the order.
 • Orders, balance and payments: history of orders, top-ups, charges, commissions and withdrawals.
 • Card number and cardholder name — only if you withdraw money. Needed to send you the money and stored with the withdrawal request.
@@ -53,6 +54,7 @@ In the app: Settings → "Delete account". The account cannot be deleted while t
 After deletion:
 • your name and phone number are erased and sign-in is closed immediately;
 • your equipment, listings and products are unpublished and photos are deleted;
+• photos of your driver documents are erased from the server;
 • the bonus balance is forfeited — it cannot be withdrawn anyway;
 • the history of completed orders stays with the other party without your data;
 • you can register again later with the same phone number.

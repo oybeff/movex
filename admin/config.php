@@ -412,6 +412,34 @@ function internalApiPost(string $path, array $payload = []): array {
 }
 
 /**
+ * GET к внутренним адресам бэкенда (X-Admin-Secret). $raw — вернуть тело
+ * как есть (фото документа водителя), иначе — разобранный JSON.
+ */
+function internalApiGet(string $path, bool $raw = false): array {
+    if (ADMIN_INTERNAL_SECRET === '') {
+        return ['ok' => false, 'data' => null, 'type' => '', 'error' => 'ADMIN_INTERNAL_SECRET backend/.env da to'ldirilmagan'];
+    }
+    $ch = curl_init(rtrim(API_BASE_URL, '/') . $path);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => API_TIMEOUT,
+        CURLOPT_HTTPHEADER => ['X-Admin-Secret: ' . ADMIN_INTERNAL_SECRET],
+    ]);
+    $body = curl_exec($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $type = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+    if ($body === false) {
+        return ['ok' => false, 'data' => null, 'type' => '', 'error' => 'Backend javob bermadi (' . $curlError . ')'];
+    }
+    if ($status < 200 || $status >= 300) {
+        return ['ok' => false, 'data' => null, 'type' => '', 'error' => 'HTTP ' . $status];
+    }
+    return ['ok' => true, 'data' => $raw ? $body : json_decode($body, true), 'type' => $type, 'error' => ''];
+}
+
+/**
  * Utility Functions
  */
 function formatBytes($bytes, $precision = 2) {

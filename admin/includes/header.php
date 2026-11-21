@@ -189,6 +189,24 @@ $adminUser = getAdminUser();
                         </a>
                     </li>
                     <li>
+                        <a href="drivers.php" class="<?= ($currentPage ?? '') === 'drivers' ? 'active' : '' ?>">
+                            <span>🪪</span>
+                            Haydovchilar hujjatlari
+                            <?php
+                            // Tekshirilmagan hujjatlar — haydovchi ishga chiqa olmaydi
+                            try {
+                                $pendingDocs = getDbConnection()
+                                    ->query("SELECT COUNT(*) FROM driver_documents WHERE status = 'pending'")
+                                    ->fetchColumn();
+                            } catch (Throwable $e) {
+                                $pendingDocs = 0;
+                            }
+                            if ($pendingDocs > 0): ?>
+                                <span class="badge badge-warning" style="margin-left:auto;"><?= (int) $pendingDocs ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                    <li>
                         <a href="backup.php" class="<?= ($currentPage ?? '') === 'backup' ? 'active' : '' ?>">
                             <span>💾</span>
                             Database Backup

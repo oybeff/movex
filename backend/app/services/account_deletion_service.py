@@ -187,6 +187,10 @@ def delete_account(db: Session, user: User) -> None:
     if user.avatar_url:
         media.delete_by_url(user.avatar_url)
         user.avatar_url = None
+    # Фото паспорта, прав и техпаспорта (MoveX GO Driver) — с диска и из базы
+    from app.services import driver_service
+
+    driver_service.delete_all(db, user.id)
     # Привязанные карты — отвязываем и в Multicard (токен аннулируется)
     from app.models.card import UserCard
     from app.services import rahmat_service

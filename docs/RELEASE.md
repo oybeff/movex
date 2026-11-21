@@ -154,6 +154,21 @@ cd backend && venv/bin/python scripts/create_admin.py
 
 ---
 
+### Документы водителя (MoveX GO Driver), с 21.11.2026
+
+Фото паспорта, прав и техпаспорта лежат в `backend/private_media/` —
+вне `media/`, которую nginx отдаёт как `/static`. На сервере, поднятом
+до этой даты, каталога нет, и systemd не даёт службе писать туда:
+
+```bash
+sudo -u movex mkdir -p /opt/movex/backend/private_media   # пользователь службы — как у media/
+sudo systemctl edit movex-api   # в [Service] дописать к ReadWritePaths: /opt/movex/backend/private_media
+sudo systemctl restart movex-api
+```
+
+Без этого загрузка документа в приложении водителя отвечает 500.
+Проверка документов в админке — `drivers.php`.
+
 ## 2. Платёжные системы
 
 Система одна — **Rahmat (Multicard)**. Click и Payme со своими
