@@ -15,7 +15,11 @@
 - ОТМЕНА наличного: только снятие заморозки владельца. Раньше ветка
   «frozen_amount == 0» считалась «старым заказом» и перевела бы полную
   сумму с владельца клиенту — это проверяется отдельно;
-- заказ с баланса по тарифу завершается как обычный (эскроу).
+- заказ с баланса по тарифу завершается как обычный (эскроу);
+- залог за наличные (21.11.2026, cash_deposit_amount): замораживается у
+  клиента при создании, не хватает — 400; переживает принятие заказа и
+  возвращается при завершении, отмене заказа и отмене заявки; 0 — без залога.
+  Остальные разделы идут с залогом 0, как было до него.
 """
 import os
 import sys
@@ -457,6 +461,81 @@ def flow_section():
     check("с владельца списана комиссия наличного заказа", money(owner_id)[0] < bal_before, (bal_before, money(owner_id)))
 
 
+DEPOSIT_KEY = "cash_deposit_amount"
+_saved_deposit = []
+
+
+def set_deposit(value):
+    if value is None:
+        sql("DELETE FROM app_settings WHERE key=:k", k=DEPOSIT_KEY)
+    elif sql("SELECT 1 FROM app_settings WHERE key=:k", k=DEPOSIT_KEY):
+        sql("UPDATE app_settings SET value=to_jsonb(CAST(:v AS text)) WHERE key=:k", k=DEPOSIT_KEY, v=str(value))
+    else:
+        sql("INSERT INTO app_settings (key, value) VALUES (:k, to_jsonb(CAST(:v AS text)))",
+            k=DEPOSIT_KEY, v=str(value))
+
+
+def deposit_section():
+    head("Залог за наличные")
+    set_deposit(None)
+    client_id, client = register("client")
+    owner_id, owner = register("owner")
+    add_equipment(owner)
+    r = requests.get(f"{API}/requests/cash-deposit", headers=client)
+    check("по умолчанию залог 50 000", r.status_code == 200 and r.json()["amount"] == 50000, r.text)
+    set_deposit(70000)
+    r = requests.get(f"{API}/requests/cash-deposit", headers=client)
+    check("сумма из настройки: 70 000", r.json()["amount"] == 70000, r.text)
+
+    set_money(client_id, 60000)
+    r = order_req(client, payment="cash")
+    check("на балансе меньше залога — 400", r.status_code == 400, r.text)
+    check("в тексте сумма без «.0»", "60 000" in r.text and ".0" not in r.text, r.text)
+
+    set_money(client_id, 100000)
+    r = order_req(client, payment="cash")
+    check("наличный заказ создан", r.status_code == 200, r.text)
+    rid = r.json()["id"]
+    check("у клиента заморожен залог 70 000", money(client_id) == (Decimal("100000"), Decimal("70000")),
+          money(client_id))
+    r = requests.post(f"{API}/requests/{rid}/cancel", headers=client, json={})
+    check("отмена заявки до принятия", r.status_code == 200, r.text)
+    check("залог вернулся после отмены заявки", money(client_id) == (Decimal("100000"), Decimal(0)),
+          money(client_id))
+
+    r = order_req(client, payment="cash")
+    rid = r.json()["id"]
+    set_money(owner_id, 1000000)
+    r = requests.post(f"{API}/requests/{rid}/quick-accept", headers=owner)
+    check("владелец взял", r.status_code == 200, r.text)
+    oid = r.json()["order_id"]
+    check("после принятия залог всё ещё заморожен", money(client_id)[1] == Decimal("70000"), money(client_id))
+    row = sql("SELECT frozen_amount FROM orders WHERE id=:o", o=oid)[0]
+    check("у заказа эскроу 0 (CHECK наличных)", Decimal(str(row[0])) == 0, row)
+    r = requests.put(f"{API}/orders/{oid}", headers=client, json={"status": "completed"})
+    check("заказ завершён", r.status_code == 200, r.text)
+    check("залог вернулся, баланс клиента цел", money(client_id) == (Decimal("100000"), Decimal(0)),
+          money(client_id))
+    r = requests.put(f"{API}/orders/{oid}", headers=client, json={"status": "completed"})
+    check("повторное завершение не трогает деньги", money(client_id) == (Decimal("100000"), Decimal(0)),
+          money(client_id))
+
+    r = order_req(client, payment="cash")
+    rid = r.json()["id"]
+    r = requests.post(f"{API}/requests/{rid}/quick-accept", headers=owner)
+    oid = r.json()["order_id"]
+    r = requests.put(f"{API}/orders/{oid}", headers=owner, json={"status": "cancelled"})
+    check("владелец отменил заказ", r.status_code == 200, r.text)
+    check("залог вернулся после отмены заказа", money(client_id) == (Decimal("100000"), Decimal(0)),
+          money(client_id))
+
+    set_deposit(0)
+    set_money(client_id, 0)
+    r = order_req(client, payment="cash")
+    check("залог 0 — наличный заказ при пустом балансе", r.status_code == 200, r.text)
+    check("и ничего не заморожено", money(client_id) == (Decimal(0), Decimal(0)), money(client_id))
+
+
 def cleanup():
     db = SessionLocal()
     try:
@@ -472,10 +551,15 @@ def cleanup():
 
 
 if __name__ == "__main__":
+    row = sql("SELECT value #>> '{}' FROM app_settings WHERE key=:k", k=DEPOSIT_KEY)
+    _saved_deposit.append(row[0][0] if row else None)
     try:
+        set_deposit(0)   # прежние разделы писались до залога
         main()
         flow_section()
+        deposit_section()
     finally:
+        set_deposit(_saved_deposit[0])
         cleanup()
     print(f"\nITOG: {ok_count} o'tdi, {fail_count} yiqildi")
     sys.exit(1 if fail_count else 0)

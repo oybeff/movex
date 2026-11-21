@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Sovg'a va Rahmat shakllarida rejim va foiz maydonlari yo'q —
     // ularni tekshirish shart emas.
-    $error = in_array($form, ['bonus', 'rahmat', 'listing_fee', 'app_status'], true)
+    $error = in_array($form, ['bonus', 'rahmat', 'listing_fee', 'app_status', 'cash_deposit'], true)
         ? null
         : validateCommission($mode, $fixed, $percent);
 
@@ -128,6 +128,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = isset($_POST['maintenance'])
                 ? "Saqlandi. Ilova hozir «Texnik ishlar» ekranini ko'rsatadi."
                 : "Saqlandi.";
+        }
+    } elseif ($form === 'cash_deposit') {
+        // Naqd buyurtma garovi: mijoz balansida muzlatiladi, buyurtma
+        // tugaganda yoki bekor bo'lganda qaytadi. 0 — garovsiz.
+        $cashDeposit = trim((string)($_POST['cash_deposit'] ?? '0'));
+        if ($cashDeposit === '') {
+            $cashDeposit = '0';
+        }
+        if (!is_numeric($cashDeposit) || (float)$cashDeposit < 0) {
+            $error = "Garov manfiy bo'lishi mumkin emas";
+        } else {
+            saveSetting($db, 'cash_deposit_amount', (string)(int)round((float)$cashDeposit));
+            $message = (float)$cashDeposit > 0
+                ? "Saqlandi. Yangi naqd buyurtmalarga qo'llaniladi."
+                : "Saqlandi. Naqd buyurtma garovsiz.";
         }
     } elseif ($form === 'listing_fee') {
         // E'lon joylash narxi. 0 — bepul. Shaxsiy narx users.php da.
@@ -176,6 +191,8 @@ $bonusAmount = settingValue($db, 'signup_bonus_amount', '50000');
 
 // E'lon joylash narxi ("E'lonlar" bo'limi). 0 — bepul.
 $listingFee = settingValue($db, 'listing_fee_amount', '0');
+// Standart 50 000 — request_service.CASH_DEPOSIT_DEFAULT bilan bir xil.
+$cashDepositAmount = settingValue($db, 'cash_deposit_amount', '50000');
 $minAppVersion = settingValue($db, 'min_app_version', '0.0.0');
 $maintenanceOn = settingValue($db, 'maintenance_enabled', '0') === '1';
 $maintenanceUntil = settingValue($db, 'maintenance_until', '');
@@ -515,6 +532,34 @@ include 'includes/header.php';
                     <label>Bitta e'lon narxi</label><br>
                     <input type="number" name="listing_fee" min="0" step="1000"
                            value="<?= htmlspecialchars($listingFee) ?>"
+                           style="max-width: 220px; margin-top: 6px;">
+                    <small class="text-muted">so'm</small>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
+                    💾 Saqlash
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-3" style="margin-top: 24px;">
+        <div class="card-header">
+            <h3 class="card-title">Naqd buyurtma garovi</h3>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info" style="margin-bottom: 18px;">
+                Mijoz <strong>naqd pul</strong> bilan texnika chaqirsa, shuncha summa uning
+                balansida <strong>muzlatiladi</strong>. Ega buyurtmani yakunlaganda yoki
+                buyurtma bekor bo'lganda garov qaytadi. Balansda yetmasa — naqd buyurtma
+                berib bo'lmaydi. <strong>0 — garovsiz.</strong> Yangi buyurtmalarga qo'llaniladi.
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                <input type="hidden" name="form" value="cash_deposit">
+                <div class="form-group">
+                    <label>Garov summasi</label><br>
+                    <input type="number" name="cash_deposit" min="0" step="1000"
+                           value="<?= htmlspecialchars($cashDepositAmount) ?>"
                            style="max-width: 220px; margin-top: 6px;">
                     <small class="text-muted">so'm</small>
                 </div>

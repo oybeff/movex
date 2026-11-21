@@ -12,6 +12,8 @@ set -uo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND="$(dirname "$DIR")"
 PY="$BACKEND/venv/bin/python"
+# Windows: venv кладёт интерпретатор в Scripts/
+[ -x "$PY" ] || PY="$BACKEND/venv/Scripts/python.exe"
 
 if [ ! -x "$PY" ]; then
   echo "venv topilmadi: $PY"

@@ -543,6 +543,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
   late String _m = widget.selected;
   List<BankCard> _cards = const [];
   int? _newCard;
+  double _deposit = 0; // залог за наличные, с сервера
 
   @override
   void initState() {
@@ -554,6 +555,10 @@ class _PaymentSheetState extends State<_PaymentSheet> {
     try {
       final c = await CardApi().list();
       if (mounted) setState(() => _cards = c);
+    } catch (_) {}
+    try {
+      final d = await TaxiService().cashDeposit();
+      if (mounted) setState(() => _deposit = d);
     } catch (_) {}
   }
 
@@ -628,7 +633,8 @@ class _PaymentSheetState extends State<_PaymentSheet> {
         _sheetHeader(context, 'taxi.payment_title'.tr()),
         const SizedBox(height: AppSpacing.md),
         if (!widget.cardsOnly)
-          _option('cash', const TaxiIcon('cash', size: 24), 'taxi.pay_cash_full'.tr(), 'taxi.pay_cash_hint'.tr()),
+          _option('cash', const TaxiIcon('cash', size: 24), 'taxi.pay_cash_full'.tr(),
+              _deposit > 0 ? 'taxi.pay_cash_deposit_hint'.tr(args: [formatSum(_deposit)]) : 'taxi.pay_cash_hint'.tr()),
         for (final c in _cards)
           _option(
             'card:${c.id}',

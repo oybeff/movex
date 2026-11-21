@@ -1084,6 +1084,7 @@
     "pay_balance": "Balans",
     "pay_cash_done": "Naqd pul — egasiga bering",
     "pay_cash_hint": "Ish tugagach egasiga naqd to'laysiz",
+    "pay_cash_deposit_hint": "Ish tugagach egasiga naqd to'laysiz. Balansda {} so'm garov muzlatiladi va qaytadi",
     "pay_cash": "Naqd",
     "payment_title": "To'lov usuli",
     "payment": "To'lov",

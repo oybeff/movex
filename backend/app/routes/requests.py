@@ -180,6 +180,18 @@ def tariff_quotes(
     return [q.__dict__ for q in tariff_service.quote_all(db, equipment_type, hours, attachment_id)]
 
 
+@router.get("/cash-deposit")
+def cash_deposit(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Залог за наличный заказ: столько заморозится на балансе клиента, пока
+    заказ не закончится. Приложение показывает его до заказа; 0 — без залога.
+    """
+    return {"amount": float(request_service.cash_deposit_amount(db))}
+
+
 @router.get("/attachments", response_model=List[AttachmentRead])
 def attachments(
     equipment_type: str = Query(..., min_length=1, max_length=50),

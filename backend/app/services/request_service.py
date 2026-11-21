@@ -130,6 +130,40 @@ def _release_quick(db: Session, request: EquipmentRequest) -> None:
     request.frozen_amount = Decimal("0")
 
 
+#: Залог клиента за наличный тарифный заказ (правки 21.11.2026): без
+#: него клиент мог вызвать технику и не выйти, а владелец ехал впустую.
+#: Сумма — app_settings.cash_deposit_amount (commission.php), 0 — без залога.
+CASH_DEPOSIT_KEY = "cash_deposit_amount"
+CASH_DEPOSIT_DEFAULT = Decimal("50000")
+
+
+def cash_deposit_amount(db: Session) -> Decimal:
+    from app.models.app_settings import AppSettings
+
+    row = db.query(AppSettings).filter(AppSettings.key == CASH_DEPOSIT_KEY).first()
+    try:
+        value = Decimal(str(row.value)) if row is not None and row.value is not None else CASH_DEPOSIT_DEFAULT
+    except Exception:
+        value = CASH_DEPOSIT_DEFAULT
+    return value if value > 0 else Decimal("0")
+
+
+def release_cash_deposit(db: Session, order_id: int) -> None:
+    """
+    Залог за наличный заказ возвращается, когда заказ завершён (владелец
+    получил деньги), отменён или удалён. Залог лежит в заявке
+    (equipment_requests.frozen_amount): у заказа за наличные frozen_amount
+    обязан быть 0 (CHECK check_order_cash_no_escrow). Без commit.
+    """
+    req = (
+        db.query(EquipmentRequest)
+        .filter(EquipmentRequest.order_id == order_id, EquipmentRequest.payment_method == "cash")
+        .first()
+    )
+    if req is not None:
+        _release_quick(db, req)
+
+
 # ------------------------------------------------------------- zayavkalar
 
 def create_request(db: Session, client: User, data) -> EquipmentRequest:
@@ -261,12 +295,14 @@ def create_request(db: Session, client: User, data) -> EquipmentRequest:
         if cp.status != "active":
             request.status = "awaiting_payment"
 
-    # Наличный заказ ничего не замораживает у клиента: он платит владельцу
-    # в руки. Комиссию заморозят у владельца, когда тот возьмёт заказ.
-    if mode == "quick" and payment_method == "balance":
+    # Наличный заказ: сам заказ клиент оплачивает владельцу в руки, а на
+    # балансе замораживается только залог (cash_deposit_amount). Комиссию
+    # заморозят у владельца, когда тот возьмёт заказ.
+    deposit = cash_deposit_amount(db) if payment_method == "cash" else Decimal("0")
+    if mode == "quick" and (payment_method == "balance" or deposit > 0):
         # Narx darhol muzlatiladi: ega "olaman" deganda pul allaqachon
         # turgan bo'lishi kerak, aks holda u bekorga yo'lga chiqardi.
-        amount = Decimal(str(budget))
+        amount = Decimal(str(budget)) if payment_method == "balance" else deposit
         balance = (
             db.query(Balance).filter(Balance.user_id == client.id).with_for_update().first()
         )
@@ -855,8 +891,11 @@ def quick_accept(db: Session, request_id: int, owner: User, equipment_id: Option
         cp = _card_payment(db, request)
         if cp is not None:
             cp.order_id = order.id
-    # Pul endi buyurtmaniki: mijoz balansidagi muzlatish o'z joyida qoladi
-    request.frozen_amount = Decimal("0")
+    # Pul endi buyurtmaniki: mijoz balansidagi muzlatish o'z joyida qoladi.
+    # Naqd buyurtmaning garovi esa zayavkada qoladi — buyurtma tugaganda
+    # release_cash_deposit uni qaytaradi.
+    if not is_cash:
+        request.frozen_amount = Decimal("0")
     db.commit()
     db.refresh(order)
 

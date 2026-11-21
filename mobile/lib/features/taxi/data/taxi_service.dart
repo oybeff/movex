@@ -31,6 +31,13 @@ class TaxiService {
         .toList();
   }
 
+  /// Залог за наличный заказ — замораживается на балансе, пока заказ не
+  /// закончится (0 — без залога). Сумму задаёт админ, поэтому спрашиваем.
+  Future<double> cashDeposit() async {
+    final r = await _dio.get('/requests/cash-deposit');
+    return (r.data['amount'] as num?)?.toDouble() ?? 0;
+  }
+
   Future<List<TaxiAttachment>> attachments(String type) async {
     final r = await _dio.get('/requests/attachments',
         queryParameters: {'equipment_type': type});

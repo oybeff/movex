@@ -558,6 +558,11 @@ def delete_order(db: Session, order_id: int):
                     current_frozen - owner_frozen if current_frozen >= owner_frozen else Decimal("0")
                 )
 
+    # Залог клиента за наличный заказ — до удаления: потом связь заявки
+    # с заказом обнулится (ON DELETE SET NULL), и залог не найти.
+    from app.services.request_service import release_cash_deposit
+    release_cash_deposit(db, db_order.id)
+
     db.delete(db_order)
     db.commit()
     return db_order
@@ -694,6 +699,10 @@ def _update_cash_order(db: Session, db_order: Order, equipment, old_status: str,
         frozen = Decimal(str(ob.frozen_balance or 0)) - Decimal(str(db_order.owner_frozen or 0))
         ob.frozen_balance = frozen if frozen > 0 else Decimal('0.0')
         db_order.owner_frozen = Decimal('0.0')
+        # Залог клиента (cash_deposit_amount) возвращается в тех же ветках,
+        # где снимается заморозка владельца: заказ закончился так или иначе.
+        from app.services.request_service import release_cash_deposit
+        release_cash_deposit(db, db_order.id)
 
     if old_status == 'confirmed' and new_status == 'completed':
         if not is_party:
