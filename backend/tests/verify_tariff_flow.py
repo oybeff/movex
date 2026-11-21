@@ -563,6 +563,11 @@ def driver_section():
     body = r.json()
     check("«Yetib keldim»: arrived_at и departed_at заполнены",
           r.status_code == 200 and body.get("arrived_at") and body.get("departed_at"), body)
+    n = sql("SELECT count(*) FROM notifications WHERE user_id=:u AND type='order_arrived'", u=client_id)
+    check("клиенту ушло уведомление «Texnika yetib keldi»", n[0][0] == 1, n)
+    requests.post(f"{API}/orders/{oid}/arrive", headers=owner)
+    n = sql("SELECT count(*) FROM notifications WHERE user_id=:u AND type='order_arrived'", u=client_id)
+    check("повторное нажатие не шлёт второе уведомление", n[0][0] == 1, n)
 
 
 def cleanup():

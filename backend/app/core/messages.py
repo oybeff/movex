@@ -79,6 +79,14 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "{owner} yo'lga chiqdi. Xaritada kuzating.",
         "ru": "{owner} выехал. Следите на карте.",
     },
+    "order_arrived.title": {
+        "uz": "Texnika yetib keldi: {what}",
+        "ru": "Техника на месте: {what}",
+    },
+    "order_arrived.body": {
+        "uz": "{owner} manzilda kutmoqda. 10 daqiqa bepul kutish.",
+        "ru": "{owner} ждёт на месте. 10 минут ожидания бесплатно.",
+    },
     "order_started.title": {
         "uz": "Ish boshlandi: {what}",
         "ru": "Работа началась: {what}",

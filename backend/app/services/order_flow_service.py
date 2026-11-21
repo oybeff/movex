@@ -104,10 +104,13 @@ def arrive(db: Session, order_id: int, user: User) -> Order:
     now = _now()
     if order.departed_at is None:
         order.departed_at = now
-    if order.arrived_at is None:
+    first = order.arrived_at is None
+    if first:
         order.arrived_at = now
     db.commit()
     db.refresh(order)
+    if first:
+        _notify(db, order, order.user_id, "order_arrived")
     return order
 
 
