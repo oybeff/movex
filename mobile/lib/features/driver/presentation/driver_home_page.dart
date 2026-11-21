@@ -10,10 +10,13 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/delete_account_button.dart';
 import '../../listings/presentation/pages/listings_page.dart';
 import '../../owner_home/presentation/pages/my_equipment_page.dart';
+import '../../requests/presentation/pages/search_area_page.dart';
 import 'driver_earnings_tab.dart';
+import 'driver_history_tab.dart';
 import 'driver_orders_tab.dart';
 
-/// Главная MoveX GO Driver: «Buyurtmalar», «Daromad», «Profil» (макет).
+/// Главная MoveX GO Driver — нижнее меню макета: «Asosiy», «Buyurtmalar»,
+/// «Daromad», «Profil».
 class DriverHomePage extends StatefulWidget {
   const DriverHomePage({super.key});
 
@@ -24,9 +27,9 @@ class DriverHomePage extends StatefulWidget {
 class _DriverHomePageState extends State<DriverHomePage> {
   int _tab = 0;
 
-  /// «Daromad» пересоздаётся при каждом открытии: заказ мог завершиться,
-  /// пока водитель был на «Buyurtmalar», и цифры должны быть свежими.
-  int _earningsOpened = 0;
+  /// «Buyurtmalar» и «Daromad» пересоздаются при каждом открытии: заказ
+  /// мог завершиться, пока водитель был на «Asosiy», цифры должны быть свежими.
+  int _opened = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -35,24 +38,35 @@ class _DriverHomePageState extends State<DriverHomePage> {
         index: _tab,
         children: [
           const DriverOrdersTab(),
-          DriverEarningsTab(key: ValueKey(_earningsOpened)),
+          DriverHistoryTab(key: ValueKey('h$_opened')),
+          DriverEarningsTab(key: ValueKey('e$_opened')),
           const DriverProfileTab(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
+        backgroundColor: AppPalette.surface,
+        indicatorColor: Colors.transparent,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         onDestinationSelected: (i) => setState(() {
-          if (i == 1 && _tab != 1) _earningsOpened++;
+          if (i != _tab && (i == 1 || i == 2)) _opened++;
           _tab = i;
         }),
         destinations: [
-          NavigationDestination(icon: const Icon(Icons.local_shipping_outlined), label: 'driver.tab_orders'.tr()),
-          NavigationDestination(icon: const Icon(Icons.payments_outlined), label: 'driver.tab_earnings'.tr()),
-          NavigationDestination(icon: const Icon(Icons.person_outline_rounded), label: 'driver.tab_profile'.tr()),
+          _dest(Icons.near_me_outlined, Icons.near_me_rounded, 'driver.tab_home'.tr()),
+          _dest(Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'driver.tab_orders'.tr()),
+          _dest(Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'driver.tab_earnings'.tr()),
+          _dest(Icons.person_outline_rounded, Icons.person_rounded, 'driver.tab_profile'.tr()),
         ],
       ),
     );
   }
+
+  NavigationDestination _dest(IconData icon, IconData active, String label) => NavigationDestination(
+        icon: Icon(icon, color: AppPalette.textSecondary),
+        selectedIcon: Icon(active, color: AppPalette.brand),
+        label: label,
+      );
 }
 
 /// «Profil»: техника, объявления, уведомления, настройки, выход.
@@ -98,66 +112,79 @@ class _DriverProfileTabState extends State<DriverProfileTab> {
   @override
   Widget build(BuildContext context) {
     final me = _me;
+    final parts = (me?.fullName ?? '').trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final initials = parts.isEmpty ? '?' : parts.take(2).map((p) => p.characters.first.toUpperCase()).join();
     return Scaffold(
       backgroundColor: AppPalette.page,
-      appBar: AppBar(title: Text('driver.tab_profile'.tr()), centerTitle: true),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(color: AppPalette.surface, borderRadius: BorderRadius.circular(20)),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: AppPalette.brandSubtle,
-                  child: Text(
-                    (me?.fullName.isNotEmpty ?? false) ? me!.fullName.characters.first.toUpperCase() : '?',
-                    style: AppTypography.h2.copyWith(color: AppPalette.textBrand),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Pr1: шапка профиля
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: AppPalette.surface, borderRadius: BorderRadius.circular(16)),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: AppPalette.brand,
+                    child: Text(initials, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(me?.fullName ?? '…', style: AppTypography.h3),
-                      if (me?.phone != null)
-                        Text('+${me!.phone}', style: AppTypography.bodyM.copyWith(color: AppPalette.textSecondary)),
-                    ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(me?.fullName ?? '…', style: AppTypography.h3),
+                        if (me?.phone != null)
+                          Text('+${me!.phone}', style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary)),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(color: AppPalette.successSubtle, borderRadius: BorderRadius.circular(6)),
+                          child: Text('driver.owner_badge'.tr(),
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppPalette.textSuccess)),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          _item(Icons.construction_rounded, 'driver.my_equipment'.tr(), () => _push(const MyEquipmentPage())),
-          _item(Icons.campaign_outlined, 'driver.listings'.tr(), () => _push(const ListingsPage())),
-          _item(Icons.notifications_none_rounded, 'driver.notifications'.tr(), () => context.push('/notifications')),
-          _item(Icons.settings_outlined, 'driver.settings'.tr(), () => context.push('/settings')),
-          _item(Icons.logout_rounded, 'driver.logout'.tr(), _logout, danger: true),
-          const SizedBox(height: AppSpacing.xl),
-          const DeleteAccountButton(),
-        ],
+            const SizedBox(height: 12),
+            _group([
+              _item(Icons.construction_rounded, 'driver.my_equipment'.tr(), () => _push(const MyEquipmentPage())),
+              _item(Icons.radar_rounded, 'driver.work_area'.tr(), () => _push(const SearchAreaPage(isOwner: true))),
+              _item(Icons.campaign_outlined, 'driver.listings'.tr(), () => _push(const ListingsPage())),
+            ]),
+            const SizedBox(height: 12),
+            _group([
+              _item(Icons.credit_card_rounded, 'driver.withdraw'.tr(), () => context.push('/payout')),
+              _item(Icons.notifications_none_rounded, 'driver.notifications'.tr(), () => context.push('/notifications')),
+              _item(Icons.language_rounded, 'driver.settings'.tr(), () => context.push('/settings')),
+              _item(Icons.logout_rounded, 'driver.logout'.tr(), _logout, danger: true),
+            ]),
+            const SizedBox(height: 24),
+            const DeleteAccountButton(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _item(IconData icon, String title, VoidCallback onTap, {bool danger = false}) => Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: Material(
-          color: AppPalette.surface,
-          borderRadius: BorderRadius.circular(16),
-          child: ListTile(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            leading: Icon(icon, color: danger ? AppPalette.textDanger : AppPalette.iconPrimary),
-            title: Text(title, style: TextStyle(color: danger ? AppPalette.textDanger : null)),
-            trailing: danger ? null : const Icon(Icons.chevron_right_rounded),
-            onTap: onTap,
-          ),
-        ),
+  Widget _group(List<Widget> items) => Container(
+        decoration: BoxDecoration(color: AppPalette.surface, borderRadius: BorderRadius.circular(16)),
+        child: Column(children: items),
       );
+
+  Widget _item(IconData icon, String title, VoidCallback onTap, {bool danger = false}) => ListTile(
+        leading: Icon(icon, color: danger ? AppPalette.textDanger : AppPalette.iconPrimary),
+        title: Text(title, style: TextStyle(fontSize: 15, color: danger ? AppPalette.textDanger : AppPalette.textPrimary)),
+        trailing: danger ? null : const Icon(Icons.chevron_right_rounded, color: AppPalette.textSecondary),
+        onTap: onTap,
+      );
+
 }
 
 /// Выход: токен, роль и ПИН стираются — как в клиентском профиле.
