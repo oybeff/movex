@@ -151,12 +151,36 @@ def review(db: Session, doc_id: int, approve: bool, reason: Optional[str] = None
         raise HTTPException(404, "Hujjat topilmadi")
     if not approve and not (reason or "").strip():
         raise HTTPException(400, "Rad etish sababini yozing")
+    before = status_of(documents(db, doc.user_id))  # до изменения: одобрение уведомляем один раз
     doc.status = "approved" if approve else "rejected"
     doc.reject_reason = None if approve else reason.strip()[:500]
     doc.reviewed_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(doc)
+    _notify_review(db, doc, before)
     return doc
+
+
+def _notify_review(db: Session, doc: DriverDocument, before: str) -> None:
+    """
+    R9 обещает «natija haqida xabar beramiz»: отказ — сразу, с причиной;
+    одобрение — одно уведомление, когда одобрен последний обязательный.
+    Ошибка уведомления проверку не отменяет (notification_service пишет в лог).
+    """
+    from app.core.messages import t
+    from app.services import notification_service
+
+    lang = notification_service.user_language(db, doc.user_id)
+    if doc.status == "rejected":
+        notification_service.create_localized(
+            db, doc.user_id, "driver_document_rejected",
+            "driver_document_rejected.title", "driver_document_rejected.body",
+            language=lang, doc=t(f"driver_doc.{doc.kind}", lang), reason=doc.reject_reason or "",
+        )
+    elif status_of(documents(db, doc.user_id)) == "approved" and before != "approved":
+        notification_service.create_localized(
+            db, doc.user_id, "driver_approved", "driver_approved.title", "driver_approved.body", language=lang,
+        )
 
 
 def delete_all(db: Session, user_id: int) -> None:

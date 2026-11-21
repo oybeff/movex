@@ -48,6 +48,50 @@ class DriverApi {
     return (r.data as List).cast<Map<String, dynamic>>();
   }
 
+  /// Проверка по документам (макет 00): статус и документы без файлов.
+  Future<DriverVerification> verification() async {
+    final r = await _dio.get('/drivers/me');
+    return DriverVerification(r.data as Map<String, dynamic>);
+  }
+
+  /// Фото документа (R6/R7). Повторная загрузка — снова на проверку.
+  Future<DriverVerification> uploadDocument(String kind, String path) async {
+    final form = FormData.fromMap({'file': await MultipartFile.fromFile(path)});
+    final r = await _dio.post('/drivers/me/documents/$kind', data: form);
+    return DriverVerification(r.data as Map<String, dynamic>);
+  }
+
+  /// Своё фото документа — байтами: в публичной /static его нет.
+  Future<List<int>> documentBytes(String kind) async {
+    final r = await _dio.get<List<int>>('/drivers/me/documents/$kind/file',
+        options: Options(responseType: ResponseType.bytes));
+    return r.data ?? const [];
+  }
+
+  /// R4 «Texnikangiz» — короткая форма. Цена за день — 8 часов: каталог
+  /// считает по дням, а тарифный заказ берёт цену из тарифа админа.
+  Future<void> addEquipment({
+    required String type,
+    required String model,
+    String? plate,
+    int? year,
+    required int pricePerHour,
+    required double lat,
+    required double lon,
+  }) =>
+      _dio.post('/equipment/', data: {
+        'type': type,
+        'model': model,
+        if (plate != null && plate.isNotEmpty) 'plate_number': plate,
+        if (year != null) 'year': year,
+        'price_per_hour': '$pricePerHour',
+        'price_per_day': '${pricePerHour * 8}',
+        'latitude': lat.toStringAsFixed(6),
+        'longitude': lon.toStringAsFixed(6),
+        'status': 'available',
+        'available': true,
+      });
+
   /// Моя техника: id → тип, модель, номер. Заказ знает только equipment_id.
   Future<Map<int, DriverEquipment>> myEquipment() async {
     final r = await _dio.get('/equipment/', queryParameters: {'owner_only': true});
@@ -144,4 +188,25 @@ class DriverEquipment {
   String get type => (j['type'] as String?) ?? 'other';
   String? get model => j['model'] as String?;
   String? get plate => j['plate_number'] as String?;
+}
+
+/// Статус проверки водителя: incomplete | pending | approved | rejected.
+class DriverVerification {
+  DriverVerification(this.j);
+
+  final Map<String, dynamic> j;
+
+  static const kinds = ['passport', 'driver_license', 'tech_passport', 'equipment_photo', 'insurance'];
+  static const required = ['passport', 'driver_license', 'tech_passport', 'equipment_photo'];
+
+  String get status => (j['status'] as String?) ?? 'incomplete';
+  bool get approved => status == 'approved';
+
+  Map<String, Map<String, dynamic>> get docs => {
+        for (final d in (j['documents'] as List? ?? const []).cast<Map<String, dynamic>>()) d['kind'] as String: d,
+      };
+
+  String? statusOf(String kind) => docs[kind]?['status'] as String?;
+  String? reasonOf(String kind) => docs[kind]?['reject_reason'] as String?;
+  int get requiredDone => required.where((k) => docs.containsKey(k)).length;
 }

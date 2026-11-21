@@ -79,6 +79,27 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "{owner} yo'lga chiqdi. Xaritada kuzating.",
         "ru": "{owner} выехал. Следите на карте.",
     },
+    "driver_approved.title": {
+        "uz": "Hujjatlaringiz tasdiqlandi",
+        "ru": "Документы одобрены",
+    },
+    "driver_approved.body": {
+        "uz": "Endi ishga chiqib, buyurtmalar olishingiz mumkin.",
+        "ru": "Можно выходить на линию и брать заказы.",
+    },
+    "driver_document_rejected.title": {
+        "uz": "Hujjatni qayta yuklang: {doc}",
+        "ru": "Загрузите документ заново: {doc}",
+    },
+    "driver_document_rejected.body": {
+        "uz": "Sabab: {reason}",
+        "ru": "Причина: {reason}",
+    },
+    "driver_doc.passport": {"uz": "Pasport", "ru": "Паспорт"},
+    "driver_doc.driver_license": {"uz": "Haydovchilik guvohnomasi", "ru": "Водительское удостоверение"},
+    "driver_doc.tech_passport": {"uz": "Texnika texpasporti", "ru": "Техпаспорт"},
+    "driver_doc.equipment_photo": {"uz": "Texnika surati", "ru": "Фото техники"},
+    "driver_doc.insurance": {"uz": "Sug'urta polisi", "ru": "Страховой полис"},
     "order_arrived.title": {
         "uz": "Texnika yetib keldi: {what}",
         "ru": "Техника на месте: {what}",

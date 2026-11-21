@@ -16,9 +16,11 @@ import '../../../core/widgets/map_or_placeholder.dart';
 import '../../owner_home/presentation/pages/my_equipment_page.dart';
 import '../../taxi/data/taxi_geo.dart';
 import '../data/driver_api.dart';
+import 'driver_equipment_step.dart';
 import 'driver_incoming_page.dart';
 import 'driver_order_page.dart';
 import 'driver_ui.dart';
+import 'driver_verification_page.dart';
 
 /// «Asosiy» приложения водителя — макет 01: H1 «Siz oflaynsiz»,
 /// H2 «Buyurtmalar kutilmoqda», живой заказ — карточкой «Faol buyurtma».
@@ -54,6 +56,7 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
   List<QuickIncomingModel> _incoming = const [];
   List<DriverOrder> _orders = const [];
   Map<int, DriverEquipment> _equipment = const {};
+  DriverVerification? _verification;
 
   DriverOrder? get _active {
     // Работа закончена и ждёт только подтверждения клиента — водитель
@@ -97,12 +100,38 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
     try {
       _equipment = await _api.myEquipment();
     } catch (_) {}
+    await _loadVerification();
+    // Проверка не пройдена — водитель офлайн, что бы ни сохранилось раньше
+    if (_verification != null && !_verification!.approved && _online) await _setOnline(false);
     if (mounted) setState(() {});
     _restartPolling();
     final here = await TaxiGeo.current();
     if (!mounted) return;
     setState(() => _here = here);
     _moveTo(here.point);
+  }
+
+  Future<void> _loadVerification() async {
+    try {
+      _verification = await _api.verification();
+    } catch (_) {}
+  }
+
+  /// Регистрация водителя по макету 00: нет техники — R4, затем документы.
+  Future<void> _startVerification() async {
+    if (_equipment.isEmpty) {
+      final added = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const DriverEquipmentStep()),
+      );
+      if (added != true || !mounted) return;
+      try {
+        _equipment = await _api.myEquipment();
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DriverVerificationPage()));
+    await _loadVerification();
+    if (mounted) setState(() {});
   }
 
   void _restartPolling() {
@@ -130,6 +159,8 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
     if (me == null) return;
     try {
       final orders = await _api.myOrders(me);
+      // Ждём решения админа — подхватываем его без перезапуска приложения
+      if (!(_verification?.approved ?? true)) await _loadVerification();
       List<QuickIncomingModel> incoming = const [];
       final busy = orders.any((o) => o.active && !o.scheduled && o.finishedAt == null);
       if (_online && !busy) incoming = await _requests.quickIncoming();
@@ -309,6 +340,7 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
             onTap: () async {
+              if (eq == null) return _startVerification();
               await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyEquipmentPage()));
               try {
                 _equipment = await _api.myEquipment();
@@ -363,8 +395,53 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
           DStat('${_orders.where((o) => o.scheduled).length}', 'driver.scheduled_short'.tr()),
         ]),
         const SizedBox(height: 12),
-        DPrimary('driver.go_online'.tr(), onPressed: eq == null ? null : () => _setOnline(true)),
+        if (_verification != null && !_verification!.approved) ...[
+          _verificationCard(_verification!),
+          const SizedBox(height: 12),
+        ],
+        DPrimary(
+          'driver.go_online'.tr(),
+          onPressed: eq == null || !(_verification?.approved ?? false) ? null : () => _setOnline(true),
+        ),
       ],
+    );
+  }
+
+  /// E5 «Hujjatlaringiz tekshirilmoqda» и его соседи: что мешает выйти на линию.
+  Widget _verificationCard(DriverVerification v) {
+    final (String title, String body, String? action) = switch (v.status) {
+      'pending' => ('driver.e5_pending_title'.tr(), 'driver.e5_pending_body'.tr(), null),
+      'rejected' => ('driver.e5_rejected_title'.tr(), 'driver.e5_rejected_body'.tr(), 'driver.reupload'.tr()),
+      _ => (
+          _equipment.isEmpty ? 'driver.e5_start_title'.tr() : 'driver.e5_docs_title'.tr(),
+          'driver.e5_docs_body'.tr(),
+          _equipment.isEmpty ? 'driver.add_equipment'.tr() : 'driver.upload_docs'.tr(),
+        ),
+    };
+    final red = v.status == 'rejected';
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: red ? DChip.redBg : DChip.blueBg, borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          Icon(red ? Icons.error_outline_rounded : Icons.verified_user_outlined,
+              color: red ? AppPalette.textDanger : AppPalette.brand),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(body, style: const TextStyle(fontSize: 12, color: AppPalette.textSecondary)),
+              ],
+            ),
+          ),
+          if (action != null)
+            TextButton(onPressed: _startVerification, child: Text(action))
+          else
+            TextButton(onPressed: _startVerification, child: Text('driver.open'.tr())),
+        ],
+      ),
     );
   }
 

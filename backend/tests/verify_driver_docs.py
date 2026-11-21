@@ -118,6 +118,8 @@ def main():
                   json={"approve": False, "reason": "Rasm xira"})
     s = requests.get(f"{API}/drivers/me", headers=owner).json()
     tech = next(d for d in s["documents"] if d["kind"] == "tech_passport")
+    n = sql("SELECT title, body FROM notifications WHERE user_id=:u AND type='driver_document_rejected'", u=owner_id)
+    check("водителю ушло уведомление об отказе с причиной", n and "Rasm xira" in n[0][1], n)
     check("отклонён — статус rejected, причина видна водителю",
           s["status"] == "rejected" and tech["reject_reason"] == "Rasm xira", s)
     upload(owner, "tech_passport")
@@ -129,6 +131,8 @@ def main():
     for kind in ("passport", "driver_license", "tech_passport", "equipment_photo"):
         requests.post(f"{API}/drivers/internal/documents/{ids[kind]}/review", headers=SECRET, json={"approve": True})
     check("все одобрены — approved", requests.get(f"{API}/drivers/me", headers=owner).json()["status"] == "approved")
+    n = sql("SELECT count(*) FROM notifications WHERE user_id=:u AND type='driver_approved'", u=owner_id)
+    check("уведомление «одобрено» — ровно одно", n[0][0] == 1, n)
     check("одобренный заменить нельзя — 409", upload(owner, "passport").status_code == 409)
     r = upload(owner, "insurance")
     check("страховка по желанию не сбивает approved", r.json()["status"] == "approved", r.text)

@@ -13,6 +13,7 @@ import '../../owner_home/presentation/pages/my_equipment_page.dart';
 import '../../requests/presentation/pages/search_area_page.dart';
 import 'driver_earnings_tab.dart';
 import 'driver_history_tab.dart';
+import 'driver_verification_page.dart';
 import 'driver_orders_tab.dart';
 
 /// Главная MoveX GO Driver — нижнее меню макета: «Asosiy», «Buyurtmalar»,
@@ -155,6 +156,7 @@ class _DriverProfileTabState extends State<DriverProfileTab> {
             const SizedBox(height: 12),
             _group([
               _item(Icons.construction_rounded, 'driver.my_equipment'.tr(), () => _push(const MyEquipmentPage())),
+              _item(Icons.badge_outlined, 'driver.documents'.tr(), () => _push(const DriverVerificationPage())),
               _item(Icons.radar_rounded, 'driver.work_area'.tr(), () => _push(const SearchAreaPage(isOwner: true))),
               _item(Icons.campaign_outlined, 'driver.listings'.tr(), () => _push(const ListingsPage())),
             ]),

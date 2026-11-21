@@ -57,7 +57,7 @@ class Notification(Base):
             "'order_departed','order_arrived','order_started','order_finished','order_delayed',"
             "'order_extend_requested','order_extend_approved','order_extend_declined',"
             "'listing_offer','material_order','material_confirmed','material_cancelled',"
-            "'material_delivered','material_moderated')",
+            "'material_delivered','material_moderated','driver_approved','driver_document_rejected')",
             name="check_notification_type",
         ),
     )
