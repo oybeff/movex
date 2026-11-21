@@ -61,6 +61,25 @@ android {
         versionName = flutter.versionName
     }
 
+    // Два приложения из одного кода (21.11.2026): клиент и водитель/владелец
+    // техники. В магазинах это разные приложения — свой applicationId и
+    // название. Код, вход, сеть и переводы общие; ветвление — appFlavor
+    // в lib/core/app_flavor.dart. Без --flavor собирается client
+    // (default-flavor в pubspec.yaml).
+    flavorDimensions += "app"
+    productFlavors {
+        create("client") {
+            dimension = "app"
+            applicationId = "uz.movexgo.app"
+            resValue("string", "app_name", "MoveXgo")
+        }
+        create("driver") {
+            dimension = "app"
+            applicationId = "uz.movexgo.driver"
+            resValue("string", "app_name", "MoveX GO Driver")
+        }
+    }
+
     signingConfigs {
         if (hasReleaseKeystore) {
             create("release") {

@@ -227,7 +227,7 @@ flutter build apk --release --dart-define=API_BASE_URL=https://movexgo.uz
 Адрес зашивается при сборке и потом не меняется. Проверить, что внутри:
 
 ```bash
-unzip -p app-release.apk lib/arm64-v8a/libapp.so | strings | grep -o 'https://[a-z0-9.-]*'
+unzip -p app-client-release.apk lib/arm64-v8a/libapp.so | strings | grep -o 'https://[a-z0-9.-]*'
 ```
 
 Опубликованный в Плей Маркете `.aab` собран со старым `movexgo.uz` —

@@ -65,14 +65,14 @@ flutter build apk --release --dart-define=API_BASE_URL=http://ВАШ_IP:8000
 flutter build apk --release --dart-define=API_BASE_URL=https://movex.004.uz
 ```
 
-APK окажется в `build/app/outputs/flutter-apk/app-release.apk`.
+APK окажется в `build/app/outputs/flutter-apk/app-client-release.apk`.
 
 ### Установка на телефон
 
 Через кабель:
 
 ```bash
-adb install -r build/app/outputs/flutter-apk/app-release.apk
+adb install -r build/app/outputs/flutter-apk/app-client-release.apk
 ```
 
 Без кабеля: скопируйте файл на телефон любым способом и откройте его.

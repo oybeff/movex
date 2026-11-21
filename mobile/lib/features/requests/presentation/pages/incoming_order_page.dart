@@ -320,9 +320,16 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.account_balance_wallet_outlined, size: 16),
+            Icon(o.paymentMethod == 'cash' ? Icons.payments_outlined : Icons.account_balance_wallet_outlined,
+                size: 16),
             const SizedBox(width: 6),
-            Text('requests.quick_payment_frozen'.tr(),
+            // Раньше тут всегда было «заморожено на балансе», и у наличного
+            // заказа водитель не знал, что деньги получит в руки.
+            Text(switch (o.paymentMethod) {
+              'cash' => 'requests.quick_payment_cash'.tr(),
+              'card' => 'requests.quick_payment_card'.tr(),
+              _ => 'requests.quick_payment_frozen'.tr(),
+            },
                 style: const TextStyle(fontSize: 12)),
           ],
         ),

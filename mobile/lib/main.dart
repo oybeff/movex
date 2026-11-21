@@ -28,6 +28,8 @@ import 'package:movex_go/features/client_home/presentation/pages/rent_equipment_
 import 'package:movex_go/features/balance/presentation/pages/balance_topup_page.dart';
 import 'package:movex_go/core/models/equipment_model.dart';
 import 'dart:async';
+import 'package:movex_go/core/app_flavor.dart';
+import 'package:movex_go/features/driver/presentation/driver_home_page.dart';
 
 // Global GoRouter instance
 late final GoRouter appRouter;
@@ -60,7 +62,17 @@ void main() async {
       ),
       GoRoute(
         path: '/',
-        builder: (context, state) => const RoleSelectPage(),
+        // В приложении водителя роль не выбирается: оно только для владельцев
+        builder: (context, state) =>
+            AppFlavor.isDriver ? const LoginPage(role: 'owner') : const RoleSelectPage(),
+      ),
+      GoRoute(
+        path: '/driverHome',
+        builder: (context, state) => const DriverHomePage(),
+      ),
+      GoRoute(
+        path: '/driver-wrong-role',
+        builder: (context, state) => const DriverWrongRolePage(),
       ),
       GoRoute(
         path: '/register',
@@ -252,7 +264,7 @@ class _MyAppState extends State<MyApp> {
     return ToastificationWrapper(
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
-        title: 'Movex Go',
+        title: AppFlavor.isDriver ? 'MoveX GO Driver' : 'Movex Go',
         // Тема из токенов макета (core/theme/app_tokens.dart). До 12.11.2026
         // здесь стоял ThemeData(primarySwatch: green), и AppTheme не
         // применялся вовсе: кнопки и поля рисовались цветами Material.

@@ -1,3 +1,4 @@
+import 'package:movex_go/core/app_flavor.dart';
 import '../../../taxi/presentation/pages/app_status_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -76,7 +77,8 @@ class _SplashScreenPageState extends State<SplashScreenPage> with SingleTickerPr
       // Tekshiruv aynan shu yerda: til tanlangandan keyin onboarding
       // ko'rsatish kech, odam allaqachon ichkarida.
       final seen = prefs.getBool(OnboardingPage.seenKey) ?? false;
-      if (mounted) context.go(seen ? '/language' : '/onboarding');
+      // Онбординг — клиентский («выберите технику»), водителю он не про него.
+      if (mounted) context.go(seen || AppFlavor.isDriver ? '/language' : '/onboarding');
       return;
     }
 
@@ -108,16 +110,10 @@ class _SplashScreenPageState extends State<SplashScreenPage> with SingleTickerPr
       }
 
       if (!mounted) return;
-      if (role == 'client') {
-        context.go('/clientHome');
-      } else if (role == 'owner') {
-        context.go('/ownerHome');
-      } else {
-        // Noma'lum rol (masalan 'admin' — u faqat panelda ishlaydi):
-        // ilgari bu yerda hech narsa bo'lmasdi va ekran sakrash ekranida
-        // abadiy qotib qolardi.
-        context.go('/');
-      }
+      // Noma'lum rol (masalan 'admin' — u faqat panelda ishlaydi) '/' ga
+      // ketadi: ilgari bu yerda hech narsa bo'lmasdi va ekran sakrash
+      // ekranida abadiy qotib qolardi.
+      context.go(AppFlavor.homeFor(role));
     } else {
       if (mounted) context.go('/');
     }

@@ -427,6 +427,36 @@ Apple M1. Результат — `build/ios/iphoneos/Runner.app`, 86 МБ, arm64
 Проверка на телефоне — **`docs/TESTING_ON_PHONE.md`**. Коротко: через
 браузер телефона работает сразу (кроме карты), APK требует Android SDK.
 
+### Два приложения: клиент и MoveX GO Driver
+
+С 21.11.2026 из одного кода `mobile/` собираются **два приложения** —
+так решил владелец продукта (Шерзатбек): отдельное приложение для
+владельцев техники, как у такси водительское. Android flavors в
+`android/app/build.gradle.kts`:
+
+| flavor | applicationId | название | APK |
+|---|---|---|---|
+| `client` (по умолчанию, `default-flavor` в pubspec) | `uz.movexgo.app` | MoveXgo | `app-client-*.apk` |
+| `driver` | `uz.movexgo.driver` | MoveX GO Driver | `app-driver-*.apk` |
+
+Две копии кода не заводились сознательно: вход по SMS и ПИН, сеть,
+переводы и экраны техники/объявлений разъехались бы. Всё ветвление —
+`lib/core/app_flavor.dart` (`AppFlavor.isDriver`, `homeFor(role)`):
+в водителе нет онбординга и выбора роли (сразу вход как `owner`), после
+входа — `/driverHome`, клиентский аккаунт видит «это приложение для
+владельцев». Экраны — `lib/features/driver/` по картинкам Шерзатбека из
+чата 21.11.2026 (Figma недоступна): «Buyurtmalar» (Onlayn/Oflayn, входящие
+быстрые заказы, живой заказ «Yo'lga chiqdim → Ishni boshladim →
+Ishni yakunlash», «Kechikyapman», продление), «Daromad», «Profil».
+Онлайн — только на телефоне (опрос сервера раз в 10 с, push нет);
+сервер про онлайн не знает. Живого слежения за машиной всё ещё нет.
+**iOS-схема для driver не сделана** — нужен Xcode (Mac).
+
+```bash
+flutter run --flavor driver --dart-define=API_BASE_URL=http://10.0.2.2:8010
+flutter build appbundle --release --flavor driver --dart-define=API_BASE_URL=https://movexgo.uz
+```
+
 Сборка. **Адрес сервера обязателен** — без него возьмётся прод:
 
 ```bash

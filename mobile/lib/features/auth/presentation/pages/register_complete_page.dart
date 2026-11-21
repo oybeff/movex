@@ -1,3 +1,4 @@
+import 'package:movex_go/core/app_flavor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -77,14 +78,7 @@ class _RegisterCompletePageState extends State<RegisterCompletePage> {
 
       // 4. Rolga qarab ichkariga. Ilgari bu yer '/login' ga qaytarardi:
       //    odam qaytadan kod so'rab, SMS ikki marta kelardi.
-      final role = result['role'];
-      if (role == 'owner') {
-        context.go('/ownerHome');
-      } else if (role == 'client') {
-        context.go('/clientHome');
-      } else {
-        context.go('/');
-      }
+      context.go(AppFlavor.homeFor(result['role'] as String?));
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);

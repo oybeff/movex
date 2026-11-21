@@ -1,3 +1,4 @@
+import 'package:movex_go/core/app_flavor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -126,7 +127,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     if (!mounted) return;
     final role = prefs.getString('role');
-    context.go(role == 'owner' ? '/ownerHome' : '/clientHome');
+    context.go(AppFlavor.homeFor(role ?? (AppFlavor.isDriver ? 'owner' : 'client')));
   }
 
   Future<void> _showLanguageBottomSheet() async {

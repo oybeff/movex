@@ -1,3 +1,4 @@
+import 'package:movex_go/core/app_flavor.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -141,14 +142,7 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
           await requirePinSetup(context);
           if (!mounted) return;
           // If this is login flow, navigate to home based on role
-          final role = result['role'];
-          if (role == 'client') {
-            context.go('/clientHome');
-          } else if (role == 'owner') {
-            context.go('/ownerHome');
-          } else {
-            context.go('/');
-          }
+          context.go(AppFlavor.homeFor(result['role'] as String?));
         }
       }
     } catch (e) {

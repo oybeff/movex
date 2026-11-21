@@ -196,6 +196,10 @@ class QuickIncomingModel {
   final double? distanceKm;
   final String? clientInitials;
 
+  /// balance — сумма заморожена у клиента; cash — клиент отдаст наличными;
+  /// card — холд на карте. Сервер отдаёт поле с тарифных заказов.
+  final String paymentMethod;
+
   const QuickIncomingModel({
     required this.id,
     required this.equipmentType,
@@ -211,6 +215,7 @@ class QuickIncomingModel {
     this.comment,
     this.distanceKm,
     this.clientInitials,
+    this.paymentMethod = 'balance',
   });
 
   factory QuickIncomingModel.fromJson(Map<String, dynamic> json) {
@@ -230,6 +235,7 @@ class QuickIncomingModel {
       comment: json['comment'] as String?,
       distanceKm: RequestOfferModel._toDouble(json['distance_km']),
       clientInitials: json['client_initials'] as String?,
+      paymentMethod: json['payment_method'] as String? ?? 'balance',
     );
   }
 
