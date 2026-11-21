@@ -55,8 +55,11 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   _Step _step = _Step.route;
   bool _busy = false;
 
+  /// Единственная точка заказа — куда нужна техника. Откуда она приедет,
+  /// клиенту безразлично (правки 19.11.2026): по умолчанию его
+  /// местоположение, булавку можно сдвинуть или найти другой адрес.
+  /// В заявку уходит как delivery_*; origin_* больше не отправляется.
   TaxiPlace _from = TaxiGeo.tashkent;
-  TaxiPlace? _to;
   List<TaxiPlace> _recent = const [];
   List<SavedAddress> _saved = const []; // Pr4: на главной первыми
   Timer? _addressDebounce;
@@ -301,28 +304,25 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
 
   // ------------------------------------------------------------- шаги
 
-  /// «Qayerdan» — тот же поиск адреса; карта переезжает к выбранной точке.
-  Future<void> _pickFrom() async {
+  /// «Manzil» — поиск другого адреса; найденный сразу ведёт к выбору техники.
+  Future<void> _pickPlace() async {
     final place = await Navigator.of(context).push<TaxiPlace>(
-      MaterialPageRoute(builder: (_) => AddressPickPage(from: _from, forSaving: true)),
+      MaterialPageRoute(builder: (_) => AddressPickPage(from: _from, recent: _recent, forSaving: true)),
     );
     if (place == null || !mounted) return;
-    setState(() => _from = place);
-    _moveMap(place);
+    _choosePlace(place);
   }
 
-  Future<void> _pickTo() async {
-    final place = await Navigator.of(context).push<TaxiPlace>(
-      MaterialPageRoute(builder: (_) => AddressPickPage(from: _from, recent: _recent)),
-    );
-    if (place == null || !mounted) return;
-    // E3: вне зоны — остаёмся на главной с предупреждением
+  /// Точка выбрана (поиск, «So'nggi manzillar» или «Davom etish» под
+  /// булавкой). E3: вне зоны — остаёмся на главной с предупреждением.
+  void _choosePlace(TaxiPlace place) {
     final outside = _status != null && !_status!.inArea(place.lat, place.lon);
     setState(() {
-      _to = place;
+      _from = place;
       _outOfArea = outside;
       if (!outside) _step = _Step.type;
     });
+    _moveMap(place);
   }
 
   Future<void> _pickType(String type) async {
@@ -442,7 +442,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
 
   Future<void> _placeOrder() async {
     final q = _quote;
-    if (q == null || _type == null || _to == null) return;
+    if (q == null || _type == null) return;
     setState(() => _busy = true);
     try {
       final req = await _api.createOrder(
@@ -450,12 +450,9 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
         tariff: _tier,
         hours: q.hours,
         start: _scheduledAt ?? DateTime.now(),
-        toLat: _to!.lat,
-        toLon: _to!.lon,
-        toAddress: _to!.address,
-        fromLat: _from.lat,
-        fromLon: _from.lon,
-        fromAddress: _from.address,
+        toLat: _from.lat,
+        toLon: _from.lon,
+        toAddress: _from.address,
         attachmentId: _attachment?.id,
         paymentMethod: _payMethod,
         comment: _comment,
@@ -473,7 +470,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
         await CardApi().confirmOtp(req.id, otp);
         if (!mounted) return;
       }
-      final to = _to!;
+      final to = _from;
       setState(() {
         _request = req;
         _step = _Step.searching;
@@ -635,9 +632,10 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
         toLat: r.toLat!,
         toLon: r.toLon!,
         toAddress: r.toAddress,
-        fromLat: r.fromLat ?? _from.lat,
-        fromLon: r.fromLon ?? _from.lon,
-        fromAddress: r.fromAddress ?? _from.address,
+        // старые заявки с двумя точками повторяются как были
+        fromLat: r.fromLat,
+        fromLon: r.fromLon,
+        fromAddress: r.fromAddress,
         attachmentId: r.attachmentId,
         paymentMethod: r.paymentMethod,
         surgePercent: _surge,
@@ -801,7 +799,6 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     if (!mounted) return;
     setState(() {
       _step = _Step.route;
-      _to = null;
       _type = null;
       _request = null;
       _order = null;
@@ -819,8 +816,8 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
       _justFound = false;
       _pulseAt = null;
     });
-    // Карта стояла над местом работ — вернуть её к точке «откуда», иначе
-    // булавка и адрес в «Qayerdan» показывали разные места.
+    // Карта стояла над местом работ — вернуть её к точке заказа, иначе
+    // булавка и адрес в «Manzil» показывали разные места.
     _moveMap(_from);
   }
 
@@ -838,8 +835,12 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
       return;
     }
     setState(() {
-      if (r.toLat != null) _to = TaxiPlace(r.toLat!, r.toLon!, r.toAddress);
-      if (r.fromLat != null) _from = TaxiPlace(r.fromLat!, r.fromLon!, r.fromAddress);
+      // Старые заказы: место работ было в «Qayerdan» (origin), новые — в delivery
+      if (r.fromLat != null) {
+        _from = TaxiPlace(r.fromLat!, r.fromLon!, r.fromAddress);
+      } else if (r.toLat != null) {
+        _from = TaxiPlace(r.toLat!, r.toLon!, r.toAddress);
+      }
       _payment = r.paymentMethod;
     });
     await _pickType(r.equipmentType);
@@ -859,7 +860,6 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
           _step = _Step.type;
         case _Step.type:
           _step = _Step.route;
-          _to = null;
         default:
           break;
       }
@@ -879,20 +879,20 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     if (_step == _Step.route) return 'route';
     final o = _order;
     return [
-      _step.name, _from.lat, _from.lon, _from.address, _to?.lat, _to?.lon, _to?.address,
+      _step.name, _from.lat, _from.lon, _from.address,
       _exec?.lat, _exec?.destLat, _exec?.etaMinutes, o?['departed_at'] != null, o?['started_at'] != null,
     ].join('|');
   }
 
-  TaxiPlace? get _dest => _to ??
-      (_request?.toLat != null ? TaxiPlace(_request!.toLat!, _request!.toLon!, _request!.toAddress) : null);
-
-  /// Куда едет техника (кадр 8) — точка «откуда» заказа.
+  /// Куда едет техника (кадр 8). У старых заявок это origin («Qayerdan»),
+  /// у новых — единственная точка, delivery.
   Point get _workPoint => _exec?.destLat != null
       ? Point(latitude: _exec!.destLat!, longitude: _exec!.destLon!)
       : (_request?.fromLat != null
           ? Point(latitude: _request!.fromLat!, longitude: _request!.fromLon!)
-          : _from.point);
+          : (_request?.toLat != null
+              ? Point(latitude: _request!.toLat!, longitude: _request!.toLon!)
+              : _from.point));
 
   /// Метки и линии под текущий шаг; потом камера — так, чтобы всё было
   /// видно над шторкой.
@@ -963,24 +963,9 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
         objs.add((await TaxiMarkers.equipment(null)).at('eq', at, z: 3));
         fit = [at];
       } else {
-        // Кадры 3–6 и E4: линия А→Б по дорогам с подписями точек
-        final b = _dest;
+        // Кадры 3–6 и E4: одна точка — куда нужна техника
         objs.add((await TaxiMarkers.pointA(_from.address == null ? null : _from.label)).at('a', _from.point, z: 2));
         fit = [_from.point];
-        if (b != null) {
-          final line = await TaxiRoute.between(_from.point, b.point);
-          objs.add(PolylineMapObject(
-            mapId: const MapObjectId('route'),
-            polyline: Polyline(points: line),
-            strokeColor: AppPalette.brand,
-            strokeWidth: 5,
-            outlineColor: Colors.white,
-            outlineWidth: 2,
-            zIndex: 1,
-          ));
-          objs.add((await TaxiMarkers.pointB(b.label.isEmpty ? null : b.label)).at('b', b.point, z: 2));
-          fit = line;
-        }
       }
     } catch (_) {
       // Картинка метки не собралась — без меток, но с камерой
@@ -1371,26 +1356,27 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
                 children: [
                   AddressRow(
                     isFrom: true,
-                    label: 'taxi.from'.tr(),
+                    label: 'taxi.address'.tr(),
                     value: _from.address ?? (TaxiGeo.denied ? 'taxi.enter_address'.tr() : 'taxi.my_location'.tr()),
                     placeholder: _from.address == null && TaxiGeo.denied,
-                    onTap: _pickFrom,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 50),
-                    child: Container(height: 1, color: const Color(0xFFDDE2E8)),
-                  ),
-                  AddressRow(
-                    isFrom: false,
-                    label: 'taxi.to'.tr(),
-                    value: _to?.address ?? 'taxi.enter_address'.tr(),
-                    placeholder: _to == null,
-                    onTap: _pickTo,
+                    onTap: _pickPlace,
                   ),
                 ],
               ),
             ),
           ),
+          // Точка под булавкой — «Davom etish». Без геолокации адреса ещё
+          // нет: сначала его надо найти, кнопка ведёт в поиск.
+          if (!_outOfArea) ...[
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+              child: ElevatedButton(
+                onPressed: (_from.address == null && TaxiGeo.denied) ? _pickPlace : () => _choosePlace(_from),
+                child: Text('taxi.continue'.tr()),
+              ),
+            ),
+          ],
           if (_places.isNotEmpty && !_outOfArea) ...[
             const SizedBox(height: 14),
             Padding(
@@ -1399,7 +1385,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
             ),
             for (final e in _places)
               InkWell(
-                onTap: () => _chooseTo(e.place),
+                onTap: () => _choosePlace(e.place),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
                   child: SizedBox(
@@ -1474,16 +1460,6 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     return out.take(4).toList();
   }
 
-  /// Выбор адреса из списка на главной — та же проверка зоны, что и после поиска.
-  void _chooseTo(TaxiPlace place) {
-    final outside = _status != null && !_status!.inArea(place.lat, place.lon);
-    setState(() {
-      _to = place;
-      _outOfArea = outside;
-      if (!outside) _step = _Step.type;
-    });
-  }
-
   Widget _routeLine() => Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
         child: Row(
@@ -1491,12 +1467,6 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
             SvgPicture.asset('assets/brand/point_a.svg', width: 16, height: 16),
             const SizedBox(width: 6),
             Flexible(child: _routeText(_from.address == null ? 'taxi.my_location'.tr() : _from.label)),
-            const SizedBox(width: 6),
-            _routeText('→'),
-            const SizedBox(width: 6),
-            SvgPicture.asset('assets/brand/point_b.svg', width: 16, height: 16),
-            const SizedBox(width: 6),
-            Flexible(child: _routeText(_to?.label ?? '')),
           ],
         ),
       );
@@ -1611,13 +1581,9 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     return 'taxi.tier_${q.tier}_note'.tr();
   }
 
-  /// «8.4 km · ~20 daq» — от точки «откуда» до «куда».
-  String get _routeMeta {
-    if (_to == null) return '';
-    final km = TaxiGeo.distanceKm(_from, _to!);
-    final min = (km / 25 * 60).round().clamp(5, 999);
-    return '${km.toStringAsFixed(1)} km · ~${'taxi.minutes_n'.tr(args: ['$min'])}';
-  }
+  /// Куда едет техника: у старых заявок — «Qayerdan» (origin), у новых — delivery.
+  String _placeText(TaxiRequest? r) =>
+      r?.fromAddress ?? r?.toAddress ?? _from.address ?? 'taxi.my_location'.tr();
 
   String get _whenText {
     final h = _quote?.hours ?? _hours ?? 4;
@@ -1634,18 +1600,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SheetTitle(
-          EquipmentTypes.label(_type),
-          trailing: Text(
-            _routeMeta,
-            style: const TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: AppPalette.textSecondary,
-            ),
-          ),
-        ),
+        SheetTitle(EquipmentTypes.label(_type)),
         const SizedBox(height: 4),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
@@ -1751,8 +1706,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          InfoRow('taxi.from'.tr(), r?.fromAddress ?? _from.address ?? 'taxi.my_location'.tr()),
-          InfoRow('taxi.to'.tr(), r?.toAddress ?? _to?.address ?? '—'),
+          InfoRow('taxi.address'.tr(), _placeText(r)),
           InfoRow('taxi.when'.tr(), _whenText),
         ],
       ),
@@ -2298,8 +2252,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                InfoRow('taxi.from'.tr(), r?.fromAddress ?? _from.address ?? 'taxi.my_location'.tr()),
-                InfoRow('taxi.to'.tr(), r?.toAddress ?? _to?.address ?? '—'),
+                InfoRow('taxi.address'.tr(), _placeText(r)),
                 InfoRow('taxi.when'.tr(), _whenText),
               ],
             ),
