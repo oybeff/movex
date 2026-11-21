@@ -8,6 +8,7 @@
 по-прежнему идут через order_service.update_order — там вся логика эскроу
 и наличных, второй копии быть не должно.
 """
+from app.core.messages import insufficient_funds
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
@@ -305,8 +306,7 @@ def _apply_extend(db: Session, order: Order, user: User, hours: int) -> Order:
             db.rollback()
             raise HTTPException(
                 400,
-                f"Hisobingizda yetarli mablag' yo'q. Mavjud: {float(available)} so'm, "
-                f"Kerak: {float(extra)} so'm",
+                insufficient_funds(db, user.id, available, extra),
             )
         cb.frozen_balance = Decimal(str(cb.frozen_balance)) + extra
         order.frozen_amount = Decimal(str(order.frozen_amount)) + extra

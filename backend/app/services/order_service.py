@@ -1,3 +1,4 @@
+from app.core.messages import insufficient_funds
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select
 from app.models.order import Order
@@ -146,7 +147,7 @@ def create_order(
     if available_balance < total_amount:
         raise HTTPException(
             status_code=400,
-            detail=f"Hisobingizda yetarli mablag' yo'q. Mavjud: {float(available_balance)} so'm, Kerak: {float(total_amount)} so'm"
+            detail=insufficient_funds(db, user_id, available_balance, total_amount)
         )
 
     balance.frozen_balance += total_amount

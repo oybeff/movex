@@ -19,6 +19,7 @@ olish paytida qayd etiladi. Bekor qilinsa yoki muddat tugasa — muzlatish
 qaytariladi. Narxni server hisoblamaydi — e'lonlardagi byudjet kabi, uni
 tomonlar kelishgan summa deb qabul qilamiz.
 """
+from app.core.messages import insufficient_funds
 import logging
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -277,8 +278,7 @@ def create_request(db: Session, client: User, data) -> EquipmentRequest:
             db.rollback()
             raise HTTPException(
                 400,
-                f"Hisobingizda yetarli mablag' yo'q. Mavjud: {float(available)} so'm, "
-                f"Kerak: {float(amount)} so'm",
+                insufficient_funds(db, client.id, available, amount),
             )
         balance.frozen_balance = Decimal(str(balance.frozen_balance)) + amount
         request.frozen_amount = amount

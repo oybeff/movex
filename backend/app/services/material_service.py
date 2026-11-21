@@ -18,6 +18,7 @@ Ulushni SOTUVCHI to'laydi: xaridor tovar va yetkazib berish uchun
 to'laydi, platforma ulushi esa sotuvchining puliga tushmasdan qoladi.
 Ijaradagi qoida bilan bir xil, boshqacha qilishning sababi yo'q.
 """
+from app.core.messages import insufficient_funds
 import logging
 from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional
@@ -412,8 +413,7 @@ def create_order(db: Session, buyer: User, data) -> MaterialOrder:
     if available < quote.total:
         raise HTTPException(
             400,
-            f"Hisobingizda yetarli mablag' yo'q. Mavjud: {float(available)} so'm, "
-            f"kerak: {float(quote.total)} so'm",
+            insufficient_funds(db, buyer.id, available, quote.total),
         )
 
     balance.frozen_balance = _dec(balance.frozen_balance) + quote.total

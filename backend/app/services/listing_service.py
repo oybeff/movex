@@ -33,6 +33,7 @@ Telefon raqami e'londa hammaga ko'rinmaydi: uni faqat muallif va TASDIQLANGAN
 ijrochi ko'radi. Aks holda taxta raqamlarni yig'ish uchun ochiq manba bo'lib
 qolardi.
 """
+from app.core.messages import insufficient_funds
 import logging
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -232,8 +233,7 @@ def _reserve_for_listing(db: Session, listing: Listing, amount) -> None:
     if available < amount:
         raise HTTPException(
             400,
-            f"Hisobingizda yetarli mablag' yo'q. "
-            f"Mavjud: {float(available)} so'm, Kerak: {float(amount)} so'm",
+            insufficient_funds(db, listing.client_id, available, amount),
         )
 
     balance.frozen_balance = Decimal(str(balance.frozen_balance)) + amount
@@ -262,9 +262,7 @@ def _adjust_reservation(db: Session, listing: Listing, new_amount) -> None:
         if available < delta:
             raise HTTPException(
                 400,
-                f"Hisobingizda yetarli mablag' yo'q. "
-                f"Mavjud: {float(available)} so'm, "
-                f"qo'shimcha kerak: {float(delta)} so'm",
+                insufficient_funds(db, listing.client_id, available, delta),
             )
 
     new_frozen = Decimal(str(balance.frozen_balance)) + delta

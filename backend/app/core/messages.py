@@ -409,6 +409,11 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "E'lon joylash: {title}",
         "ru": "Размещение объявления: {title}",
     },
+    # Eskirgan matn: "Mavjud: 150000.0 so'm" — float va doim o'zbekcha edi
+    "balance.insufficient": {
+        "uz": "Hisobingizda yetarli mablag' yo'q. Mavjud: {available} so'm, kerak: {need} so'm",
+        "ru": "На балансе недостаточно средств. Доступно: {available} сум, нужно: {need} сум",
+    },
     "listing_fee.insufficient": {
         "uz": "E'lon joylash narxi {fee} so'm. Balansingizda yetarli mablag' yo'q — hisobni to'ldiring.",
         "ru": "Размещение объявления стоит {fee} сум. На балансе недостаточно средств — пополните баланс.",
@@ -462,3 +467,24 @@ def t(key: str, language: Optional[str] = None, **params) -> str:
     except (KeyError, IndexError):
         # Shablonga argument yetmasa ham xabarnoma yozilishi kerak
         return template
+
+
+def format_sum(value) -> str:
+    """1500000 -> "1 500 000": тот же вид, что и в приложении."""
+    try:
+        return f"{float(value):,.0f}".replace(",", " ")
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def insufficient_funds(db, user_id, available, need) -> str:
+    """Текст 400 «не хватает денег» на языке пользователя, суммы без «.0»."""
+    from app.models.user import User
+
+    user = db.get(User, user_id) if user_id is not None else None
+    return t(
+        "balance.insufficient",
+        getattr(user, "language", None),
+        available=format_sum(available),
+        need=format_sum(need),
+    )
