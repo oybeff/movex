@@ -120,6 +120,12 @@ def order_depart(order_id: int, db: Session = Depends(get_db), current_user=Depe
     return order_flow_service.depart(db, order_id, current_user)
 
 
+@router.post("/{order_id}/arrive", response_model=order_schema.OrderRead)
+def order_arrive(order_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """Владелец: «Yetib keldim»."""
+    return order_flow_service.arrive(db, order_id, current_user)
+
+
 @router.post("/{order_id}/start", response_model=order_schema.OrderRead)
 def order_start(order_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     """Владелец: «Boshlash» — у клиента пошёл таймер."""

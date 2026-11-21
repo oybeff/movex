@@ -238,14 +238,20 @@ def quick_accept(
     return {"request_id": request_id, "order_id": order.id}
 
 
+class _DeclineIn(BaseModel):
+    # far | low_price | busy | not_my_job | other — ilovadagi H4 tanlovi
+    reason: Optional[str] = Field(None, max_length=20)
+
+
 @router.post("/{request_id}/quick-decline")
 def quick_decline(
     request_id: int,
+    data: Optional[_DeclineIn] = None,
     db: Session = Depends(get_db),
     current_user=Depends(role_checker(["owner"])),
 ):
-    """Ega rad etdi — bu buyurtma unga boshqa ko'rsatilmaydi."""
-    request_service.quick_decline(db, request_id, current_user)
+    """Ega rad etdi — bu buyurtma unga boshqa ko'rsatilmaydi. Tana ixtiyoriy."""
+    request_service.quick_decline(db, request_id, current_user, data.reason if data else None)
     return {"detail": "ok"}
 
 

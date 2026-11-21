@@ -207,6 +207,14 @@ class QuickRequestDecline(Base):
     owner_id = Column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    # Почему отказался (макет H4): far | low_price | busy | not_my_job | other
+    reason = Column(String(20), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    __table_args__ = (UniqueConstraint("request_id", "owner_id", name="uq_quick_decline"),)
+    __table_args__ = (
+        UniqueConstraint("request_id", "owner_id", name="uq_quick_decline"),
+        CheckConstraint(
+            "reason IS NULL OR reason IN ('far','low_price','busy','not_my_job','other')",
+            name="check_quick_decline_reason",
+        ),
+    )

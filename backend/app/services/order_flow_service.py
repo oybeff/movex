@@ -97,6 +97,20 @@ def depart(db: Session, order_id: int, user: User) -> Order:
     return order
 
 
+def arrive(db: Session, order_id: int, user: User) -> Order:
+    """«Yetib keldim» (макет водителя D1 → D2): техника на месте, ждём клиента."""
+    order = _lock_order(db, order_id)
+    _owner_only(db, order, user)
+    now = _now()
+    if order.departed_at is None:
+        order.departed_at = now
+    if order.arrived_at is None:
+        order.arrived_at = now
+    db.commit()
+    db.refresh(order)
+    return order
+
+
 def start(db: Session, order_id: int, user: User) -> Order:
     """«Boshlash»: работа началась — с этого момента идёт таймер клиента."""
     order = _lock_order(db, order_id)
@@ -105,6 +119,8 @@ def start(db: Session, order_id: int, user: User) -> Order:
     first = order.started_at is None
     if order.departed_at is None:
         order.departed_at = now
+    if order.arrived_at is None:
+        order.arrived_at = now
     if first:
         order.started_at = now
     db.commit()

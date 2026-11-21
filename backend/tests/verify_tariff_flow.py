@@ -536,6 +536,35 @@ def deposit_section():
     check("и ничего не заморожено", money(client_id) == (Decimal(0), Decimal(0)), money(client_id))
 
 
+def driver_section():
+    head("Водитель: причина отказа и «Yetib keldim»")
+    set_deposit(0)
+    client_id, client = register("client")
+    owner_id, owner = register("owner")
+    add_equipment(owner)
+    set_money(owner_id, 1000000)
+    rid = order_req(client, payment="cash").json()["id"]
+    r = requests.post(f"{API}/requests/{rid}/quick-decline", headers=owner, json={"reason": "low_price"})
+    check("отказ с причиной принят", r.status_code == 200, r.text)
+    row = sql("SELECT reason FROM quick_request_declines WHERE request_id=:r AND owner_id=:o", r=rid, o=owner_id)
+    check("причина сохранена", row and row[0][0] == "low_price", row)
+    rid2 = order_req(client, payment="cash").json()["id"]
+    r = requests.post(f"{API}/requests/{rid2}/quick-decline", headers=owner, json={"reason": "взлом"})
+    row = sql("SELECT reason FROM quick_request_declines WHERE request_id=:r", r=rid2)
+    check("неизвестная причина не сохраняется, отказ проходит", r.status_code == 200 and row[0][0] is None, row)
+    r = requests.post(f"{API}/requests/{rid2}/quick-decline", headers=owner)
+    check("отказ без тела по-прежнему работает", r.status_code == 200, r.text)
+
+    rid3 = order_req(client, payment="cash").json()["id"]
+    oid = requests.post(f"{API}/requests/{rid3}/quick-accept", headers=owner).json()["order_id"]
+    r = requests.post(f"{API}/orders/{oid}/arrive", headers=client)
+    check("«Yetib keldim» клиенту нельзя", r.status_code in (403, 404), r.text)
+    r = requests.post(f"{API}/orders/{oid}/arrive", headers=owner)
+    body = r.json()
+    check("«Yetib keldim»: arrived_at и departed_at заполнены",
+          r.status_code == 200 and body.get("arrived_at") and body.get("departed_at"), body)
+
+
 def cleanup():
     db = SessionLocal()
     try:
@@ -558,6 +587,7 @@ if __name__ == "__main__":
         main()
         flow_section()
         deposit_section()
+        driver_section()
     finally:
         set_deposit(_saved_deposit[0])
         cleanup()

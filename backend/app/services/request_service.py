@@ -768,8 +768,16 @@ def quick_incoming(db: Session, owner: User, limit: int = 20) -> List[dict]:
     ][:limit]
 
 
-def quick_decline(db: Session, request_id: int, owner: User) -> None:
-    """Ega "Rad etish"ni bosdi — bu zayavka unga boshqa ko'rsatilmaydi."""
+DECLINE_REASONS = ("far", "low_price", "busy", "not_my_job", "other")
+
+
+def quick_decline(db: Session, request_id: int, owner: User, reason: Optional[str] = None) -> None:
+    """
+    Ega "Rad etish"ni bosdi — bu zayavka unga boshqa ko'rsatilmaydi.
+    reason — sababi (ilova, maket H4); noma'lumi saqlanmaydi.
+    """
+    if reason not in DECLINE_REASONS:
+        reason = None
     exists = (
         db.query(QuickRequestDecline)
         .filter(QuickRequestDecline.request_id == request_id,
@@ -777,7 +785,10 @@ def quick_decline(db: Session, request_id: int, owner: User) -> None:
         .first()
     )
     if exists is None:
-        db.add(QuickRequestDecline(request_id=request_id, owner_id=owner.id))
+        db.add(QuickRequestDecline(request_id=request_id, owner_id=owner.id, reason=reason))
+        db.commit()
+    elif reason and not exists.reason:
+        exists.reason = reason
         db.commit()
 
 

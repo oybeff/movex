@@ -37,6 +37,8 @@ class Order(Base):
     # Ход тарифного заказа: владелец «Ketdik» → «Boshlash» → «Yakunlash»,
     # затем клиент подтверждает (status='completed').
     departed_at = Column(DateTime(timezone=True), nullable=True)
+    # «Yetib keldim» водителя (макет D1 → D2), между выездом и началом работы
+    arrived_at = Column(DateTime(timezone=True), nullable=True)
     started_at = Column(DateTime(timezone=True), nullable=True)
     finished_at = Column(DateTime(timezone=True), nullable=True)
     # Макет B1–B5: продление по согласию владельца, опоздание, кто отменил,
