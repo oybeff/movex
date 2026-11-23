@@ -64,3 +64,21 @@ def token(phone: str, api: str = API) -> dict:
     if "access_token" not in data:
         raise RuntimeError(f"kirish bajarilmadi: {phone}: {data}")
     return {"Authorization": f"Bearer {data['access_token']}"}
+
+
+def owner_equipment_id(headers: dict, api: str = API) -> int:
+    """Shu egaga tegishli, kunlik narxi bor texnika.
+
+    Testlar ilgari `equipment_id = 1` deb yozardi, bazada esa 1-texnika
+    boshqa egada (998901000001) edi: ega o'zi bo'lmagan buyurtmani
+    tasdiqlay olmasdi (403) va pul testlari jim yiqilardi.
+    """
+    items = requests.get(
+        f"{api}/equipment/", headers=headers, params={"owner_only": "true", "limit": 100}
+    ).json()
+    priced = [e for e in items if e.get("price_per_day") and float(e["price_per_day"]) > 0]
+    # Koordinatasi borini afzal ko'ramiz: yetkazib berish masofa bo'yicha hisoblanadi.
+    priced.sort(key=lambda e: (e.get("latitude") is None, not e.get("delivery_price_per_km")))
+    if priced:
+        return int(priced[0]["id"])
+    raise RuntimeError("test egasida kunlik narxli texnika yo'q")

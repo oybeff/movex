@@ -45,7 +45,7 @@ class Tariff(Base):
     tier = Column(String(10), nullable=False)
     price_per_hour = Column(Numeric(12, 2), nullable=False)
     #: Минимальный заказ, часов. Макет: «Ish vaqti — kamida 4 soat».
-    min_hours = Column(Integer, nullable=False, default=4, server_default="4")
+    min_hours = Column(Integer, nullable=False, default=1, server_default="1")
     #: Выключенный тариф в приложении не показывается и не заказывается.
     is_active = Column(Boolean, nullable=False, default=True, server_default="true")
     #: «45 daqiqada keladi» в карточке тарифа. Задаёт админ; пусто — без минут.

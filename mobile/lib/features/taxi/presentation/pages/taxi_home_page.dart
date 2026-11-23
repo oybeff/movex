@@ -102,10 +102,10 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   bool _justFound = false; // шаг 8 только что открылся — «нашли!»
   Timer? _foundTimer;
 
-  /// Часы по умолчанию — «Hozir · 4 soat» в макете. Все тарифы считаются
-  /// за одно и то же время (сервер поднимет до минимума тарифа), иначе
-  /// «Tezkor» за 2 часа выглядел дешевле «Ekonom» за 4.
-  static const _defaultHours = 4;
+  /// Часы по умолчанию. В макете было «Hozir · 4 soat», но Шерзодбек
+  /// 22.11.2026 попросил заказ от 1 часа: сервер сам поднимает до минимума
+  /// тарифа (`min_hours` в admin/tariffs.php), так что здесь — наименьшее.
+  static const _defaultHours = 1;
 
   @override
   void initState() {
@@ -627,7 +627,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
       final req = await _api.createOrder(
         equipmentType: r.equipmentType,
         tariff: r.tariff ?? _tier,
-        hours: r.hours ?? 4,
+        hours: r.hours ?? _defaultHours,
         start: DateTime.now(),
         toLat: r.toLat!,
         toLon: r.toLon!,
@@ -880,7 +880,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     final o = _order;
     return [
       _step.name, _from.lat, _from.lon, _from.address,
-      _exec?.lat, _exec?.destLat, _exec?.etaMinutes, o?['departed_at'] != null, o?['started_at'] != null,
+      _exec?.lat, _exec?.destLat, _exec?.etaMinutes, o?['departed_at'] != null, o?['arrived_at'] != null, o?['started_at'] != null,
     ].join('|');
   }
 
@@ -909,7 +909,9 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     }
     final objs = <MapObject>[];
     var fit = <Point>[];
-    final started = _order?['started_at'] != null;
+    // «Yetib keldim» bosilgan — texnika joyida: yo'l chizig'i va «5 daq»
+    // endi yolg'on bo'lardi, xarita 9-kadrdagidek joyni ko'rsatadi.
+    final started = _order?['started_at'] != null || _order?['arrived_at'] != null;
     try {
       if (step == _Step.searching || step == _Step.notFound) {
         // Кадр 7: точка и расходящиеся круги. E4: те же круги, но застывшие
@@ -1586,7 +1588,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
       r?.fromAddress ?? r?.toAddress ?? _from.address ?? 'taxi.my_location'.tr();
 
   String get _whenText {
-    final h = _quote?.hours ?? _hours ?? 4;
+    final h = _quote?.hours ?? _hours ?? _defaultHours;
     final hours = 'taxi.hours_n'.tr(args: ['$h']);
     if (_scheduledAt == null) return '${'taxi.now'.tr()} · $hours';
     final d = _scheduledAt!;
@@ -1780,6 +1782,8 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
           phone: _exec?.phone,
           status: _order?['started_at'] != null
               ? 'taxi.in_progress'.tr()
+              : _order?['arrived_at'] != null
+                  ? 'taxi.arrived'.tr()
               : departed && eta != null
                   ? '${'taxi.on_the_way'.tr()} · ${'taxi.arrives_in_short'.tr(args: ['$eta'])}'
                   : (departed ? 'taxi.on_the_way'.tr() : 'taxi.found'.tr()),
@@ -1833,6 +1837,10 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   // 8 · Texnika topildi — yo'lda
   Widget _onTheWayPanel() {
     final departed = _order?['departed_at'] != null;
+    // Haydovchi «Yetib keldim» bosgan (orders.arrived_at). Ilgari mijoz
+    // bu holatni bilmasdi va texnika yonida turganda ham «5 daqiqada
+    // keladi» ko'rardi.
+    final arrived = _order?['arrived_at'] != null;
     final eta = _exec?.etaMinutes;
     final panel = Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
@@ -1858,12 +1866,17 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
             children: [
               const TaxiIcon('status_dot', size: 10),
               const SizedBox(width: AppSpacing.sm),
-              Text(departed ? 'taxi.on_the_way'.tr() : 'taxi.found'.tr(), style: AppTypography.h2),
+              Text(
+                arrived ? 'taxi.arrived'.tr() : (departed ? 'taxi.on_the_way'.tr() : 'taxi.found'.tr()),
+                style: AppTypography.h2,
+              ),
             ],
           ),
           const SizedBox(height: 2),
           Text(
-            eta != null ? 'taxi.eta_minutes'.tr(args: ['$eta']) : 'taxi.found_hint'.tr(),
+            arrived
+                ? 'taxi.arrived_hint'.tr()
+                : (eta != null ? 'taxi.eta_minutes'.tr(args: ['$eta']) : 'taxi.found_hint'.tr()),
             style: AppTypography.subtitle,
           ),
           const SizedBox(height: 14),
@@ -2145,6 +2158,8 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
       title = 'taxi.stage_title_awaiting_confirm'.tr();
     } else if (o['started_at'] != null) {
       title = '${EquipmentTypes.label(_type)} · ${'taxi.in_progress'.tr().toLowerCase()}';
+    } else if (o['arrived_at'] != null) {
+      title = 'taxi.arrived'.tr();
     } else if (o['departed_at'] != null) {
       title = 'taxi.type_on_the_way'.tr(args: [EquipmentTypes.label(_type)]);
     } else {
@@ -2154,7 +2169,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     final shortName = parts.isEmpty ? null : (parts.length > 1 ? '${parts.first} ${parts[1][0]}.' : parts.first);
     final eta = _exec?.etaMinutes;
     final sub = [
-      if (o != null && o['departed_at'] != null && o['started_at'] == null && eta != null)
+      if (o != null && o['departed_at'] != null && o['arrived_at'] == null && o['started_at'] == null && eta != null)
         'taxi.arrives_in'.tr(args: ['$eta']),
       if (shortName != null) shortName,
     ].join(' · ');

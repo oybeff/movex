@@ -7,6 +7,7 @@ import re
 import requests
 
 from _topup import topup
+from _auth import owner_equipment_id
 
 API = __import__("os").environ.get("API", "http://127.0.0.1:8000")
 ok = fail = 0
@@ -39,6 +40,7 @@ def bal(hdr):
 
 
 client, owner = token("998901110002"), token("998901110001")
+EQUIPMENT_ID = owner_equipment_id(owner, API)
 
 
 topup(client, 10000000, API)
@@ -47,7 +49,7 @@ print(f"баланс клиента для тестов: {money(bal(client)[0])}
 
 def make_order(start, end):
     return requests.post(f"{API}/orders/", headers=client, json={
-        "equipment_id": 1, "start_date": start, "end_date": end,
+        "equipment_id": EQUIPMENT_ID, "start_date": start, "end_date": end,
         "total_amount": 1, "commission": 1,
         "delivery_latitude": "41.31", "delivery_longitude": "69.28",
     }).json()

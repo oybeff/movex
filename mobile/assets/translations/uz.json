@@ -1197,6 +1197,7 @@
     "repeat_short": "Qayta buyurtma",
     "repeat_order": "Qayta buyurtma berish",
     "no_orders_title": "Hali buyurtma yo'q",
+    "no_active_orders_title": "Faol buyurtma yo'q",
     "no_orders_body": "Ekskavator, kran, beton nasos va boshqa texnikani bir necha bosishda buyurtma qiling.",
     "order_equipment": "Texnika buyurtma qilish",
     "order_n": "Buyurtma #{}",
@@ -1370,7 +1371,9 @@
     "notif_on": "Yoqilgan",
     "notif_off": "O'chirilgan",
     "search_offline_body": "Ulanish tiklangach qayta qidiramiz. Bosing — hozir urinib ko'ramiz.",
-    "blocked_title": "Hisobingiz bloklangan"
+    "blocked_title": "Hisobingiz bloklangan",
+    "arrived": "Texnika yetib keldi",
+    "arrived_hint": "Ijrochi joyida. Ish tez orada boshlanadi"
   },
   "owner_flow": {
     "done": "Bajarildi",

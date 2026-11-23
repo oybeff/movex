@@ -109,7 +109,14 @@ class _OrdersPageState extends State<OrdersPage> {
               child: cards == null
                   ? const _Skeleton()
                   : list.isEmpty
-                      ? _Empty(onOrder: () => Navigator.of(context).popUntil((r) => r.isFirst))
+                      ? _Empty(
+                          // Tarixda buyurtma bor, faollari yo'q: «Hali buyurtma
+                          // yo'q» yolg'on bo'lardi.
+                          title: cards.isNotEmpty && !_history
+                              ? 'taxi.no_active_orders_title'.tr()
+                              : 'taxi.no_orders_title'.tr(),
+                          onOrder: () => Navigator.of(context).popUntil((r) => r.isFirst),
+                        )
                       : RefreshIndicator(
                           onRefresh: _load,
                           child: ListView(
@@ -347,8 +354,9 @@ class _Point extends StatelessWidget {
 
 /// B6 · Buyurtmalar yo'q.
 class _Empty extends StatelessWidget {
-  const _Empty({required this.onOrder});
+  const _Empty({required this.title, required this.onOrder});
 
+  final String title;
   final VoidCallback onOrder;
 
   @override
@@ -372,7 +380,7 @@ class _Empty extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Text('taxi.no_orders_title'.tr(), textAlign: TextAlign.center, style: AppTypography.h2),
+          Text(title, textAlign: TextAlign.center, style: AppTypography.h2),
           const SizedBox(height: 10),
           Text(
             'taxi.no_orders_body'.tr(),

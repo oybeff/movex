@@ -216,8 +216,18 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
     // BIR NECHTA raqam kelsa — kod to'liq joylangan (SMS dan avtomatik
     // to'ldirish yoki buferdan qo'yish). Ilgari maydon faqat bittasini
     // olardi, qolgani yo'qolardi va odam kodni qo'lda ko'chirardi.
+    //
+    // `maxLength: 1` bu yerda QO'YILMAYDI: u satrni onChanged'gacha bitta
+    // belgiga qirqardi, va bu shart hech qachon bajarilmasdi — SMS dan
+    // to'ldirilgan kod bitta raqamga aylanardi (emulyatorda 23.11.2026
+    // ushlandi, telefon maydonidagi LengthLimiting xatosi bilan bir xil).
     if (value.length > 1) {
-      _fillFromCode(value);
+      final digits = value.replaceAll(RegExp(r'\D'), '');
+      if (digits.length >= 4) {
+        _fillFromCode(digits);
+      } else {
+        _spreadFrom(index, digits);
+      }
       return;
     }
 
@@ -240,6 +250,24 @@ class _OTPVerificationPageState extends State<OTPVerificationPage> {
       if (allFilled) {
         _verifyOTP();
       }
+    }
+  }
+
+  /// Bir katakka kelgan bir nechta raqamni shu katakdan boshlab yoyadi
+  /// (to'la katakda davom ettirib yozilganda yoki tez kiritishda).
+  void _spreadFrom(int index, String digits) {
+    var i = index;
+    for (final d in digits.split('')) {
+      if (i > 3) break;
+      _controllers[i].text = d;
+      i++;
+    }
+    if (_controllers.every((c) => c.text.isNotEmpty)) {
+      _focusNodes[3].unfocus();
+      _verifyOTP();
+    } else {
+      final next = _controllers.indexWhere((c) => c.text.isEmpty);
+      _focusNodes[next < 0 ? 3 : next].requestFocus();
     }
   }
 
@@ -469,7 +497,6 @@ class _OtpCell extends StatelessWidget {
           enabled: enabled,
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
-          maxLength: 1,
           cursorColor: AppPalette.brand,
           style: TextStyle(
             fontFamily: AppTypography.fontFamily,

@@ -15,13 +15,13 @@ from datetime import datetime, timedelta
 import requests
 
 import _topup
+from _auth import owner_equipment_id
 
 API = __import__("os").environ.get("API", "http://127.0.0.1:8000")
 
 
 CLIENT_PHONE = "998901110002"
 OWNER_PHONE = "998901110001"
-EQUIPMENT_ID = 1
 TOPUP = 5_000_000
 
 ok_count = 0
@@ -93,6 +93,7 @@ def free_dates(days=1, equipment_id=None, headers=None):
 
 client = token(CLIENT_PHONE)
 owner = token(OWNER_PHONE)
+EQUIPMENT_ID = owner_equipment_id(owner)
 
 client_start, _ = balance_of(client)
 owner_start, _ = balance_of(owner)
@@ -163,6 +164,8 @@ check("чужая сумма баланс не тронула", bal == client_st
 
 head("3. ЦЕНУ СЧИТАЕТ СЕРВЕР, А НЕ КЛИЕНТ")
 
+# Yetkazib berish masofa bo'yicha hisoblanishi uchun texnikada km narxi bo'lishi shart.
+requests.put(f"{API}/equipment/{EQUIPMENT_ID}", headers=owner, json={"delivery_price_per_km": 5000})
 eq = requests.get(f"{API}/equipment/{EQUIPMENT_ID}", headers=client).json()
 day_price = float(eq["price_per_day"])
 start_date, end_date = free_dates(days=1)   # двое суток: начало и конец включительно

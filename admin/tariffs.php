@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($form === 'tariffs') {
         $type = (string)($_POST['equipment_type'] ?? '');
-        $minHours = (string)($_POST['min_hours'] ?? '4');
+        $minHours = (string)($_POST['min_hours'] ?? '1');
         if (!in_array($type, $types, true)) {
             $error = "Noma'lum texnika turi";
         } elseif (!ctype_digit($minHours) || (int)$minHours < 1 || (int)$minHours > 24) {
@@ -216,7 +216,7 @@ function money($v) {
                 <tbody>
                 <?php foreach ($types as $type):
                     $t = $tariffs[$type] ?? [];
-                    $min = 4;
+                    $min = 1;
                     foreach ($t as $row) { $min = (int)$row['min_hours']; break; }
                     $formId = 'tf_' . $type;
                 ?>
