@@ -22,6 +22,17 @@ from app.services import driver_service
 router = APIRouter()
 
 
+@router.get("/settings")
+def driver_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Числа для экранов водителя: компенсация E1/E7 и сколько ждать клиента."""
+    from app.services import compensation_service
+
+    return {
+        "compensation_amount": float(compensation_service.amount_setting(db)),
+        "no_show_wait_minutes": compensation_service.NO_SHOW_WAIT_MINUTES,
+    }
+
+
 @router.get("/me")
 def my_verification(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Статус проверки и документы (без файлов): R5, E5, V1–V3."""

@@ -36,6 +36,15 @@ class _DriverOrderPageState extends State<DriverOrderPage> {
   bool _busy = false;
   bool _summary = false; // D5 открыт
   bool _extendShown = false;
+  DriverSettings _settings = DriverSettings(const {});
+  // E7: окно «Mijoz kelmadimi?» само открывается, когда ожидание вышло;
+  // «Yana 5 daqiqa kutish» откладывает его.
+  DateTime? _noShowSnoozeUntil;
+  bool _noShowOpen = false;
+  // D6: оценка клиента
+  int _stars = 0;
+  final Set<String> _tags = {};
+  bool _rated = false;
   Timer? _poll;
   Timer? _clock;
 
@@ -43,9 +52,22 @@ class _DriverOrderPageState extends State<DriverOrderPage> {
   void initState() {
     super.initState();
     _load();
+    _api.settings().then((v) {
+      if (mounted) setState(() => _settings = v);
+    });
+    _api.myClientRating(widget.orderId).then((m) {
+      if (m == null || !mounted) return;
+      setState(() {
+        _rated = true;
+        _stars = (m['rating'] as int?) ?? 0;
+        _tags.addAll((m['tags'] as List? ?? const []).cast<String>());
+      });
+    }).catchError((_) {});
     _poll = Timer.periodic(const Duration(seconds: 10), (_) => _load());
     _clock = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      setState(() {});
+      _maybeAskNoShow();
     });
   }
 
@@ -162,21 +184,168 @@ class _DriverOrderPageState extends State<DriverOrderPage> {
     }
   }
 
+  /// Ожидание клиента вышло (D2 → E7)?
+  bool _waitOver(DriverOrder o) =>
+      o.arrivedAt != null &&
+      o.startedAt == null &&
+      DateTime.now().difference(o.arrivedAt!) >= Duration(minutes: _settings.noShowWaitMinutes);
+
+  void _maybeAskNoShow() {
+    final o = _o;
+    if (o == null || _noShowOpen || _busy || o.status != 'confirmed' || !_waitOver(o)) return;
+    final until = _noShowSnoozeUntil;
+    if (until != null && DateTime.now().isBefore(until)) return;
+    _noShow(o);
+  }
+
+  /// E7 «Mijoz kelmadimi?». До конца ожидания — простая отмена без денег.
   Future<void> _noShow(DriverOrder o) async {
-    final ok = await showDialog<bool>(
+    if (_noShowOpen) return;
+    _noShowOpen = true;
+    final over = _waitOver(o);
+    final comp = over ? _settings.compensation : 0.0;
+    final mins = '${_settings.noShowWaitMinutes}';
+    final choice = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('driver.no_show_title'.tr()),
-        content: Text('driver.no_show_body'.tr()),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text('driver.back'.tr())),
-          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text('driver.cancel_order'.tr())),
-        ],
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        backgroundColor: AppPalette.surface,
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 22, 18, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Center(
+                child: CircleAvatar(
+                  radius: 26,
+                  backgroundColor: Color(0xFFFDF3D6),
+                  child: Icon(Icons.person_outline_rounded, color: AppPalette.textPrimary, size: 28),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text('driver.no_show_title'.tr(), textAlign: TextAlign.center, style: AppTypography.h2),
+              const SizedBox(height: 8),
+              Text(
+                over
+                    ? (comp > 0
+                        ? 'driver.no_show_body_comp'.tr(args: [mins])
+                        : 'driver.no_show_body_over'.tr(args: [mins]))
+                    : 'driver.no_show_body_early'.tr(args: [mins]),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, height: 1.4, color: AppPalette.textSecondary),
+              ),
+              if (comp > 0) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppPalette.successSubtle,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text('driver.compensation_plus'.tr(args: [money(comp)]),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 14, color: AppPalette.textSuccess)),
+                ),
+              ],
+              const SizedBox(height: 12),
+              DPrimary(comp > 0 ? 'driver.cancel_with_comp'.tr() : 'driver.cancel_order'.tr(),
+                  onPressed: () => Navigator.of(ctx).pop('cancel')),
+              const SizedBox(height: 8),
+              DSecondary(over ? 'driver.wait_5_more'.tr() : 'driver.back'.tr(),
+                  tinted: true, onPressed: () => Navigator.of(ctx).pop('wait')),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop('call'),
+                child: Text('driver.call_client'.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
       ),
     );
-    if (ok != true) return;
-    await _act(() => _api.cancel(o.id));
+    _noShowOpen = false;
+    if (!mounted) return;
+    if (choice == 'cancel') {
+      await _act(() => _api.noShow(o.id));
+    } else if (choice == 'call') {
+      _noShowSnoozeUntil = DateTime.now().add(const Duration(minutes: 5));
+      await _call();
+    } else if (over) {
+      _noShowSnoozeUntil = DateTime.now().add(const Duration(minutes: 5));
+    }
   }
+
+  Future<void> _sendRating(DriverOrder o) async {
+    if (_stars == 0 || _busy) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await _api.rateClient(o.id, _stars, _tags.toList());
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(getErrorMessage(e))));
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  static const _ratingTags = ['on_time_pay', 'polite', 'exact_address', 'kept_waiting'];
+
+  /// D6 «Mijozni baholang»: звёзды и плашки.
+  Widget _ratingBlock() => Column(
+        children: [
+          Text('driver.rate_client'.tr(), style: AppTypography.bodyMedium),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 1; i <= 5; i++)
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => setState(() => _stars = i),
+                  icon: Icon(
+                    i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded,
+                    size: 34,
+                    color: i <= _stars ? const Color(0xFFF5B400) : AppPalette.textPlaceholder,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final t in _ratingTags)
+                FilterChip(
+                  label: Text('driver.rate_tag_$t'.tr()),
+                  selected: _tags.contains(t),
+                  showCheckmark: false,
+                  selectedColor: AppPalette.brandSubtle,
+                  side: BorderSide.none,
+                  backgroundColor: AppPalette.page,
+                  labelStyle: TextStyle(
+                    fontSize: 13,
+                    color: _tags.contains(t) ? AppPalette.textBrand : AppPalette.textPrimary,
+                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  onSelected: (v) => setState(() => v ? _tags.add(t) : _tags.remove(t)),
+                ),
+            ],
+          ),
+          if (_rated) ...[
+            const SizedBox(height: 6),
+            Text('driver.rated_hint'.tr(), style: const TextStyle(fontSize: 12, color: AppPalette.textSecondary)),
+          ],
+        ],
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -456,86 +625,137 @@ class _DriverOrderPageState extends State<DriverOrderPage> {
         ),
       );
 
-  /// D6 · «Ish yakunlandi».
+  /// D6 · «Ish yakunlandi» + «Mijozni baholang». Прокручивается: на
+  /// маленьком экране звёзды и плашки не влезают вместе с суммой.
   Widget _done(DriverOrder o) => Scaffold(
         backgroundColor: AppPalette.surface,
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Spacer(),
-                const Center(
-                  child: CircleAvatar(
-                    radius: 36,
-                    backgroundColor: AppPalette.textSuccess,
-                    child: Icon(Icons.check_rounded, color: Colors.white, size: 44),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text('driver.work_done'.tr(), textAlign: TextAlign.center, style: AppTypography.h1),
-                Text(_name, textAlign: TextAlign.center, style: const TextStyle(color: AppPalette.textSecondary)),
-                const SizedBox(height: 16),
-                DCard(
-                  color: AppPalette.page,
-                  child: Column(
-                    children: [
-                      Text('driver.your_earning'.tr(), style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary)),
-                      Text('+${money(o.earning)}',
-                          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppPalette.textSuccess)),
-                      Text(
-                        // Деньги двигает подтверждение клиента (или авто через 10 мин):
-                        // до него комиссия ещё не списана — говорим в будущем времени
-                        o.status != 'completed'
-                            ? 'driver.commission_pending'.tr(args: [money(o.commission)])
-                            : o.cash
-                                ? 'driver.commission_from_balance'.tr(args: [money(o.commission)])
-                                : 'driver.commission_held'.tr(args: [money(o.commission)]),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 12, color: AppPalette.textSecondary),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 40, 16, 16),
+                  children: [
+                    const Center(
+                      child: CircleAvatar(
+                        radius: 36,
+                        backgroundColor: AppPalette.textSuccess,
+                        child: Icon(Icons.check_rounded, color: Colors.white, size: 44),
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text('driver.work_done'.tr(), textAlign: TextAlign.center, style: AppTypography.h1),
+                    Text(_name, textAlign: TextAlign.center, style: const TextStyle(color: AppPalette.textSecondary)),
+                    const SizedBox(height: 16),
+                    DCard(
+                      color: AppPalette.page,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('driver.your_earning'.tr(),
+                              style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary)),
+                          Text('+${money(o.earning)}',
+                              style: const TextStyle(
+                                  fontSize: 26, fontWeight: FontWeight.w700, color: AppPalette.textSuccess)),
+                          Text(
+                            // Деньги двигает подтверждение клиента (или авто через 10 мин):
+                            // до него комиссия ещё не списана — говорим в будущем времени
+                            o.status != 'completed'
+                                ? 'driver.commission_pending'.tr(args: [money(o.commission)])
+                                : o.cash
+                                    ? 'driver.commission_from_balance'.tr(args: [money(o.commission)])
+                                    : 'driver.commission_held'.tr(args: [money(o.commission)]),
+                            style: const TextStyle(fontSize: 12, color: AppPalette.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (o.status != 'completed') ...[
+                      const SizedBox(height: 12),
+                      Text('driver.wait_client'.tr(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary)),
                     ],
-                  ),
+                    const SizedBox(height: 24),
+                    _ratingBlock(),
+                  ],
                 ),
-                if (o.status != 'completed') ...[
-                  const SizedBox(height: 12),
-                  Text('driver.wait_client'.tr(),
-                      textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary)),
-                ],
-                const Spacer(),
-                DPrimary('driver.ready'.tr(), onPressed: () => Navigator.of(context).pop()),
-              ],
-            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: DPrimary('driver.ready'.tr(), busy: _busy, onPressed: () => _sendRating(o)),
+              ),
+            ],
           ),
         ),
       );
 
-  /// E1 · «Mijoz buyurtmani bekor qildi».
-  Widget _cancelled(DriverOrder o) => Scaffold(
-        backgroundColor: AppPalette.surface,
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Spacer(),
-                const Center(
-                  child: CircleAvatar(
-                    radius: 36,
-                    backgroundColor: DChip.redBg,
-                    child: Icon(Icons.close_rounded, color: AppPalette.textDanger, size: 40),
-                  ),
+  /// E1 «Mijoz buyurtmani bekor qildi» (и отмена владельцем, в т.ч. E7).
+  /// Компенсация показывается, только если сервер её действительно провёл.
+  Widget _cancelled(DriverOrder o) {
+    final byOwner = o.cancelledBy == 'owner';
+    final noShow = o.cancelReason == 'client_no_show';
+    return Scaffold(
+      backgroundColor: AppPalette.page,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Spacer(),
+              DCard(
+                padding: const EdgeInsets.fromLTRB(18, 24, 18, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Center(
+                      child: CircleAvatar(
+                        radius: 28,
+                        backgroundColor: DChip.redBg,
+                        child: Icon(Icons.close_rounded, color: AppPalette.textDanger, size: 32),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      noShow
+                          ? 'driver.no_show_done'.tr()
+                          : (byOwner ? 'driver.you_cancelled'.tr() : 'driver.client_cancelled'.tr()),
+                      textAlign: TextAlign.center,
+                      style: AppTypography.h2,
+                    ),
+                    if (o.compensation > 0) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        byOwner
+                            ? 'driver.comp_added_noshow'.tr()
+                            : 'driver.comp_added_cancel'.tr(args: [_name]),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 14, height: 1.4, color: AppPalette.textSecondary),
+                      ),
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppPalette.successSubtle,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text('driver.compensation_plus'.tr(args: [money(o.compensation)]),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 14, color: AppPalette.textSuccess)),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    DPrimary('driver.wait_new'.tr(), onPressed: () => Navigator.of(context).pop()),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                Text(o.cancelledBy == 'owner' ? 'driver.you_cancelled'.tr() : 'driver.client_cancelled'.tr(),
-                    textAlign: TextAlign.center, style: AppTypography.h2),
-                const Spacer(),
-                DPrimary('driver.wait_new'.tr(), onPressed: () => Navigator.of(context).pop()),
-              ],
-            ),
+              ),
+              const Spacer(),
+            ],
           ),
         ),
-      );
+      ),
+    );
+  }
 }

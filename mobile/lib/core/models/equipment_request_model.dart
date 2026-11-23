@@ -196,6 +196,9 @@ class QuickIncomingModel {
   final double? distanceKm;
   final String? clientInitials;
 
+  /// Средняя оценка клиента водителями (макет D6), null — оценок нет.
+  final double? clientRating;
+
   /// balance — сумма заморожена у клиента; cash — клиент отдаст наличными;
   /// card — холд на карте. Сервер отдаёт поле с тарифных заказов.
   final String paymentMethod;
@@ -217,6 +220,7 @@ class QuickIncomingModel {
     this.comment,
     this.distanceKm,
     this.clientInitials,
+    this.clientRating,
     this.paymentMethod = 'balance',
     this.tariff,
     this.hours,
@@ -239,6 +243,7 @@ class QuickIncomingModel {
       comment: json['comment'] as String?,
       distanceKm: RequestOfferModel._toDouble(json['distance_km']),
       clientInitials: json['client_initials'] as String?,
+      clientRating: RequestOfferModel._toDouble(json['client_rating']),
       paymentMethod: json['payment_method'] as String? ?? 'balance',
       tariff: json['tariff'] as String?,
       hours: json['hours'] as int?,

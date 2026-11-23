@@ -276,6 +276,74 @@ def auto_confirm(db: Session, order: Order) -> Order:
     return order
 
 
+def no_show(db: Session, order_id: int, user: User) -> Order:
+    """
+    E7 «Mijoz kelmadi»: техника на месте, клиент не вышел. Владелец
+    отменяет заказ; если ждал не меньше NO_SHOW_WAIT_MINUTES — клиент
+    платит компенсацию (compensation_service, по умолчанию выключена).
+    Раньше — обычная отмена владельцем, без денег.
+    """
+    from app.schemas.order import OrderUpdate
+    from app.services import compensation_service, order_service
+
+    order = _lock_order(db, order_id)
+    eq = _owner_only(db, order, user)
+    if order.arrived_at is None:
+        raise HTTPException(409, "Avval «Yetib keldim» bosing")
+    if order.started_at is not None:
+        raise HTTPException(409, "Ish boshlangan")
+    waited = _now() - order.arrived_at
+    if waited >= timedelta(minutes=compensation_service.NO_SHOW_WAIT_MINUTES):
+        compensation_service.compensate(db, order, eq.owner_id)
+    order.cancel_reason = "client_no_show"
+    # update_order ставит cancelled_by='owner', возвращает остаток заморозки
+    # и коммитит всё одной транзакцией вместе с компенсацией.
+    return order_service.update_order(db, order.id, OrderUpdate(status="cancelled"), user.id)
+
+
+def rate_client(db: Session, order_id: int, user: User, rating: int, tags: list) -> dict:
+    """D6 «Mijozni baholang»: одна оценка на заказ, повтор переписывает."""
+    from app.models.client_rating import ClientRating
+
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if order is None:
+        raise HTTPException(404, "Buyurtma topilmadi")
+    eq = _equipment(db, order)
+    if eq.owner_id != user.id:
+        raise HTTPException(403, "Faqat texnika egasi")
+    if order.finished_at is None and order.status != "completed":
+        raise HTTPException(409, "Ish hali yakunlanmagan")
+    if not 1 <= int(rating) <= 5:
+        raise HTTPException(400, "Baho 1 dan 5 gacha")
+    clean = list(dict.fromkeys(x for x in (tags or []) if x in CLIENT_RATING_TAGS))
+    row = db.query(ClientRating).filter(ClientRating.order_id == order.id).first()
+    if row is None:
+        row = ClientRating(order_id=order.id, owner_id=user.id, client_id=order.user_id)
+        db.add(row)
+    row.rating = int(rating)
+    row.tags = ",".join(clean) or None
+    db.commit()
+    return {"order_id": order.id, "rating": row.rating, "tags": clean}
+
+
+def client_rating_summary(db: Session, client_id: int) -> dict:
+    """Средняя оценка клиента водителями — для карточки входящего заказа."""
+    from sqlalchemy import func as sa_func
+
+    from app.models.client_rating import ClientRating
+
+    avg, cnt = (
+        db.query(sa_func.avg(ClientRating.rating), sa_func.count(ClientRating.id))
+        .filter(ClientRating.client_id == client_id)
+        .one()
+    )
+    return {"rating": round(float(avg), 1) if avg is not None else None, "count": int(cnt or 0)}
+
+
+#: Плашки макета D6. Код — в базе, текст — в переводах приложения.
+CLIENT_RATING_TAGS = ("on_time_pay", "polite", "exact_address", "kept_waiting")
+
+
 def extend(db: Session, order_id: int, user: User, hours: int) -> Order:
     """Старый прямой путь (без согласия владельца) — через запрос."""
     return request_extend(db, order_id, user, hours)

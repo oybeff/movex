@@ -732,6 +732,12 @@ def _initials(name: Optional[str]) -> Optional[str]:
     return "".join(p[0] for p in parts[:2]).upper()
 
 
+def _client_rating(db: Session, client_id: int) -> Optional[float]:
+    from app.services.order_flow_service import client_rating_summary
+
+    return client_rating_summary(db, client_id)["rating"]
+
+
 def quick_card(db: Session, request: EquipmentRequest, owner: User) -> dict:
     price = Decimal(str(request.budget))
     commission = pricing_service.calculate_commission(db, price, price)
@@ -752,6 +758,8 @@ def quick_card(db: Session, request: EquipmentRequest, owner: User) -> dict:
         comment=request.comment,
         distance_km=round(km, 1) if km is not None else None,
         client_initials=_initials(client.full_name if client else None),
+        # D6: средняя оценка клиента водителями — видна до принятия заказа
+        client_rating=_client_rating(db, request.client_id),
         created_at=request.created_at,
         payment_method=request.payment_method or "balance",
         tariff=request.tariff,

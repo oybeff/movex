@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
@@ -39,6 +41,11 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
   static const _pollEvery = Duration(seconds: 10);
   static const _onlineKey = 'driver_online';
   static const _onlineSinceKey = 'driver_online_since';
+  // E2: пропуски подряд и до когда водитель снят с линии за них
+  static const _missedKey = 'driver_missed_in_row';
+  static const _pausedUntilKey = 'driver_paused_until';
+  static const _maxMissed = 3;
+  static const _pause = Duration(minutes: 15);
 
   final _api = DriverApi();
   final _requests = EquipmentRequestService();
@@ -57,6 +64,10 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
   List<DriverOrder> _orders = const [];
   Map<int, DriverEquipment> _equipment = const {};
   DriverVerification? _verification;
+  int _missed = 0;
+  DateTime? _pausedUntil;
+  // E3: последний опрос сервера не дошёл — сети нет
+  bool _netDown = false;
 
   DriverOrder? get _active {
     // Работа закончена и ждёт только подтверждения клиента — водитель
@@ -92,6 +103,9 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
   Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
     _online = prefs.getBool(_onlineKey) ?? false;
+    _missed = prefs.getInt(_missedKey) ?? 0;
+    final paused = prefs.getString(_pausedUntilKey);
+    _pausedUntil = paused == null ? null : DateTime.tryParse(paused);
     final since = prefs.getString(_onlineSinceKey);
     _onlineSince = since == null ? null : DateTime.tryParse(since);
     try {
@@ -169,10 +183,23 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
         _orders = orders;
         _incoming = incoming;
         _loaded = true;
+        _netDown = false;
       });
       _maybeShowIncoming();
-    } catch (_) {
-      if (mounted) setState(() => _loaded = true);
+    } catch (e) {
+      // E3: нет связи — только сетевые ошибки; ответ сервера с ошибкой —
+      // это не «нет интернета»
+      final net = e is DioException &&
+          (e.type == DioExceptionType.connectionError ||
+              e.type == DioExceptionType.connectionTimeout ||
+              e.type == DioExceptionType.receiveTimeout ||
+              e.type == DioExceptionType.sendTimeout);
+      if (mounted) {
+        setState(() {
+          _loaded = true;
+          _netDown = net;
+        });
+      }
     }
   }
 
@@ -190,10 +217,118 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
       MaterialPageRoute(fullscreenDialog: true, builder: (_) => DriverIncomingPage(order: o)),
     );
     _showingIncoming = false;
+    await _countMissed(accepted == null);
     await _refresh();
     if (accepted == true && mounted) {
       final a = _active;
       if (a != null) await _openOrder(a);
+    }
+  }
+
+  /// E2: не ответил на заказ — счётчик подряд; ответил (взял или отказал) —
+  /// сброс. На третьем пропуске водитель на 15 минут уходит с линии: иначе
+  /// заказы гуляли бы по спящим телефонам, а клиент ждал.
+  Future<void> _countMissed(bool missed) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!missed) {
+      _missed = 0;
+      await prefs.setInt(_missedKey, 0);
+      return;
+    }
+    _missed++;
+    await prefs.setInt(_missedKey, _missed);
+    if (_missed >= _maxMissed) {
+      _missed = 0;
+      await prefs.setInt(_missedKey, 0);
+      _pausedUntil = DateTime.now().add(_pause);
+      await prefs.setString(_pausedUntilKey, _pausedUntil!.toIso8601String());
+      await _setOnline(false);
+    }
+    if (!mounted) return;
+    await _missedSheet(paused: _pausedUntil != null && DateTime.now().isBefore(_pausedUntil!));
+  }
+
+  Future<void> _missedSheet({required bool paused}) async {
+    final stay = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DSheet(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(color: DChip.warn, borderRadius: BorderRadius.circular(24)),
+                child: const Icon(Icons.schedule_rounded, color: AppPalette.textPrimary),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text('driver.e2_title'.tr(), style: AppTypography.h2),
+            const SizedBox(height: 4),
+            Text(
+              paused
+                  ? 'driver.e2_paused'.tr(args: ['${_pause.inMinutes}'])
+                  : 'driver.e2_body'.tr(args: ['$_maxMissed', '${_pause.inMinutes}']),
+              style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary),
+            ),
+            if (!paused) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: AppPalette.page, borderRadius: BorderRadius.circular(12)),
+                child: Text('driver.e2_counter'.tr(args: ['$_missed', '$_maxMissed']),
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              ),
+            ],
+            const SizedBox(height: 14),
+            if (paused)
+              DPrimary('driver.ok'.tr(), onPressed: () => Navigator.of(ctx).pop(false))
+            else
+              Row(children: [
+                Expanded(child: DSecondary('driver.go_offline'.tr(), tinted: true, onPressed: () => Navigator.of(ctx).pop(false))),
+                const SizedBox(width: 10),
+                Expanded(child: DPrimary('driver.stay_online'.tr(), onPressed: () => Navigator.of(ctx).pop(true))),
+              ]),
+          ],
+        ),
+      ),
+    );
+    if (!paused && stay == false && mounted) await _setOnline(false);
+  }
+
+  /// «Ishga chiqish»: снят с линии за пропуски (E2) или выключена геолокация (E4).
+  Future<void> _goOnline() async {
+    final until = _pausedUntil;
+    if (until != null && DateTime.now().isBefore(until)) {
+      final left = until.difference(DateTime.now()).inMinutes + 1;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('driver.e2_wait'.tr(args: ['$left']))),
+      );
+      return;
+    }
+    if (!await _locationReady()) {
+      if (!mounted) return;
+      final fixed = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(fullscreenDialog: true, builder: (_) => const _LocationOffPage()),
+      );
+      if (fixed != true || !await _locationReady()) return;
+      _recenter();
+    }
+    await _setOnline(true);
+  }
+
+  static Future<bool> _locationReady() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) return false;
+      final p = await Geolocator.checkPermission();
+      return p == LocationPermission.always || p == LocationPermission.whileInUse;
+    } catch (_) {
+      // Платформа без геолокации (веб) — не мешаем
+      return true;
     }
   }
 
@@ -265,12 +400,42 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
                   child: Text(_initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 ),
                 const Spacer(),
-                _OnlinePill(online: _online, onTap: () => _setOnline(!_online)),
+                _OnlinePill(online: _online, onTap: () => _online ? _setOnline(false) : _goOnline()),
                 const Spacer(),
                 _Round(icon: Icons.notifications_none_rounded, onTap: () => context.push('/notifications')),
               ],
             ),
           ),
+          if (_netDown)
+            Positioned(
+              top: top + 60,
+              left: 16,
+              right: 16,
+              child: Material(
+                color: const Color(0xFFE5484D),
+                borderRadius: BorderRadius.circular(14),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.sync_problem_rounded, color: Colors.white, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('driver.e3_banner'.tr(),
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                            Text('driver.e3_banner_sub'.tr(),
+                                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           Align(
             alignment: Alignment.bottomCenter,
             child: Column(
@@ -321,7 +486,22 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
     }
     final a = _active;
     if (a != null) return _activeCard(a);
+    if (_netDown && _online) return _netSheet();
     return _online ? _onlineSheet() : _offlineSheet();
+  }
+
+  /// E3 «Aloqa tiklanishini kutyapmiz»: опрос продолжается сам.
+  Widget _netSheet() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('driver.e3_title'.tr(), style: AppTypography.h2),
+        const SizedBox(height: 4),
+        Text('driver.e3_body'.tr(), style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary)),
+        const SizedBox(height: 14),
+        DSecondary('driver.retry'.tr(), onPressed: _refresh),
+      ],
+    );
   }
 
   /// H1 · «Siz oflaynsiz».
@@ -401,7 +581,7 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
         ],
         DPrimary(
           'driver.go_online'.tr(),
-          onPressed: eq == null || !(_verification?.approved ?? false) ? null : () => _setOnline(true),
+          onPressed: eq == null || !(_verification?.approved ?? false) ? null : _goOnline,
         ),
       ],
     );
@@ -589,6 +769,62 @@ class _Round extends StatelessWidget {
           customBorder: const CircleBorder(),
           onTap: onTap,
           child: SizedBox(width: 40, height: 40, child: Icon(icon, size: 22, color: AppPalette.iconPrimary)),
+        ),
+      );
+}
+
+/// E4 «Joylashuvni yoqing»: без GPS водителя не видно на карте и ближние
+/// заказы к нему не идут. Возвращает true, если человек пошёл включать.
+class _LocationOffPage extends StatelessWidget {
+  const _LocationOffPage();
+
+  Future<void> _open(BuildContext context) async {
+    try {
+      final service = await Geolocator.isLocationServiceEnabled();
+      if (!service) {
+        await Geolocator.openLocationSettings();
+      } else {
+        var p = await Geolocator.checkPermission();
+        if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
+        if (p == LocationPermission.deniedForever) await Geolocator.openAppSettings();
+      }
+    } catch (_) {}
+    if (context.mounted) Navigator.of(context).pop(true);
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: AppPalette.surface,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Spacer(),
+                Center(
+                  child: Container(
+                    width: 88,
+                    height: 88,
+                    decoration: const BoxDecoration(color: DChip.blueBg, shape: BoxShape.circle),
+                    child: const Icon(Icons.location_off_outlined, size: 40, color: AppPalette.brand),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text('driver.e4_title'.tr(), textAlign: TextAlign.center, style: AppTypography.h1),
+                const SizedBox(height: 8),
+                Text('driver.e4_body'.tr(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14, height: 1.4, color: AppPalette.textSecondary)),
+                const Spacer(flex: 2),
+                DPrimary('driver.e4_open'.tr(), onPressed: () => _open(context)),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text('driver.e4_later'.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          ),
         ),
       );
 }

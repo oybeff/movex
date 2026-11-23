@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Sovg'a va Rahmat shakllarida rejim va foiz maydonlari yo'q —
     // ularni tekshirish shart emas.
-    $error = in_array($form, ['bonus', 'rahmat', 'listing_fee', 'app_status', 'cash_deposit'], true)
+    $error = in_array($form, ['bonus', 'rahmat', 'listing_fee', 'app_status', 'cash_deposit', 'compensation'], true)
         ? null
         : validateCommission($mode, $fixed, $percent);
 
@@ -128,6 +128,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = isset($_POST['maintenance'])
                 ? "Saqlandi. Ilova hozir «Texnik ishlar» ekranini ko'rsatadi."
                 : "Saqlandi.";
+        }
+    } elseif ($form === 'compensation') {
+        // Haydovchi ilovasi E1/E7: mijoz texnika yo'lga chiqqandan keyin bekor
+        // qilsa yoki kelmasa, egaga shuncha kompensatsiya — mijozning muzlatilgan
+        // pulidan (garov yoki eskrou). 0 — o'chirilgan.
+        $comp = trim((string)($_POST['compensation'] ?? '0'));
+        if ($comp === '') {
+            $comp = '0';
+        }
+        if (!is_numeric($comp) || (float)$comp < 0) {
+            $error = "Kompensatsiya manfiy bo'lishi mumkin emas";
+        } else {
+            saveSetting($db, 'cancel_compensation_amount', (string)(int)round((float)$comp));
+            $message = (float)$comp > 0
+                ? "Saqlandi. Keyingi bekor qilishlarga qo'llaniladi."
+                : "Saqlandi. Kompensatsiya o'chirilgan.";
         }
     } elseif ($form === 'cash_deposit') {
         // Naqd buyurtma garovi: mijoz balansida muzlatiladi, buyurtma
@@ -193,6 +209,8 @@ $bonusAmount = settingValue($db, 'signup_bonus_amount', '50000');
 $listingFee = settingValue($db, 'listing_fee_amount', '0');
 // Standart 50 000 — request_service.CASH_DEPOSIT_DEFAULT bilan bir xil.
 $cashDepositAmount = settingValue($db, 'cash_deposit_amount', '50000');
+// Standart 0 — compensation_service.amount_setting bilan bir xil (o'chirilgan).
+$compensationAmount = settingValue($db, 'cancel_compensation_amount', '0');
 $minAppVersion = settingValue($db, 'min_app_version', '0.0.0');
 $maintenanceOn = settingValue($db, 'maintenance_enabled', '0') === '1';
 $maintenanceUntil = settingValue($db, 'maintenance_until', '');
@@ -560,6 +578,36 @@ include 'includes/header.php';
                     <label>Garov summasi</label><br>
                     <input type="number" name="cash_deposit" min="0" step="1000"
                            value="<?= htmlspecialchars($cashDepositAmount) ?>"
+                           style="max-width: 220px; margin-top: 6px;">
+                    <small class="text-muted">so'm</small>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
+                    💾 Saqlash
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-3" style="margin-top: 24px;">
+        <div class="card-header">
+            <h3 class="card-title">Bekor qilish uchun kompensatsiya</h3>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info" style="margin-bottom: 18px;">
+                Texnika egasi <strong>yo'lga chiqqandan keyin</strong> mijoz buyurtmani bekor
+                qilsa, yoki ega joyida <strong>15 daqiqa</strong> kutib mijoz kelmasa — egaga
+                shuncha summa o'tadi. Pul mijozning shu buyurtma uchun
+                <strong>muzlatilgan</strong> summasidan olinadi (naqd buyurtmada — garovdan,
+                balans bilan to'langanda — eskroudan), undan ortiq emas. Karta bilan
+                to'langan buyurtmada kompensatsiya yo'q. <strong>0 — o'chirilgan.</strong>
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                <input type="hidden" name="form" value="compensation">
+                <div class="form-group">
+                    <label>Kompensatsiya summasi</label><br>
+                    <input type="number" name="compensation" min="0" step="1000"
+                           value="<?= htmlspecialchars($compensationAmount) ?>"
                            style="max-width: 220px; margin-top: 6px;">
                     <small class="text-muted">so'm</small>
                 </div>

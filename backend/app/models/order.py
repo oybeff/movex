@@ -50,6 +50,10 @@ class Order(Base):
     # E6: plans | long_wait | wrong_address | other — mijoz tanlagan sabab
     cancel_reason = Column(String(30), nullable=True)
     problem_reported_at = Column(DateTime(timezone=True), nullable=True)
+    # Макет водителя E1/E7: сколько клиент заплатил владельцу за отмену после
+    # выезда или за неявку. Пишется в момент отмены — смена ставки в админке
+    # историю не переписывает. 0 — компенсации не было.
+    compensation = Column(Numeric(12, 2), nullable=False, default=0, server_default="0")
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -63,6 +67,7 @@ class Order(Base):
         CheckConstraint("delivery_fee IS NULL OR delivery_fee >= 0", name="check_order_delivery_fee"),
         CheckConstraint("payment_method IN ('balance','cash','card')", name="check_order_payment_method"),
         CheckConstraint("owner_frozen >= 0", name="check_order_owner_frozen"),
+        CheckConstraint("compensation >= 0", name="check_order_compensation"),
         # У наличного заказа нет эскроу клиента — только заморозка владельца.
         CheckConstraint("payment_method = 'balance' OR frozen_amount = 0", name="check_order_cash_no_escrow"),
     )

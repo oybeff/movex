@@ -78,6 +78,7 @@ class OrderRead(BaseModel):
     hours: Optional[int] = None
     departed_at: Optional[datetime] = None
     arrived_at: Optional[datetime] = None
+    compensation: Optional[float] = 0
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
     extend_requested_hours: Optional[int] = None

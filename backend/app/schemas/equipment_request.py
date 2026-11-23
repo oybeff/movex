@@ -190,6 +190,7 @@ class QuickIncoming(BaseModel):
     distance_km: Optional[float] = None
     #: Mijoz ismining bosh harflari ("DR") — avatar uchun, ismsiz
     client_initials: Optional[str] = None
+    client_rating: Optional[float] = None
     created_at: datetime
     #: cash — клиент платит наличными владельцу; комиссия уйдёт с баланса
     #: владельца, поэтому он должен видеть это ДО того, как возьмёт заказ.

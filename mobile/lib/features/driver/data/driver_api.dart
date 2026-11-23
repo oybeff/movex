@@ -109,6 +109,33 @@ class DriverApi {
   Future<void> declineExtend(int id) => _dio.post('/orders/$id/extend/decline');
   Future<void> cancel(int id) => _dio.put('/orders/$id', data: {'status': 'cancelled'});
 
+  /// E7 «Mijoz kelmadi»: отмена владельцем; после ожидания — с компенсацией.
+  Future<DriverOrder> noShow(int id) async {
+    final r = await _dio.post('/orders/$id/no-show');
+    return DriverOrder(r.data as Map<String, dynamic>);
+  }
+
+  /// D6 «Mijozni baholang». Повторная оценка переписывает прежнюю.
+  Future<void> rateClient(int id, int rating, List<String> tags) =>
+      _dio.post('/orders/$id/rate-client', data: {'rating': rating, 'tags': tags});
+
+  /// Своя оценка клиента в этом заказе (null — ещё не оценивал).
+  Future<Map<String, dynamic>?> myClientRating(int id) async {
+    final r = await _dio.get('/orders/$id/client-rating');
+    return (r.data as Map<String, dynamic>)['mine'] as Map<String, dynamic>?;
+  }
+
+  /// Компенсация E1/E7 и сколько ждать клиента — из админки, не из кода:
+  /// иначе в собранном APK застыло бы старое значение.
+  Future<DriverSettings> settings() async {
+    try {
+      final r = await _dio.get('/drivers/settings');
+      return DriverSettings(r.data as Map<String, dynamic>);
+    } catch (_) {
+      return DriverSettings(const {});
+    }
+  }
+
   /// Имя и телефон клиента — участникам заказа сервер их отдаёт (access.py).
   Future<Map<String, dynamic>?> client(int userId) async {
     try {
@@ -162,6 +189,10 @@ class DriverOrder {
   String? get startTime => (j['start_time'] as String?)?.substring(0, 5);
   int get equipmentId => j['equipment_id'] as int;
   String? get cancelledBy => j['cancelled_by'] as String?;
+  String? get cancelReason => j['cancel_reason'] as String?;
+
+  /// E1/E7: сколько клиент заплатил владельцу за отмену. 0 — не было.
+  double get compensation => _num(j['compensation']);
 
   /// Живой заказ — его водитель видит на главной.
   bool get active => status == 'confirmed';
@@ -209,4 +240,14 @@ class DriverVerification {
   String? statusOf(String kind) => docs[kind]?['status'] as String?;
   String? reasonOf(String kind) => docs[kind]?['reject_reason'] as String?;
   int get requiredDone => required.where((k) => docs.containsKey(k)).length;
+}
+
+/// Настройки для экранов водителя (`GET /drivers/settings`).
+class DriverSettings {
+  DriverSettings(this.j);
+
+  final Map<String, dynamic> j;
+
+  double get compensation => _num(j['compensation_amount']);
+  int get noShowWaitMinutes => (j['no_show_wait_minutes'] as int?) ?? 15;
 }

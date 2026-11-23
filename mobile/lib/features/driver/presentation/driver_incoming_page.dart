@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
 
 import '../../../core/models/equipment_request_model.dart';
@@ -16,7 +17,8 @@ import 'driver_ui.dart';
 /// Входящий заказ водителя — макет 01: H3 (сейчас, 15 секунд на ответ,
 /// свайп), H5 (запланированный — кнопками), H4 (причина отказа).
 ///
-/// Результат: `true` — взял, `false` — отказался или время вышло.
+/// Результат: `true` — взял, `false` — отказался, `null` — не ответил
+/// (время вышло, E2: дом считает пропуски подряд).
 class DriverIncomingPage extends StatefulWidget {
   const DriverIncomingPage({super.key, required this.order});
 
@@ -56,8 +58,8 @@ class _DriverIncomingPageState extends State<DriverIncomingPage> {
         setState(() => _left--);
         if (_left <= 0) {
           _timer?.cancel();
-          // Время вышло — как «пропустил», без причины. Заказ уходит другим.
-          Navigator.of(context).pop(false);
+          // Время вышло — «пропустил», без причины. Заказ уходит другим (E2).
+          Navigator.of(context).pop(null);
         }
       });
     }
@@ -67,6 +69,58 @@ class _DriverIncomingPageState extends State<DriverIncomingPage> {
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  /// E6 «Komissiya uchun balans yetmaydi». В макете — «долг по комиссии с
+  /// лимитом»; у нас долга нет вовсе: комиссия наличного заказа
+  /// замораживается на балансе при принятии (request_service.quick_accept),
+  /// поэтому экран говорит, сколько пополнить, чтобы взять заказ.
+  Future<void> _noBalanceSheet() async {
+    double available = 0;
+    try {
+      final b = await _api.balance();
+      double n(Object? v) => v is num ? v.toDouble() : double.tryParse('$v') ?? 0;
+      available = n(b['balance']) - n(b['frozen_balance']);
+    } catch (_) {}
+    final need = (o.price - o.youReceive);
+    final missing = (need - available).clamp(0, double.infinity);
+    if (!mounted) return;
+    final go = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DSheet(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(color: DChip.redBg, borderRadius: BorderRadius.circular(24)),
+                child: const Icon(Icons.account_balance_wallet_outlined, color: AppPalette.textDanger),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text('driver.e6_title'.tr(), style: AppTypography.h2),
+            const SizedBox(height: 4),
+            Text('driver.e6_body'.tr(), style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary)),
+            const SizedBox(height: 12),
+            DRow('driver.e6_available'.tr(), money(available)),
+            DRow('driver.e6_commission'.tr(), money(need)),
+            DRow('driver.e6_missing'.tr(), money(missing), bold: true, valueColor: AppPalette.textDanger),
+            const SizedBox(height: 14),
+            DPrimary('driver.e6_topup'.tr(), onPressed: () => Navigator.of(ctx).pop(true)),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text('driver.later'.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (go == true && mounted) await context.push('/balance-topup');
   }
 
   Future<void> _accept() async {
@@ -87,6 +141,12 @@ class _DriverIncomingPageState extends State<DriverIncomingPage> {
         if (data is Map && data['detail'] is String) detail = data['detail'] as String;
       } catch (_) {}
       setState(() => _busy = false);
+      if (status == 402 && o.paymentMethod == 'cash') {
+        // E6: на комиссию наличного заказа не хватает баланса
+        await _noBalanceSheet();
+        if (mounted) Navigator.of(context).pop(false);
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(status == 409 ? 'requests.quick_taken'.tr() : (detail ?? 'errors.something_went_wrong'.tr())),
       ));
@@ -197,6 +257,17 @@ class _DriverIncomingPageState extends State<DriverIncomingPage> {
                       'driver.you_get'.tr(args: [money(o.youReceive), money(commission)]),
                       style: const TextStyle(fontSize: 12, color: AppPalette.textSecondary),
                     ),
+                    if (o.clientRating != null) ...[
+                      const SizedBox(height: 6),
+                      Row(children: [
+                        Text('driver.client_rating'.tr(),
+                            style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary)),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.star_rounded, size: 16, color: Color(0xFFF5B400)),
+                        Text(o.clientRating!.toStringAsFixed(1),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      ]),
+                    ],
                     const SizedBox(height: 12),
                     DAddress(o.deliveryAddress),
                     const SizedBox(height: 8),

@@ -324,6 +324,14 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "Buyurtma #{order_id} bekor qilindi — {what}",
         "ru": "Заказ #{order_id} отменён — {what}",
     },
+    "tx.compensation_paid": {
+        "uz": "Buyurtma #{order_id}: texnika egasiga kompensatsiya",
+        "ru": "Заказ #{order_id}: компенсация владельцу техники",
+    },
+    "tx.compensation_received": {
+        "uz": "Buyurtma #{order_id}: bekor qilingani uchun kompensatsiya",
+        "ru": "Заказ #{order_id}: компенсация за отмену",
+    },
     "tx.order_cancelled_returned": {
         "uz": "Buyurtma #{order_id} bekor qilindi, pul qaytarildi — {what}",
         "ru": "Заказ #{order_id} отменён, деньги возвращены — {what}",

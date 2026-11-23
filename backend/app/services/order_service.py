@@ -211,6 +211,16 @@ def get_orders(db: Session, skip: int = 0, limit: int = 100, current_user=None):
 #: E6 «Buyurtmani bekor qilasizmi?» — ilovadagi variantlar bilan bir xil.
 CANCEL_REASONS = ("plans", "long_wait", "wrong_address", "other")
 
+
+def _wants_compensation(db_order, old_status: str) -> bool:
+    """E1: клиент отменил ПОДТВЕРЖДЁННЫЙ заказ, когда техника уже выехала."""
+    return (
+        old_status == 'confirmed'
+        and db_order.cancelled_by == 'client'
+        and db_order.departed_at is not None
+    )
+
+
 def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id: int):
     """
     Buyurtmani yangilash (faqat status o'zgartiriladi)
@@ -423,7 +433,9 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
 
         # Agar frozen_amount 0 bo'lsa, demak pul allaqachon o'tgan (eski kod bilan yaratilgan buyurtma)
         # Bu holda owner'dan client'ga qaytarish kerak
-        if db_order.frozen_amount == Decimal('0.0'):
+        # compensation > 0: эскроу ушёл владельцу компенсацией (E7) — это НЕ
+        # старый заказ, и переводить «всю сумму обратно» было бы печатью денег.
+        if db_order.frozen_amount == Decimal('0.0') and not (db_order.compensation or 0):
             # Eski tizim: pul allaqachon owner'ga o'tgan
             owner_balance = db.query(Balance).filter(Balance.user_id == equipment.owner_id).first()
             if not owner_balance:
@@ -468,20 +480,30 @@ def update_order(db: Session, order_id: int, order: OrderUpdate, current_user_id
 
         else:
             # Yangi tizim: pul escrow'da (frozen_balance'da)
+            # E1: texnika yo'lga chiqqandan keyin mijoz bekor qilsa — avval
+            # kompensatsiya (sozlama 0 bo'lsa hech narsa qilmaydi), keyin
+            # QOLGAN muzlatish mijozga qaytadi.
+            if _wants_compensation(db_order, old_status):
+                from app.services.compensation_service import compensate
+                # `balance` — тот же объект из identity map, compensate
+                # меняет его же; refresh здесь стёр бы эти изменения.
+                compensate(db, db_order, equipment.owner_id)
             # ESCROW'dan client'ga pul qaytarish
             balance.frozen_balance -= db_order.frozen_amount
 
-            # Client uchun 'refund' transaksiyasi yaratish
-            refund_transaction = BalanceTransaction(
-                user_id=db_order.user_id,
-                amount=db_order.frozen_amount,
-                type='refund',
-                status='completed',
-                description=t("tx.order_cancelled", _lang(db, db_order.user_id),
-                              order_id=db_order.id, what=_what(equipment, _lang(db, db_order.user_id))),
-                order_id=db_order.id
-            )
-            db.add(refund_transaction)
+            # Client uchun 'refund' transaksiyasi. Kompensatsiya butun
+            # eskrouni olgan bo'lsa, qaytadigan narsa yo'q — 0 so'mlik
+            # yozuvni CHECK check_transaction_amount qabul qilmaydi.
+            if db_order.frozen_amount > 0:
+                db.add(BalanceTransaction(
+                    user_id=db_order.user_id,
+                    amount=db_order.frozen_amount,
+                    type='refund',
+                    status='completed',
+                    description=t("tx.order_cancelled", _lang(db, db_order.user_id),
+                                  order_id=db_order.id, what=_what(equipment, _lang(db, db_order.user_id))),
+                    order_id=db_order.id
+                ))
 
         # MUHIM: Equipment ni 'available' holatiga QAYTARMAYMIZ!
         # Owner o'zi qo'lda boshqaradi
@@ -732,6 +754,10 @@ def _update_cash_order(db: Session, db_order: Order, equipment, old_status: str,
     elif new_status == 'cancelled' and old_status in ('pending', 'confirmed'):
         if not is_party:
             raise HTTPException(status_code=403, detail="Faqat buyurtma egasi yoki texnika egasi bekor qilishi mumkin")
+        # E1: kompensatsiya mijoz garovidan — garov qaytarilishidan OLDIN.
+        if _wants_compensation(db_order, old_status):
+            from app.services.compensation_service import compensate
+            compensate(db, db_order, owner_id)
         _release(_owner_balance())
         db_order.status = 'cancelled'
 

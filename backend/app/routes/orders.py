@@ -132,6 +132,40 @@ def order_start(order_id: int, db: Session = Depends(get_db), current_user=Depen
     return order_flow_service.start(db, order_id, current_user)
 
 
+@router.post("/{order_id}/no-show", response_model=order_schema.OrderRead)
+def order_no_show(order_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """Владелец: E7 «Mijoz kelmadi» — отмена, после 15 минут ожидания с компенсацией."""
+    return order_flow_service.no_show(db, order_id, current_user)
+
+
+class ClientRatingIn(BaseModel):
+    rating: int = Field(..., ge=1, le=5)
+    tags: list[str] = Field(default_factory=list, max_length=8)
+
+
+@router.post("/{order_id}/rate-client")
+def order_rate_client(order_id: int, payload: ClientRatingIn, db: Session = Depends(get_db),
+                      current_user=Depends(get_current_user)):
+    """Владелец: D6 «Mijozni baholang»."""
+    return order_flow_service.rate_client(db, order_id, current_user, payload.rating, payload.tags)
+
+
+@router.get("/{order_id}/client-rating")
+def order_client_rating(order_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """Средняя оценка клиента этого заказа и оценка, поставленная в нём."""
+    from app.models.client_rating import ClientRating
+
+    db_order = order_service.get_order(db, order_id)
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    assert_order_access(db, db_order, current_user)
+    mine = db.query(ClientRating).filter(ClientRating.order_id == order_id).first()
+    return {
+        **order_flow_service.client_rating_summary(db, db_order.user_id),
+        "mine": {"rating": mine.rating, "tags": (mine.tags or "").split(",") if mine.tags else []} if mine else None,
+    }
+
+
 @router.post("/{order_id}/finish", response_model=order_schema.OrderRead)
 def order_finish(order_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     """Владелец: «Yakunlash». Деньги двигает подтверждение клиента."""
