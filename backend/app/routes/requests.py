@@ -169,6 +169,8 @@ def tariff_quotes(
     equipment_type: str = Query(..., min_length=1, max_length=50),
     hours: Optional[int] = Query(None, ge=1, le=24),
     attachment_id: Optional[int] = Query(None),
+    latitude: Optional[float] = Query(None, ge=-90, le=90),
+    longitude: Optional[float] = Query(None, ge=-180, le=180),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
@@ -176,8 +178,19 @@ def tariff_quotes(
     Тарифы типа с итоговой суммой. Та же функция считает сумму при
     создании заказа — цифра на экране и списанная совпадают.
     hours не задан или меньше минимума — берётся минимум тарифа.
+    Динамический расчет ETA от местоположения клиента до ближайшей техники.
     """
-    return [q.__dict__ for q in tariff_service.quote_all(db, equipment_type, hours, attachment_id)]
+    return [
+        q.__dict__
+        for q in tariff_service.quote_all(
+            db,
+            equipment_type,
+            hours,
+            attachment_id,
+            latitude=latitude,
+            longitude=longitude,
+        )
+    ]
 
 
 @router.get("/cash-deposit")

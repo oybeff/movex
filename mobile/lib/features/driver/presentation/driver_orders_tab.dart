@@ -14,6 +14,7 @@ import '../../../core/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/equipment_request_service.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_logo.dart';
 import '../../../core/widgets/map_or_placeholder.dart';
 import '../../owner_home/presentation/pages/my_equipment_page.dart';
 import '../../taxi/data/taxi_geo.dart';
@@ -399,9 +400,19 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
                   backgroundColor: AppPalette.brand,
                   child: Text(_initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppPalette.surface,
+                    borderRadius: BorderRadius.circular(99),
+                    boxShadow: AppShadows.xs,
+                  ),
+                  child: const AppLogo(kind: AppLogoKind.horizontal, height: 20),
+                ),
                 const Spacer(),
                 _OnlinePill(online: _online, onTap: () => _online ? _setOnline(false) : _goOnline()),
-                const Spacer(),
+                const SizedBox(width: 8),
                 _Round(icon: Icons.notifications_none_rounded, onTap: () => context.push('/notifications')),
               ],
             ),

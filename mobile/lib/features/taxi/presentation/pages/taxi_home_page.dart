@@ -11,6 +11,7 @@ import 'package:yandex_mapkit/yandex_mapkit.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/error_handler.dart';
+import '../../../../core/widgets/app_logo.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
 import '../../data/taxi_geo.dart';
 import '../../data/taxi_service.dart';
@@ -338,7 +339,12 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     });
     try {
       final results = await Future.wait([
-        _api.tariffs(type, hours: _defaultHours),
+        _api.tariffs(
+          type,
+          hours: _defaultHours,
+          latitude: _from.lat,
+          longitude: _from.lon,
+        ),
         _api.attachments(type),
       ]);
       if (!mounted) return;
@@ -364,7 +370,13 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   Future<void> _reloadQuotes() async {
     if (_type == null) return;
     try {
-      final quotes = await _api.tariffs(_type!, hours: _hours ?? _defaultHours, attachmentId: _attachment?.id);
+      final quotes = await _api.tariffs(
+        _type!,
+        hours: _hours ?? _defaultHours,
+        attachmentId: _attachment?.id,
+        latitude: _from.lat,
+        longitude: _from.lon,
+      );
       if (mounted) setState(() => _quotes = quotes);
       _netBack();
     } catch (e) {
@@ -1079,6 +1091,27 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
                       )
                     : const SizedBox.shrink(),
           ),
+          if (_step == _Step.route)
+            Positioned(
+              top: top + AppSpacing.sm,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: AppPalette.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                    boxShadow: AppShadows.card,
+                    border: Border.all(color: AppPalette.borderDefault.withValues(alpha: 0.6)),
+                  ),
+                  child: const AppLogo(
+                    kind: AppLogoKind.horizontal,
+                    height: 24,
+                  ),
+                ),
+              ),
+            ),
           if (_step == _Step.route && !MapOrPlaceholder.isWeb)
             Positioned(
               right: AppSpacing.gutter,

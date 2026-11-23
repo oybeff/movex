@@ -7,6 +7,7 @@ import '../../../core/models/user_model.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/pin_service.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/app_logo.dart';
 import '../../../core/widgets/delete_account_button.dart';
 import '../../listings/presentation/pages/listings_page.dart';
 import '../../owner_home/presentation/pages/my_equipment_page.dart';
@@ -172,6 +173,14 @@ class _DriverProfileTabState extends State<DriverProfileTab> {
             ]),
             const SizedBox(height: 24),
             const DeleteAccountButton(),
+            const SizedBox(height: 28),
+            const Center(
+              child: AppLogo(
+                kind: AppLogoKind.vertical,
+                height: 56,
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),

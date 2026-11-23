@@ -9,6 +9,7 @@ import '../../../../core/services/order_service.dart';
 import '../../../../core/services/pin_service.dart';
 import '../../../../core/services/user_service.dart';
 import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/widgets/app_logo.dart';
 import '../../../listings/presentation/pages/listings_page.dart';
 import '../../../settings/presentation/pages/privacy_page.dart';
 import '../../../settings/presentation/pages/terms_page.dart';
@@ -422,7 +423,14 @@ class _TaxiProfilePageState extends State<TaxiProfilePage> {
                       onTap: _logout,
                     ),
                   ]),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
+                  const Center(
+                    child: AppLogo(
+                      kind: AppLogoKind.vertical,
+                      height: 56,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Text(
                     'MoveX GO · ${'profile.version'.tr()} $_version',
                     textAlign: TextAlign.center,

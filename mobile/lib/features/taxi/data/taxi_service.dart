@@ -20,11 +20,15 @@ class TaxiService {
     String type, {
     int? hours,
     int? attachmentId,
+    double? latitude,
+    double? longitude,
   }) async {
     final r = await _dio.get('/requests/tariffs', queryParameters: {
       'equipment_type': type,
       if (hours != null) 'hours': hours,
       if (attachmentId != null) 'attachment_id': attachmentId,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
     });
     return (r.data as List)
         .map((e) => TariffQuote.fromJson(e as Map<String, dynamic>))

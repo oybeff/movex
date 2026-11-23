@@ -77,16 +77,73 @@ def get_attachment(
 
 
 def quote_all(
-    db: Session, equipment_type: str, hours: Optional[int], attachment_id: Optional[int]
+    db: Session,
+    equipment_type: str,
+    hours: Optional[int],
+    attachment_id: Optional[int],
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
 ) -> List[TariffQuote]:
-    """Все активные тарифы типа с итоговой суммой. hours=None — минимум тарифа."""
+    """Все активные тарифы типа с итоговой суммой. hours=None — минимум тарифа.
+    
+    Динамический расчёт времени прибытия (eta_minutes): если переданы координаты
+    клиента, ищется ближайшая доступная техника данного типа и рассчитывается
+    время доезда по формуле (дистанция / 25 км/ч) + буфер подготовки.
+    """
     att = get_attachment(db, equipment_type, attachment_id)
     att_price = Decimal(str(att.price_per_hour)) if att else Decimal("0")
+
+    # Ищем минимальное расстояние до доступной техники данного типа
+    nearest_km: Optional[float] = None
+    if latitude is not None and longitude is not None:
+        try:
+            from app.models.equipment import Equipment
+            from app.models.user import User
+            from app.services import pricing_service
+
+            machines = (
+                db.query(Equipment)
+                .filter(
+                    Equipment.type == equipment_type,
+                    Equipment.deleted_at.is_(None),
+                    Equipment.status == "available",
+                )
+                .all()
+            )
+            for eq in machines:
+                e_lat = float(eq.latitude) if eq.latitude is not None else None
+                e_lon = float(eq.longitude) if eq.longitude is not None else None
+                if e_lat is None or e_lon is None:
+                    owner = db.query(User).filter(User.id == eq.owner_id).first()
+                    if owner and owner.search_latitude is not None and owner.search_longitude is not None:
+                        e_lat = float(owner.search_latitude)
+                        e_lon = float(owner.search_longitude)
+                if e_lat is not None and e_lon is not None:
+                    dist = float(pricing_service.distance_km(e_lat, e_lon, latitude, longitude))
+                    if nearest_km is None or dist < nearest_km:
+                        nearest_km = dist
+        except Exception:
+            nearest_km = None
+
     result = []
     for t in active_tariffs(db, equipment_type):
         h = max(hours or t.min_hours, t.min_hours)
         h = min(h, MAX_HOURS)
         price = Decimal(str(t.price_per_hour))
+
+        eta = t.eta_minutes
+        if t.tier == "day":
+            eta = None  # Для «Kun davomida» всегда подпись «Bugun ichida»
+        elif nearest_km is not None:
+            # Средняя скорость спецтехники по городу 25 км/ч (1 км ≈ 2.4 мин)
+            travel_mins = int(round(nearest_km / 25.0 * 60))
+            if t.tier == "fast":
+                # Срочный вызов: подача сразу + 5 мин на выезд, минимум 10 мин
+                eta = max(10, min(120, travel_mins + 5))
+            else:
+                # Эконом: плановая подача с буфером 15 мин, минимум 20 мин
+                eta = max(20, min(180, travel_mins + 15))
+
         result.append(TariffQuote(
             tier=t.tier,
             price_per_hour=price,
@@ -94,7 +151,7 @@ def quote_all(
             min_hours=t.min_hours,
             hours=h,
             total=(price + att_price) * h,
-            eta_minutes=t.eta_minutes,
+            eta_minutes=eta,
         ))
     return result
 
