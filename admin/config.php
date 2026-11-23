@@ -449,7 +449,7 @@ function internalApiPost(string $path, array $payload = []): array {
  */
 function internalApiUpload(string $path, string $tmpFile, string $fileName, string $mime): array {
     if (ADMIN_INTERNAL_SECRET === '') {
-        return ['ok' => false, 'data' => null, 'error' => 'ADMIN_INTERNAL_SECRET backend/.env da to'ldirilmagan'];
+        return ['ok' => false, 'data' => null, 'error' => "ADMIN_INTERNAL_SECRET backend/.env da to'ldirilmagan"];
     }
     $ch = curl_init(rtrim(API_BASE_URL, '/') . $path);
     curl_setopt_array($ch, [
