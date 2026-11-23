@@ -798,6 +798,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
       children: [
         for (final code in EquipmentTypes.codes)
           ChoiceChip(
+            showCheckmark: false,
             selected: _equipmentType == code,
             onSelected: (selected) =>
                 setState(() => _equipmentType = selected ? code : null),
