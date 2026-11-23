@@ -300,7 +300,38 @@ function equipmentTypeName($code) {
         'other'           => 'Boshqa texnika',
     ];
     if ($code === null || $code === '') return '—';
-    return $names[$code] ?? $code;
+    // С 23.11.2026 типы ведёт catalog.php (таблица equipment_catalog):
+    // там их переименовывают и заводят новые. Таблицы нет — список выше.
+    static $db = null;
+    if ($db === null) {
+        $db = [];
+        try {
+            foreach (getDbConnection()->query('SELECT code, name_uz FROM equipment_catalog') as $r) {
+                $db[$r['code']] = $r['name_uz'];
+            }
+        } catch (Throwable $e) {
+            // миграция ещё не прошла
+        }
+    }
+    return $db[$code] ?? $names[$code] ?? $code;
+}
+
+/**
+ * Коды типов техники для выпадающих списков — из catalog.php, включённые
+ * и выключенные (тариф можно завести заранее).
+ */
+function equipmentTypeCodes(): array {
+    try {
+        $codes = getDbConnection()
+            ->query('SELECT code FROM equipment_catalog ORDER BY sort_order, code')
+            ->fetchAll(PDO::FETCH_COLUMN);
+        if ($codes) return $codes;
+    } catch (Throwable $e) {
+    }
+    return ['excavator', 'mini_excavator', 'backhoe_loader', 'bulldozer', 'front_loader',
+            'grader', 'roller', 'truck_crane', 'manipulator', 'aerial_platform',
+            'dump_truck', 'concrete_mixer', 'concrete_pump', 'auger_drill', 'tow_truck',
+            'compressor', 'other'];
 }
 
 /**
@@ -408,6 +439,39 @@ function internalApiPost(string $path, array $payload = []): array {
         ? (is_string($decoded['detail']) ? $decoded['detail'] : json_encode($decoded['detail']))
         : ('HTTP ' . $status);
 
+    return ['ok' => false, 'data' => null, 'error' => $detail];
+}
+
+/**
+ * Загрузка файла во внутренний адрес бэкенда (иконка типа в catalog.php).
+ * Файл сохраняет бэкенд — у него свои права на media/ и свои правила
+ * (расширение, размер, имя задаёт сервер).
+ */
+function internalApiUpload(string $path, string $tmpFile, string $fileName, string $mime): array {
+    if (ADMIN_INTERNAL_SECRET === '') {
+        return ['ok' => false, 'data' => null, 'error' => 'ADMIN_INTERNAL_SECRET backend/.env da to'ldirilmagan'];
+    }
+    $ch = curl_init(rtrim(API_BASE_URL, '/') . $path);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => ['file' => new CURLFile($tmpFile, $mime, $fileName)],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => API_TIMEOUT,
+        CURLOPT_HTTPHEADER => ['X-Admin-Secret: ' . ADMIN_INTERNAL_SECRET],
+    ]);
+    $body = curl_exec($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+    if ($body === false) {
+        return ['ok' => false, 'data' => null, 'error' => 'Backend javob bermadi (' . $curlError . ')'];
+    }
+    $decoded = json_decode($body, true);
+    if ($status >= 200 && $status < 300) {
+        return ['ok' => true, 'data' => $decoded, 'error' => ''];
+    }
+    $detail = is_array($decoded) && isset($decoded['detail']) && is_string($decoded['detail'])
+        ? $decoded['detail'] : ('HTTP ' . $status);
     return ['ok' => false, 'data' => null, 'error' => $detail];
 }
 

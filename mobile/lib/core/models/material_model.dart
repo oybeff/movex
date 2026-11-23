@@ -157,7 +157,10 @@ class DeliveryVehicleModel {
   final String code;
   final int capacityKg;
 
-  const DeliveryVehicleModel({required this.code, required this.capacityKg});
+  /// Название из админки (catalog.php → «Yetkazib berish mashinalari»).
+  final String? name;
+
+  const DeliveryVehicleModel({required this.code, required this.capacityKg, this.name});
 
   double get capacityTonnes => capacityKg / 1000;
 
@@ -165,6 +168,7 @@ class DeliveryVehicleModel {
       DeliveryVehicleModel(
         code: json['code'] as String,
         capacityKg: json['capacity_kg'] as int,
+        name: json['name'] as String?,
       );
 }
 

@@ -20,6 +20,8 @@ import '../widgets/taxi_sheets.dart';
 import '../widgets/taxi_ui.dart';
 import 'address_pick_page.dart';
 import '../../data/app_status.dart';
+import '../../../../core/services/equipment_catalog.dart';
+import 'catalog_all_page.dart';
 import '../../../../core/services/permission_service.dart';
 import 'package:dio/dio.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -135,6 +137,10 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     if (!TaxiGeo.denied) _resolveFromAddress();
     _askNotificationsOnce();
     _pickDefaultCard();
+    // Иконки и названия типов из админки — не ждём, плитки обновятся сами.
+    EquipmentCatalog.load(context.locale.languageCode).then((ok) {
+      if (ok && mounted) setState(() {});
+    });
     _status = AppStatus.last ?? await AppStatus.fetch();
     try {
       final types = await _api.tariffTypes();
@@ -1536,31 +1542,12 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     return types;
   }
 
+  /// «Boshqalar» → K2 «Barcha kategoriyalar»: весь справочник из админки.
   Future<void> _moreTypes() async {
-    const mainCodes = {'excavator', 'bulldozer', 'truck_crane', 'dump_truck', 'front_loader'};
-    final rest = _types.where((t) => !mainCodes.contains(t)).toList();
-    if (rest.isEmpty) {
-      _toast('taxi.no_more_types'.tr());
-      return;
-    }
-    final picked = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: AppPalette.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.gutter),
-          child: Wrap(
-            spacing: (MediaQuery.of(ctx).size.width - 2 * AppSpacing.gutter - 4 * 76) / 3,
-            runSpacing: 14,
-            children: [for (final t in rest) TypeTile(type: t, onTap: () => Navigator.of(ctx).pop(t))],
-          ),
-        ),
-      ),
+    final picked = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const CatalogAllPage()),
     );
-    if (picked != null) _pickType(picked);
+    if (picked != null && mounted) _pickType(picked);
   }
 
   // 3 · Texnika va xizmat turini tanlash (TT 2-qism):
@@ -1575,7 +1562,9 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
       TypeTile(type: 'dump_truck', onTap: _busy ? () {} : () => _pickType('dump_truck')),
       TypeTile(type: 'front_loader', onTap: _busy ? () {} : () => _pickType('front_loader')),
       TypeTile(type: 'freight', onTap: _busy ? () {} : () => _pickType('freight')),
-      TypeTile(type: 'materials', onTap: () => _pickType('materials')),
+      // Раздел выключает админ (catalog.php) — тогда плитки нет совсем.
+      if (_status?.materialsEnabled ?? true)
+        TypeTile(type: 'materials', onTap: () => _pickType('materials')),
       TypeTile(type: 'more', label: 'taxi.more_types'.tr(), onTap: _moreTypes),
     ];
     final rows = <Widget>[];

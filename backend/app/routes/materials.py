@@ -11,10 +11,10 @@ marta bo'lgan.
 """
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
-from app.core import delivery_vehicles, material_types, media
+from app.core import delivery_vehicles, material_types, media, settings_values
 from app.core.account_state import assert_not_frozen
 from app.core.roles import role_checker
 from app.db.session import get_db
@@ -95,11 +95,12 @@ def material_type_list():
 
 
 @router.get("/vehicles", response_model=List[DeliveryVehicleRead])
-def vehicle_list():
-    """Yetkazadigan mashinalar va ularning sig'imi."""
+def vehicle_list(db: Session = Depends(get_db)):
+    """Yetkazadigan mashinalar — ro'yxatni admin yuritadi (vehicles.php)."""
     return [
-        DeliveryVehicleRead(code=v.code, capacity_kg=v.capacity_kg)
-        for v in delivery_vehicles.VEHICLES
+        DeliveryVehicleRead(code=v.code, capacity_kg=v.capacity_kg,
+                            name=v.name, volume_m3=v.volume_m3)
+        for v in delivery_vehicles.load(db)
     ]
 
 
@@ -234,6 +235,7 @@ def quote(
         goods_amount=result.goods_amount,
         weight_kg=result.weight_kg,
         vehicle_code=result.vehicle_code,
+        vehicle_name=result.vehicle_name,
         vehicle_capacity_kg=result.vehicle_capacity_kg,
         trips=result.trips,
         delivery_distance_km=result.distance_km,
@@ -261,6 +263,10 @@ def create_order(
     current_user=Depends(get_current_user),
 ):
     """Buyurtma: summa serverda sanaladi va balansda muzlatiladi."""
+    # Bo'limni admin o'chirgan bo'lsa (commission.php → «Qurilish
+    # materiallari»), eski ilova orqali ham buyurtma berib bo'lmasin.
+    if not settings_values.materials_enabled(db):
+        raise HTTPException(403, "Qurilish materiallari bo'limi vaqtincha o'chirilgan")
     order = material_service.create_order(db, current_user, data)
     return _order_to_read(db, order)
 

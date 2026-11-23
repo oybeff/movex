@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../../core/constants/app_config.dart';
 import '../../../../core/constants/equipment_types.dart';
+import '../../../../core/services/equipment_catalog.dart';
 import '../../../../core/theme/app_tokens.dart';
 
 /// Куски экранов заказа «как такси». Размеры и цвета — из макета (клиентский
@@ -69,8 +70,37 @@ class EquipmentPhoto extends StatelessWidget {
     'aerial_platform',
   };
 
+  Widget _local() {
+    if (!EquipmentTypes.isBuiltIn(type)) {
+      return SizedBox(
+        width: width,
+        height: height,
+        child: Center(
+          child: SvgPicture.asset('assets/brand/more_types.svg', width: height * 0.6, height: height * 0.6),
+        ),
+      );
+    }
+    return _builtIn();
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Иконка из админки (catalog.php) главнее зашитой в приложение:
+    // её можно поменять без новой версии в Play Market.
+    final remote = EquipmentCatalog.iconUrl(type);
+    if (remote != null && remote.isNotEmpty) {
+      return Image.network(
+        AppConfig.mediaUrl(remote),
+        width: width,
+        height: height,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => _local(),
+      );
+    }
+    return _local();
+  }
+
+  Widget _builtIn() {
     if (!_photos.contains(type)) {
       // Agar texnikaning fotosurati bo'lmasa, toza vektorli SVG ikonkasi
       // ko'rsatiladi (eskirgan va noaniq kesilgan marker o'rniga).

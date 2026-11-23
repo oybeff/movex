@@ -15,6 +15,10 @@ class AppStatus {
   String? get maintenanceUntil => j['maintenance_until'] as String?;
   String? get storeAndroid => j['store_android'] as String?;
   String? get storeIos => j['store_ios'] as String?;
+
+  /// «Qurilish materiallari» включены в админке. Старый сервер поля не
+  /// шлёт — считаем включёнными.
+  bool get materialsEnabled => j['materials_enabled'] != false;
   Map<String, dynamic> get area => (j['service_area'] as Map?)?.cast<String, dynamic>() ?? const {};
 
   bool inArea(double lat, double lon) {

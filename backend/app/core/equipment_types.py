@@ -45,11 +45,26 @@ EQUIPMENT_TYPE_CODES = {t["code"] for t in EQUIPMENT_TYPES}
 FALLBACK_TYPE_CODE = "other"
 
 def is_valid_type(code: Optional[str]) -> bool:
+    """
+    Тип можно заказать. С 23.11.2026 типы ведёт админка (equipment_catalog):
+    там можно завести новый и выключить старый. Записи в базе нет — решает
+    список в коде (база до миграции).
+    """
+    from app.core import catalog
+
+    row = catalog.get(code)
+    if row is not None:
+        return bool(row["is_enabled"])
     return code in EQUIPMENT_TYPE_CODES
 
 
 
 def get_type(code: str) -> Optional[Dict[str, str]]:
+    from app.core import catalog
+
+    row = catalog.get(code)
+    if row is not None:
+        return row
     for t in EQUIPMENT_TYPES:
         if t["code"] == code:
             return t
@@ -110,6 +125,10 @@ def normalize_type(raw: Optional[str]) -> str:
 
     value = raw.strip().lower()
     if value in EQUIPMENT_TYPE_CODES:
+        return value
+    from app.core import catalog
+
+    if catalog.get(value) is not None:  # тип, заведённый в админке
         return value
 
     for code, keywords in _KEYWORD_MAP:

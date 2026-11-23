@@ -1,3 +1,4 @@
+import '../constants/material_types.dart';
 import 'package:dio/dio.dart';
 
 import '../models/material_model.dart';
@@ -16,9 +17,13 @@ class MaterialService {
 
   Future<List<DeliveryVehicleModel>> getVehicles() async {
     final response = await _dio.get('/materials/vehicles');
-    return (response.data as List<dynamic>)
+    final list = (response.data as List<dynamic>)
         .map((e) => DeliveryVehicleModel.fromJson(e as Map<String, dynamic>))
         .toList();
+    for (final v in list) {
+      DeliveryVehicles.remember(v.code, v.name, v.capacityKg);
+    }
+    return list;
   }
 
   // ---------------------------------------------------------- katalog

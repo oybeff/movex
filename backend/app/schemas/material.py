@@ -112,6 +112,7 @@ class MaterialQuoteRead(BaseModel):
 
     weight_kg: Decimal
     vehicle_code: str
+    vehicle_name: Optional[str] = None
     vehicle_capacity_kg: int
     trips: int
 
@@ -181,6 +182,8 @@ class MaterialTypeRead(BaseModel):
 class DeliveryVehicleRead(BaseModel):
     code: str
     capacity_kg: int
+    name: Optional[str] = None
+    volume_m3: Optional[Decimal] = None
 
 
 class MaterialModerate(BaseModel):

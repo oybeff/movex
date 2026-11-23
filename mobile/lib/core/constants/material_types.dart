@@ -57,6 +57,23 @@ class MaterialTypes {
 class DeliveryVehicles {
   const DeliveryVehicles._();
 
-  static String label(String? code) =>
-      'delivery_vehicles.${(code ?? 'labo')}'.tr();
+  /// Машины с сервера: список ведёт админка, и новые (Damas, Gazel,
+  /// Porter…) появляются без новой версии приложения. Заполняет
+  /// [remember] после GET /materials/vehicles.
+  static final Map<String, ({String name, int kg})> _known = {};
+
+  static void remember(String code, String? name, int capacityKg) {
+    if (name != null && name.isNotEmpty) _known[code] = (name: name, kg: capacityKg);
+  }
+
+  /// «Gazel (2 t)», «Labo (0,7 t)».
+  static String label(String? code) {
+    final v = _known[code];
+    if (v != null) {
+      final t = v.kg / 1000;
+      final ts = t == t.roundToDouble() ? t.toStringAsFixed(0) : t.toString().replaceAll('.', ',');
+      return '${v.name} ($ts t)';
+    }
+    return 'delivery_vehicles.${(code ?? 'labo')}'.tr();
+  }
 }

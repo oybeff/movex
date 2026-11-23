@@ -10,6 +10,7 @@ from app.schemas.equipment import EquipmentCreate, EquipmentRead, EquipmentUpdat
 from app.routes.auth import get_current_user
 from app.core.roles import role_checker
 from app.core import media
+from app.core.internal_auth import require_internal_admin
 from app.core.equipment_types import EQUIPMENT_TYPES, normalize_type
 import os
 from datetime import date, datetime
@@ -86,6 +87,73 @@ def list_equipment_types():
     foydalanadi — turlar erkin matn emas, qat'iy kodlar.
     """
     return EQUIPMENT_TYPES
+
+@router.get("/catalog")
+def equipment_catalog(lang: str = Query("uz"), db: Session = Depends(get_db)):
+    """
+    Экран «Barcha kategoriyalar» (макет K2) и иконки плиток главной.
+    Без входа: приложение берёт список при запуске. Ведёт админка
+    (catalog.php) — новый тип и иконка появляются без новой версии.
+
+    has_tariff — у типа есть цена в тарифах; без неё заказ «как такси»
+    сделать нельзя, приложение показывает тип серым.
+    """
+    from app.core.catalog import GROUPS
+    from app.models.catalog import EquipmentCatalogType
+    from app.models.tariff import Tariff
+
+    lang = "ru" if lang == "ru" else "uz"
+    priced = {
+        t for (t,) in db.query(Tariff.equipment_type)
+        .filter(Tariff.is_active.is_(True)).distinct().all()
+    }
+    rows = (
+        db.query(EquipmentCatalogType)
+        .filter(EquipmentCatalogType.is_enabled.is_(True))
+        .order_by(EquipmentCatalogType.sort_order, EquipmentCatalogType.code)
+        .all()
+    )
+    return {
+        "groups": [{"code": g["code"], "name": g[f"name_{lang}"]} for g in GROUPS],
+        "types": [
+            {
+                "code": r.code,
+                "name": r.name_ru if lang == "ru" else r.name_uz,
+                "name_uz": r.name_uz,
+                "name_ru": r.name_ru,
+                "group": r.group_code,
+                "subtitle": (r.subtitle_ru if lang == "ru" else r.subtitle_uz) or None,
+                "icon_url": r.icon_url,
+                "has_tariff": r.code in priced,
+            }
+            for r in rows
+        ],
+    }
+
+
+@router.post("/internal/catalog/{code}/icon")
+def upload_catalog_icon(
+    code: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _admin=Depends(require_internal_admin),
+):
+    """Иконка типа из админки (catalog.php). Старый файл удаляется."""
+    from app.core import catalog
+    from app.models.catalog import EquipmentCatalogType
+
+    row = db.query(EquipmentCatalogType).filter(EquipmentCatalogType.code == code).first()
+    if row is None:
+        raise HTTPException(404, "Tur topilmadi")
+    url = media.save_upload(file, "catalog")
+    old = row.icon_url
+    row.icon_url = url
+    db.commit()
+    if old and media.is_own_media(old):
+        media.delete_by_url(old)
+    catalog.invalidate()
+    return {"icon_url": url}
+
 
 @router.get("/{equipment_id}", response_model=EquipmentRead)
 def get_equipment(

@@ -25,13 +25,8 @@ $currentPage = 'tariffs';
 
 $db = getDbConnection();
 
-// backend/app/core/equipment_types.py dagi texnika turlari (xizmatlarsiz).
-$types = [
-    'excavator', 'mini_excavator', 'backhoe_loader', 'bulldozer', 'front_loader',
-    'grader', 'roller', 'truck_crane', 'manipulator', 'aerial_platform',
-    'dump_truck', 'concrete_mixer', 'concrete_pump', 'auger_drill', 'tow_truck',
-    'compressor', 'other',
-];
+// Turlar — catalog.php dan (admin yangi tur qo'shsa, shu yerda ham chiqadi).
+$types = equipmentTypeCodes();
 $tiers = [
     'econom' => 'Ekonom',
     'fast'   => 'Tezkor',

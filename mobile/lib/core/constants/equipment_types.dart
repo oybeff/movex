@@ -1,5 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 
+import '../services/equipment_catalog.dart';
+
 /// Texnika turlari ma'lumotnomasi.
 ///
 /// Kodlar backend'dagi ro'yxat bilan BIR XIL bo'lishi shart:
@@ -42,7 +44,9 @@ class EquipmentTypes {
   static String normalize(String? code) {
     if (code == null) return fallback;
     final value = code.trim().toLowerCase();
-    return codes.contains(value) ? value : fallback;
+    if (codes.contains(value)) return value;
+    // Тип, заведённый в админке (catalog.php) после выхода этой версии.
+    return EquipmentCatalog.byCode(value) != null ? value : fallback;
   }
 
   /// Vektorli toza SVG ikonkasi (interfeys, chiplar, kartochkalar uchun).
@@ -61,6 +65,13 @@ class EquipmentTypes {
   }
 
   /// Foydalanuvchi tilidagi nomi.
-  static String label(String? code) =>
-      'equipment_types.${normalize(code)}'.tr();
+  static String label(String? code) {
+    final c = normalize(code);
+    if (codes.contains(c)) return 'equipment_types.$c'.tr();
+    return EquipmentCatalog.name(c, EquipmentCatalog.lang) ?? 'equipment_types.$fallback'.tr();
+  }
+
+  /// Тип есть в самом приложении (переводы, svg). Новые типы из админки —
+  /// нет: у них только название и иконка с сервера.
+  static bool isBuiltIn(String? code) => codes.contains(code);
 }

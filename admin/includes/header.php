@@ -158,6 +158,12 @@ $adminUser = getAdminUser();
                         </a>
                     </li>
                     <li>
+                        <a href="catalog.php" class="<?= ($currentPage ?? '') === 'catalog' ? 'active' : '' ?>">
+                            <span>🗂</span>
+                            Katalog
+                        </a>
+                    </li>
+                    <li>
                         <a href="tariffs.php" class="<?= ($currentPage ?? '') === 'tariffs' ? 'active' : '' ?>">
                             <span>🚕</span>
                             Tariflar

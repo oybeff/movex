@@ -21,11 +21,20 @@ from typing import Dict, List, Optional
 
 
 class DeliveryVehicle:
-    def __init__(self, code: str, capacity_kg: int):
+    def __init__(self, code: str, capacity_kg: int, name: Optional[str] = None,
+                 volume_m3: Optional[Decimal] = None, base_fee: Decimal = Decimal("0"),
+                 price_per_km: Optional[Decimal] = None):
         self.code = code
         self.capacity_kg = capacity_kg
+        self.name = name or code
+        self.volume_m3 = volume_m3
+        self.base_fee = base_fee
+        self.price_per_km = price_per_km
 
 
+#: Zaxira ro'yxat: delivery_vehicles jadvali bo'sh yoki hali yo'q bo'lsa.
+#: 23.11.2026 dan mashinalarni ADMIN yuritadi (admin/vehicles.php), ro'yxat
+#: bazadan `load(db)` bilan olinadi.
 #: Kichigidan kattasiga — tanlash shu tartibga tayanadi.
 VEHICLES: List[DeliveryVehicle] = [
     DeliveryVehicle("labo", 700),          # Labo / Damas
@@ -73,7 +82,35 @@ def _trips_for(weight_kg: Decimal, capacity: int) -> int:
     return max(1, int(trips))
 
 
-def choose(weight_kg: Decimal, preferred: Optional[str] = None) -> VehiclePlan:
+def load(db) -> List[DeliveryVehicle]:
+    """Yoqilgan mashinalar, sig'imi bo'yicha o'sish tartibida."""
+    from app.models.catalog import DeliveryVehicleRow
+
+    try:
+        rows = (
+            db.query(DeliveryVehicleRow)
+            .filter(DeliveryVehicleRow.is_enabled.is_(True))
+            .order_by(DeliveryVehicleRow.capacity_kg, DeliveryVehicleRow.sort_order)
+            .all()
+        )
+    except Exception:
+        db.rollback()
+        rows = []
+    if not rows:
+        return list(VEHICLES)
+    return [
+        DeliveryVehicle(
+            r.code, int(r.capacity_kg), r.name,
+            Decimal(r.volume_m3) if r.volume_m3 is not None else None,
+            Decimal(r.base_fee or 0),
+            Decimal(r.price_per_km) if r.price_per_km is not None else None,
+        )
+        for r in rows
+    ]
+
+
+def choose(weight_kg: Decimal, preferred: Optional[str] = None,
+           vehicles: Optional[List[DeliveryVehicle]] = None) -> VehiclePlan:
     """
     Yuk uchun mashina.
 
@@ -81,17 +118,19 @@ def choose(weight_kg: Decimal, preferred: Optional[str] = None) -> VehiclePlan:
     sig'imi yetmasa reyslar soni oshadi, ya'ni yuk baribir tashiladi.
     Berilmasa — bitta reysga sig'adigan eng kichigi.
     """
+    vehicles = vehicles or VEHICLES
+    by_code = {v.code: v for v in vehicles}
     if weight_kg <= 0:
-        return VehiclePlan(VEHICLES[0], 0)
+        return VehiclePlan(vehicles[0], 0)
 
-    if preferred and is_valid(preferred):
-        vehicle = BY_CODE[preferred]
+    if preferred and preferred in by_code:
+        vehicle = by_code[preferred]
         return VehiclePlan(vehicle, _trips_for(weight_kg, vehicle.capacity_kg))
 
-    for vehicle in VEHICLES:
+    for vehicle in vehicles:
         if weight_kg <= vehicle.capacity_kg:
             return VehiclePlan(vehicle, 1)
 
     # Eng kattasiga ham sig'madi — bir necha reys.
-    biggest = VEHICLES[-1]
+    biggest = vehicles[-1]
     return VehiclePlan(biggest, _trips_for(weight_kg, biggest.capacity_kg))

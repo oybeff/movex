@@ -23,3 +23,4 @@ from app.models.user_address import UserAddress  # noqa: E402,F401
 from app.models.card import CardBindSession, CardPayment, UserCard  # noqa: E402,F401
 from app.models.driver_document import DriverDocument  # noqa: E402,F401
 from app.models.client_rating import ClientRating  # noqa: E402,F401
+from app.models.catalog import DeliveryVehicleRow, EquipmentCatalogType  # noqa: E402,F401

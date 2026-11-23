@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.core import legal, service_area
+from app.core import legal, service_area, settings_values
 from app.db.session import get_db
 from app.models.app_settings import AppSettings, ContactMethod
 from app.schemas.app_settings import (
@@ -208,6 +208,8 @@ def app_status(db: Session = Depends(get_db)):
                              "https://play.google.com/store/apps/details?id=uz.movexgo.app"),
         "store_ios": val("store_url_ios"),
         "service_area": service_area.AREA,
+        # Плитка «Qurilish materiallari» и кнопка в объявлениях (админка).
+        "materials_enabled": settings_values.materials_enabled(db),
     }
 
 

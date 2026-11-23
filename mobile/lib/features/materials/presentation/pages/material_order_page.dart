@@ -10,6 +10,7 @@ import '../../../../core/models/material_model.dart';
 import '../../../../core/services/material_service.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/material_type_icon.dart';
+import '../../../taxi/data/taxi_geo.dart';
 
 /// Material buyurtmasi: miqdor → og'irlik → mashina → yetkazish → jami.
 ///
@@ -55,6 +56,21 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
     _quantityController.addListener(_onQuantityChanged);
     _loadVehicles();
     _recalculate();
+    _locate();
+  }
+
+  /// Куда везти — туда, где сейчас клиент. До 23.11.2026 сюда уходили
+  /// координаты САМОГО товара: расстояние 0 км, и «Yo'lkira» всегда 0.
+  /// Геолокации нет — точку не выдумываем, доставка не считается.
+  double? _destLat;
+  double? _destLon;
+
+  Future<void> _locate() async {
+    final here = await TaxiGeo.current();
+    if (!mounted || TaxiGeo.denied) return;
+    _destLat = here.lat;
+    _destLon = here.lon;
+    _recalculate();
   }
 
   @override
@@ -99,8 +115,8 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
       final quote = await _service.quote(
         productId: widget.product.id,
         quantity: _quantity,
-        latitude: widget.product.latitude,
-        longitude: widget.product.longitude,
+        latitude: _destLat,
+        longitude: _destLon,
         vehicleCode: _vehicleCode,
       );
       if (!mounted) return;
@@ -138,8 +154,8 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
         productId: widget.product.id,
         quantity: _quantity,
         address: _addressController.text.trim(),
-        latitude: widget.product.latitude,
-        longitude: widget.product.longitude,
+        latitude: _destLat,
+        longitude: _destLon,
         vehicleCode: _vehicleCode,
         comment: _commentController.text.trim(),
       );

@@ -76,6 +76,7 @@ class Quote:
         self.goods_amount = goods_amount
         self.weight_kg = weight_kg
         self.vehicle_code = vehicle_code
+        self.vehicle_name: Optional[str] = None
         self.vehicle_capacity_kg = vehicle_capacity_kg
         self.trips = trips
         self.distance_km = distance_km
@@ -116,7 +117,9 @@ def calculate(
     # Og'irlik → mashina. Foydalanuvchi boshqa mashina tanlagan bo'lsa,
     # uniki ishlatiladi: u yo'lni va joyni bizdan yaxshiroq biladi.
     weight_kg = (_dec(product.unit_weight_kg) * quantity).quantize(Decimal("0.01"))
-    plan = delivery_vehicles.choose(weight_kg, preferred_vehicle)
+    plan = delivery_vehicles.choose(
+        weight_kg, preferred_vehicle, delivery_vehicles.load(db)
+    )
 
     # Yetkazib berish — texnikadagi formula bilan bir xil: masofa × tarif.
     # Farqi bitta: reyslar soniga ko'paytiriladi.
@@ -128,7 +131,15 @@ def calculate(
         distance = pricing_service.distance_km(
             from_lat, from_lon, delivery_latitude, delivery_longitude
         ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        if product.delivery_price_per_km is not None:
+        # Narxni admin mashinaga qo'ygan bo'lsa (vehicles.php) — u:
+        # (podacha + km × narx) × reys. Qo'ymagan bo'lsa — eskicha,
+        # sotuvchi tovarga yozgan km narxi.
+        vehicle = plan.vehicle
+        if vehicle.price_per_km is not None:
+            delivery_fee = _round(
+                (vehicle.base_fee + distance * vehicle.price_per_km) * Decimal(plan.trips)
+            )
+        elif product.delivery_price_per_km is not None:
             delivery_fee = _round(
                 distance * _dec(product.delivery_price_per_km) * Decimal(plan.trips)
             )
@@ -140,7 +151,7 @@ def calculate(
     # eski qoida bo'yicha ishlab qolardi.
     commission = pricing_service.calculate_commission(db, goods_amount, total)
 
-    return Quote(
+    quote = Quote(
         quantity=quantity,
         price_per_unit=price_per_unit,
         goods_amount=goods_amount,
@@ -153,6 +164,8 @@ def calculate(
         commission=commission,
         total=total,
     )
+    quote.vehicle_name = plan.vehicle.name
+    return quote
 
 
 def _to_float(value) -> Optional[float]:

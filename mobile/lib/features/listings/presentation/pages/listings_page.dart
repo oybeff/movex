@@ -1,7 +1,10 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/app_flavor.dart';
 import '../../../../core/theme/app_tokens.dart';
+import '../../../materials/presentation/pages/materials_catalog_page.dart';
+import '../../../taxi/data/app_status.dart';
 import 'create_listing_page.dart';
 import 'listings_feed_view.dart';
 import 'my_listings_view.dart';
@@ -43,6 +46,71 @@ class _ListingsPageState extends State<ListingsPage>
   void _onTabChanged() {
     if (_tabs.indexIsChanging) return;
     if (_tabs.index == 2) _savedKey.currentState?.reload();
+  }
+
+  /// Кнопка «Qurilish materiallari» над объявлениями (просьба 23.11.2026).
+  /// Только в клиентском приложении и только пока раздел включён в админке.
+  bool _materials = !AppFlavor.isDriver && (AppStatus.last?.materialsEnabled ?? true);
+
+  @override
+  void initState() {
+    super.initState();
+    if (!AppFlavor.isDriver) {
+      AppStatus.fetch().then((s) {
+        if (s != null && mounted) setState(() => _materials = s.materialsEnabled);
+      });
+    }
+  }
+
+  void _openMaterials() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const MaterialsCatalogPage()),
+    );
+  }
+
+  Widget _materialsBanner() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.gutter, AppSpacing.md, AppSpacing.gutter, 0),
+      child: Material(
+        color: AppPalette.brandSubtle,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          onTap: _openMaterials,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppPalette.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.inventory_2_outlined, color: AppPalette.iconBrand),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('listings.materials_button'.tr(),
+                          style: AppTypography.bodyMedium.copyWith(
+                              color: AppPalette.textPrimary, fontWeight: FontWeight.w600)),
+                      Text('listings.materials_hint'.tr(),
+                          style: AppTypography.captionS.copyWith(color: AppPalette.textSecondary)),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: AppPalette.iconBrand),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -110,12 +178,19 @@ class _ListingsPageState extends State<ListingsPage>
           label: Text('listings.create'.tr()),
         ),
       ),
-      body: TabBarView(
-        controller: _tabs,
+      body: Column(
         children: [
-          ListingsFeedView(key: _feedKey),
-          MyListingsView(key: _mineKey),
-          SavedListingsView(key: _savedKey),
+          if (_materials) _materialsBanner(),
+          Expanded(
+            child: TabBarView(
+              controller: _tabs,
+              children: [
+                ListingsFeedView(key: _feedKey),
+                MyListingsView(key: _mineKey),
+                SavedListingsView(key: _savedKey),
+              ],
+            ),
+          ),
         ],
       ),
     );

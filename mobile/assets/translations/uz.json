@@ -407,7 +407,8 @@
     "yes": "Ha",
     "yesterday": "Kecha",
     "call": "Qo'ng'iroq",
-    "coming_soon": "Tez orada"
+    "coming_soon": "Tez orada",
+    "clear": "Tozalash"
   },
   "franchise": {
     "contact_admin": "Franchayzing olish uchun administrator bilan bog'laning",
@@ -977,7 +978,9 @@
     "discard_title": "E'lon joylanmadi",
     "discard_body": "Yozganlaringiz saqlanmaydi. Chiqib ketasizmi?",
     "discard_leave": "Chiqish",
-    "discard_stay": "Davom etish"
+    "discard_stay": "Davom etish",
+    "materials_button": "Qurilish materiallari",
+    "materials_hint": "G‘isht, sement, qum va boshqalar — yetkazib berish bilan"
   },
   "material_types": {
     "brick": "G'isht",
@@ -1690,5 +1693,15 @@
     "e4_body": "Mijozlar sizni xaritada ko'rishi va yaqin buyurtmalar kelishi uchun GPS doim yoqilgan bo'lishi kerak.",
     "e4_open": "Sozlamalarni ochish",
     "e4_later": "Keyinroq (oflayn qolaman)"
+  },
+  "catalog": {
+    "all_title": "Barcha kategoriyalar",
+    "count": "{} ta kategoriya",
+    "search_hint": "Kategoriya yoki texnika nomi",
+    "all": "Hammasi",
+    "soon": "Narx hali qo‘yilmagan",
+    "no_price": "{} uchun narx hali qo‘yilmagan — tez orada qo‘shiladi",
+    "load_failed": "Ro‘yxat yuklanmadi. Internetni tekshirib, qayta urinib ko‘ring.",
+    "nothing_found": "Hech narsa topilmadi"
   }
 }
