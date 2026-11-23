@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
-import 'package:movex_go/core/constants/app_colors.dart';
+
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/services/equipment_service.dart';
 import '../../../../core/models/equipment_model.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import '../../../../core/widgets/bottom_nav_space.dart';
+import '../../../driver/presentation/driver_equipment_step.dart';
+import '../../../driver/presentation/driver_ui.dart';
 import '../../../materials/presentation/pages/my_materials_page.dart';
 
 class MyEquipmentPage extends StatefulWidget {
@@ -31,22 +34,28 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     _fetchEquipment();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchEquipment() async {
     setState(() => _isLoading = true);
-
     try {
       final equipment = await _equipmentService.getEquipmentList(
         ownerOnly: true,
         limit: 100,
       );
-
-      setState(() {
-        equipmentList = equipment;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
+        setState(() {
+          equipmentList = equipment;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('equipment.load_error'.tr())),
         );
@@ -54,66 +63,45 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     }
   }
 
-  String _mapStatus(String? backendStatus) {
-    switch (backendStatus) {
-      case "available":
-        return 'equipment.status_available'.tr();
-      case "busy":
-        return 'equipment.status_busy'.tr();
-      case "repair":
-        return 'equipment.status_repair'.tr();
-      default:
-        return 'equipment.status_unknown'.tr();
-    }
-  }
-
   List<EquipmentModel> get filteredList {
-    // Qidiruv kartochkada KO'RINADIGAN nom bo'yicha ham ishlashi kerak.
-    // Sarlavha "Ямобур Soilmec SR30" — turi + modeli, odam esa "ямо" deb
-    // qidiradi. Ilgari faqat modeli bo'yicha qidirilardi va "Texnika
-    // topilmadi" chiqardi. Mijoz katalogida bu allaqachon shunday.
     final query = _searchController.text.trim().toLowerCase();
     return equipmentList.where((eq) {
       final matchesSearch = query.isEmpty ||
           EquipmentTypes.label(eq.type).toLowerCase().contains(query) ||
           eq.type.toLowerCase().contains(query) ||
-          (eq.model ?? '').toLowerCase().contains(query);
+          eq.model.toLowerCase().contains(query);
       final matchesFilter =
           _filterStatus == 'all' || eq.status == _filterStatus;
       return matchesSearch && matchesFilter;
     }).toList();
   }
 
-  Color _statusColor(String? status) {
-    switch (status) {
-      case 'available':
-        return Colors.green;
-      case 'busy':
-        return Colors.orange;
-      case 'repair':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
   Future<void> _deleteEquipment(int equipmentId) async {
-    final confirm = await showDialog<bool>(
+    final confirm = await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('equipment.delete_confirm'.tr()),
-        content: Text('equipment.delete_message'.tr()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('common.cancel'.tr()),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text('common.delete'.tr()),
-          ),
-        ],
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DSheet(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('equipment.delete_confirm'.tr(), style: AppTypography.h2),
+            const SizedBox(height: 8),
+            Text(
+              'equipment.delete_message'.tr(),
+              style: const TextStyle(fontSize: 14, color: AppPalette.textSecondary),
+            ),
+            const SizedBox(height: 20),
+            DPrimary(
+              'common.delete'.tr(),
+              onPressed: () => Navigator.of(ctx).pop(true),
+            ),
+            const SizedBox(height: 8),
+            DSecondary(
+              'common.cancel'.tr(),
+              onPressed: () => Navigator.of(ctx).pop(false),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -126,7 +114,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
           );
         }
         _fetchEquipment();
-      } catch (e) {
+      } catch (_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('equipment.delete_error'.tr())),
@@ -136,516 +124,498 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
     }
   }
 
-  Future<void> _showChangeStatusDialog(EquipmentModel equipment) async {
-    String? selectedStatus = equipment.status;
-
-    final result = await showDialog<String>(
+  Future<void> _showChangeStatusSheet(EquipmentModel equipment) async {
+    final newStatus = await showModalBottomSheet<String>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          backgroundColor: Colors.white,
-          title: Text('messages.change_equipment_status'.tr(), style: const TextStyle(color: AppColors.black, fontSize: 18, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${EquipmentTypes.label(equipment.type)} ${equipment.model}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              RadioListTile<String>(
-                title: Text('messages.status_available'.tr()),
-                subtitle: Text('messages.status_available_desc'.tr()),
-                value: 'available',
-                groupValue: selectedStatus,
-                activeColor: AppColors.primaryGreen,
-                onChanged: (value) {
-                  setState(() => selectedStatus = value);
-                },
-              ),
-              RadioListTile<String>(
-                title: Text('messages.status_busy'.tr()),
-                subtitle: Text('messages.status_busy_desc'.tr()),
-                value: 'busy',
-                groupValue: selectedStatus,
-                activeColor: Colors.orange,
-                onChanged: (value) {
-                  setState(() => selectedStatus = value);
-                },
-              ),
-              RadioListTile<String>(
-                title: Text('messages.status_maintenance'.tr()),
-                subtitle: Text('messages.status_maintenance_desc'.tr()),
-                value: 'maintenance',
-                groupValue: selectedStatus,
-                activeColor: Colors.red,
-                onChanged: (value) {
-                  setState(() => selectedStatus = value);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('common.cancel'.tr()),
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DSheet(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('messages.change_equipment_status'.tr(), style: AppTypography.h2),
+            const SizedBox(height: 4),
+            Text(
+              '${EquipmentTypes.label(equipment.type)} ${equipment.model}',
+              style: const TextStyle(fontSize: 14, color: AppPalette.textSecondary),
             ),
-            ElevatedButton(
-              onPressed: selectedStatus == equipment.status
-                  ? null
-                  : () => Navigator.pop(context, selectedStatus),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryGreen,
-                foregroundColor: Colors.white,
-              ),
-              child: Text('common.save'.tr()),
+            const SizedBox(height: 16),
+            _statusOption(
+              ctx: ctx,
+              title: 'messages.status_available'.tr(),
+              subtitle: 'messages.status_available_desc'.tr(),
+              value: 'available',
+              selected: equipment.status == 'available',
+              color: AppPalette.textSuccess,
+              bgColor: AppPalette.successSubtle,
+              icon: Icons.check_circle_outline_rounded,
             ),
+            const SizedBox(height: 8),
+            _statusOption(
+              ctx: ctx,
+              title: 'messages.status_busy'.tr(),
+              subtitle: 'messages.status_busy_desc'.tr(),
+              value: 'busy',
+              selected: equipment.status == 'busy',
+              color: AppPalette.textOnAccent,
+              bgColor: AppPalette.accentSubtle,
+              icon: Icons.access_time_rounded,
+            ),
+            const SizedBox(height: 8),
+            _statusOption(
+              ctx: ctx,
+              title: 'messages.status_maintenance'.tr(),
+              subtitle: 'messages.status_maintenance_desc'.tr(),
+              value: 'maintenance',
+              selected: equipment.status == 'maintenance' || equipment.status == 'repair',
+              color: AppPalette.textDanger,
+              bgColor: AppPalette.dangerSubtle,
+              icon: Icons.build_outlined,
+            ),
+            const SizedBox(height: 16),
+            DSecondary('common.cancel'.tr(), onPressed: () => Navigator.of(ctx).pop()),
           ],
         ),
       ),
     );
 
-    if (result != null && result != equipment.status) {
+    if (newStatus != null && newStatus != equipment.status) {
       try {
-        // Loading dialog
+        await _equipmentService.updateEquipmentStatus(equipment.id, newStatus);
         if (mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryGreen),
-            ),
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('messages.status_changed'.tr())),
           );
-        }
-
-        await _equipmentService.updateEquipmentStatus(equipment.id, result);
-
-        if (mounted) {
-          Navigator.pop(context); // Close loading dialog
-
-          // Success dialog
-          await showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: AppColors.primaryGreen),
-                  const SizedBox(width: 8),
-                  Text('messages.success'.tr()),
-                ],
-              ),
-              content: Text('messages.status_changed'.tr()),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('messages.ok'.tr()),
-                ),
-              ],
-            ),
-          );
-
           _fetchEquipment();
         }
-      } catch (e) {
+      } catch (_) {
         if (mounted) {
-          Navigator.pop(context); // Close loading dialog
-
-          // Error dialog
-          await showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Row(
-                children: [
-                  const Icon(Icons.error, color: Colors.red),
-                  const SizedBox(width: 8),
-                  Text('errors.error'.tr()),
-                ],
-              ),
-              content: Text(e.toString()),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('messages.ok'.tr()),
-                ),
-              ],
-            ),
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('errors.something_went_wrong'.tr())),
           );
         }
       }
     }
   }
 
-  String _getStatusName(String status) {
-    switch (status) {
-      case 'available':
-        return 'messages.available'.tr();
-      case 'busy':
-        return 'messages.busy'.tr();
-      case 'maintenance':
-        return 'Ta\'mirda';
-      default:
-        return status;
+  Widget _statusOption({
+    required BuildContext ctx,
+    required String title,
+    required String subtitle,
+    required String value,
+    required bool selected,
+    required Color color,
+    required Color bgColor,
+    required IconData icon,
+  }) {
+    return InkWell(
+      onTap: () => Navigator.of(ctx).pop(value),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selected ? bgColor : AppPalette.page,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? color : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: selected ? color.withValues(alpha: 0.15) : AppPalette.surface,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: color)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: const TextStyle(fontSize: 12, color: AppPalette.textSecondary)),
+                ],
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check_rounded, color: color, size: 22),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAddEquipmentModal() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DSheet(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('equipment.add'.tr(), style: AppTypography.h2),
+            const SizedBox(height: 4),
+            Text(
+              'Qanday usulda texnika qoʻshmoqchisiz?',
+              style: const TextStyle(fontSize: 14, color: AppPalette.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            InkWell(
+              onTap: () => Navigator.of(ctx).pop('quick'),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: DChip.blueBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.flash_on_rounded, color: AppPalette.brand, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text('Tezkor qoʻshish (1 daqiqa)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppPalette.brand)),
+                          SizedBox(height: 2),
+                          Text('Model, davlat raqami va narx — buyurtmalar qabul qilish uchun kifoya', style: TextStyle(fontSize: 12, color: AppPalette.textSecondary)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded, color: AppPalette.brand),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: () => Navigator.of(ctx).pop('full'),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppPalette.page,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.description_outlined, color: AppPalette.textPrimary, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text('Batafsil maʼlumotlar bilan', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppPalette.textPrimary)),
+                          SizedBox(height: 2),
+                          Text('Rasmlar, oʻlchamlar, tavsif va xaritadagi aniq manzil', style: TextStyle(fontSize: 12, color: AppPalette.textSecondary)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded, color: AppPalette.textSecondary),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            DSecondary('common.cancel'.tr(), onPressed: () => Navigator.of(ctx).pop()),
+          ],
+        ),
+      ),
+    );
+
+    if (choice == 'quick') {
+      if (!mounted) return;
+      final added = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const DriverEquipmentStep()),
+      );
+      if (added == true) _fetchEquipment();
+    } else if (choice == 'full') {
+      if (!mounted) return;
+      final added = await context.push<bool>('/add-equipment');
+      if (added == true) _fetchEquipment();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const double cardRadius = 16;
-
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppPalette.page,
       appBar: AppBar(
         title: Text(
           'equipment.my_equipment'.tr(),
-          overflow: TextOverflow.ellipsis,
+          style: AppTypography.h2,
         ),
-        backgroundColor: AppColors.white,
+        backgroundColor: AppPalette.surface,
         elevation: 0,
         actions: [
-          // Materiallar shu yerda: ega uchun bu ham "sotadigan narsam",
-          // faqat ijaraga emas, sotuvga. Alohida bo'limga yashirilsa,
-          // sotuvchi uni umuman topmaydi.
-          // Yozuv bilan, faqat ikonka emas: ilgari bu yerda yolg'iz 🧱
-          // turardi va bo'lim nomi faqat uzoq bosganda chiqardi — ega
-          // g'ishtni ko'rib, bu butun "qurilish materiallari" bo'limi
-          // ekanini bilmasdi.
-          TextButton(
+          TextButton.icon(
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MyMaterialsPage()),
             ),
-            child: Text(
+            icon: const Icon(Icons.category_outlined, size: 16),
+            label: Text(
               'materials.title'.tr(),
-              style: const TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () async {
-              final result = await context.push('/add-equipment');
-              if (result == true) {
-                _fetchEquipment();
-              }
-            },
+            icon: const Icon(Icons.add_circle_outline_rounded, color: AppPalette.brand, size: 26),
             tooltip: 'equipment.add'.tr(),
+            onPressed: _showAddEquipmentModal,
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Поиск и фильтр
-            Row(
+      body: Column(
+        children: [
+          // Поиск
+          Container(
+            color: AppPalette.surface,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Column(
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'equipment.search'.tr(),
-                      prefixIcon: const Icon(Icons.search),
-                      border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(16)),
-                      ),
-                    ),
-                    onTapOutside: (event) => FocusScope.of(context).unfocus(),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Zamonaviy Dropdown Filter
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey[300]!),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _filterStatus,
-                      icon: const Icon(Icons.filter_list, color: AppColors.primaryGreen),
-                      elevation: 2,
-                      dropdownColor: Colors.white,
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'equipment.search'.tr(),
+                    hintStyle: const TextStyle(color: AppPalette.textSecondary, fontSize: 14),
+                    prefixIcon: const Icon(Icons.search_rounded, color: AppPalette.iconSecondary),
+                    filled: true,
+                    fillColor: AppPalette.page,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      style: const TextStyle(
-                        color: Colors.black87,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      items: [
-                        DropdownMenuItem(
-                          value: 'all',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.all_inclusive, size: 18, color: Colors.grey),
-                              const SizedBox(width: 8),
-                              Text('common.all'.tr()),
-                            ],
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'available',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.check_circle, size: 18, color: Colors.green),
-                              const SizedBox(width: 8),
-                              Text('equipment.status_available'.tr()),
-                            ],
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'busy',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.work, size: 18, color: Colors.orange),
-                              const SizedBox(width: 8),
-                              Text('equipment.status_busy'.tr()),
-                            ],
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'repair',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.build, size: 18, color: Colors.red),
-                              const SizedBox(width: 8),
-                              Text('equipment.status_repair'.tr()),
-                            ],
-                          ),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _filterStatus = value);
-                        }
-                      },
+                      borderSide: BorderSide.none,
                     ),
+                  ),
+                  onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+                // Фильтр-чипы
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _filterChip('all', 'common.all'.tr()),
+                      const SizedBox(width: 8),
+                      _filterChip('available', 'equipment.status_available'.tr()),
+                      const SizedBox(width: 8),
+                      _filterChip('busy', 'equipment.status_busy'.tr()),
+                      const SizedBox(width: 8),
+                      _filterChip('repair', 'equipment.status_repair'.tr()),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+          ),
 
-            // Список техники
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen,))
-                  : filteredList.isEmpty
-                      ? Center(child: Column(
+          // Список техники
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppPalette.brand))
+                : filteredList.isEmpty
+                    ? Center(
+                        child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.construction, size: 64, color: Colors.grey[400]),
-                            const SizedBox(height: 16),
+                            const Icon(Icons.construction_rounded, size: 64, color: AppPalette.iconSecondary),
+                            const SizedBox(height: 12),
                             Text(
                               'equipment.not_found'.tr(),
-                              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                              style: const TextStyle(fontSize: 15, color: AppPalette.textSecondary),
+                            ),
+                            const SizedBox(height: 16),
+                            FilledButton.icon(
+                              onPressed: _showAddEquipmentModal,
+                              icon: const Icon(Icons.add),
+                              label: Text('equipment.add'.tr()),
+                              style: FilledButton.styleFrom(backgroundColor: AppPalette.brand),
                             ),
                           ],
-                        ),)
-                      : RefreshIndicator(
-                          onRefresh: _fetchEquipment,
-                          child: ListView.separated(
-                            // Pastki suzuvchi menyu ro'yxat ustida turadi.
-                            padding: EdgeInsets.only(
-                                bottom: bottomNavInset(context)),
-                            itemCount: filteredList.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 8),
-                            itemBuilder: (context, index) {
-                              final eq = filteredList[index];
-                              return GestureDetector(
-                                onTap: () {
-                                  context.push('/equipment-detail', extra: eq);
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(cardRadius),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Colors.black12,
-                                        blurRadius: 4,
-                                        offset: Offset(2, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 28,
-                                      backgroundColor: _statusColor(eq.status),
-                                      child: EquipmentTypeIcon(
-                                        eq.type,
-                                        size: 30,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '${EquipmentTypes.label(eq.type)} ${eq.model ?? ''}',
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            '${'equipment.status'.tr()}: ${_mapStatus(eq.status)}',
-                                            style: TextStyle(
-                                              color: _statusColor(eq.status),
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          if (eq.pricePerDay != null)
-                                            Text(
-                                              '${NumberFormatter.formatCurrency(eq.pricePerDay)} ${'common.currency'.tr()}/${'common.day'.tr()}',
-                                              style: const TextStyle(color: Colors.grey),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    PopupMenuButton<String>(
-                                      icon: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[100],
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: const Icon(
-                                          Icons.more_vert,
-                                          color: Colors.black87,
-                                          size: 20,
-                                        ),
-                                      ),
-                                      elevation: 8,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      color: Colors.white,
-                                      offset: const Offset(0, 40),
-                                      onSelected: (value) async {
-                                        if (value == 'edit') {
-                                          final result = await context.push('/edit-equipment/${eq.id}');
-                                          if (result == true) {
-                                            _fetchEquipment();
-                                          }
-                                        } else if (value == 'delete') {
-                                          await _deleteEquipment(eq.id);
-                                        } else if (value == 'change_status') {
-                                          await _showChangeStatusDialog(eq);
-                                        }
-                                      },
-                                      itemBuilder: (_) => [
-                                        PopupMenuItem(
-                                          value: 'edit',
-                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.all(8),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.primaryGreen.withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                                child: const Icon(
-                                                  Icons.edit_outlined,
-                                                  color: AppColors.primaryGreen,
-                                                  size: 20,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Text(
-                                                'common.edit'.tr(),
-                                                style: const TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w500,
-                                                  color: Colors.black87,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const PopupMenuDivider(height: 1),
-                                        PopupMenuItem(
-                                          value: 'change_status',
-                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.all(8),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.blue.withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                                child: const Icon(
-                                                  Icons.swap_horiz,
-                                                  color: Colors.blue,
-                                                  size: 20,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Text(
-                                                'messages.change_equipment_status'.tr(),
-                                                style: const TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w500,
-                                                  color: Colors.blue,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const PopupMenuDivider(height: 1),
-                                        PopupMenuItem(
-                                          value: 'delete',
-                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.all(8),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.red.withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                                child: const Icon(
-                                                  Icons.delete_outline,
-                                                  color: Colors.red,
-                                                  size: 20,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Text(
-                                                'common.delete'.tr(),
-                                                style: const TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w500,
-                                                  color: Colors.red,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              );
-                            },
-                          ),
                         ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _fetchEquipment,
+                        color: AppPalette.brand,
+                        child: ListView.separated(
+                          padding: EdgeInsets.fromLTRB(16, 12, 16, bottomNavInset(context) + 16),
+                          itemCount: filteredList.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final eq = filteredList[index];
+                            return _equipmentCard(eq);
+                          },
+                        ),
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _filterChip(String status, String label) {
+    final selected = _filterStatus == status;
+    return InkWell(
+      onTap: () => setState(() => _filterStatus = status),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppPalette.brand : AppPalette.page,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+            color: selected ? Colors.white : AppPalette.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _equipmentCard(EquipmentModel eq) {
+    Widget statusChip;
+    switch (eq.status) {
+      case 'available':
+        statusChip = DChip('equipment.status_available'.tr(), bg: AppPalette.successSubtle, fg: AppPalette.textSuccess);
+        break;
+      case 'busy':
+        statusChip = DChip('equipment.status_busy'.tr(), bg: AppPalette.accentSubtle, fg: AppPalette.textOnAccent);
+        break;
+      case 'maintenance':
+      case 'repair':
+        statusChip = DChip('equipment.status_repair'.tr(), bg: AppPalette.dangerSubtle, fg: AppPalette.textDanger);
+        break;
+      default:
+        statusChip = DChip('equipment.status_unknown'.tr(), bg: AppPalette.page, fg: AppPalette.textSecondary);
+    }
+
+    final pricePerHour = eq.pricePerHourValue ??
+        (eq.pricePerDayValue > 0 ? (eq.pricePerDayValue / 8).round() : null);
+
+    return InkWell(
+      onTap: () => context.push('/equipment-detail', extra: eq),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppPalette.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppPalette.borderDefault.withValues(alpha: 0.6)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: DChip.blueBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: EquipmentTypeIcon(
+                  eq.type,
+                  size: 28,
+                  color: AppPalette.brand,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${EquipmentTypes.label(eq.type)} ${eq.model}'.trim(),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppPalette.textPrimary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      statusChip,
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      if (pricePerHour != null)
+                        Text(
+                          '${NumberFormatter.formatCurrency(pricePerHour)} soʻm/soat',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppPalette.brand),
+                        ),
+                      if (pricePerHour != null && eq.pricePerDayValue > 0)
+                        const Text(' · ', style: TextStyle(color: AppPalette.textSecondary)),
+                      if (eq.pricePerDayValue > 0)
+                        Text(
+                          '${NumberFormatter.formatCurrency(eq.pricePerDayValue.round())} soʻm/kun',
+                          style: const TextStyle(fontSize: 12, color: AppPalette.textSecondary),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded, color: AppPalette.iconSecondary, size: 20),
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: AppPalette.surface,
+              onSelected: (value) async {
+                if (value == 'edit') {
+                  final result = await context.push('/edit-equipment/${eq.id}');
+                  if (result == true) _fetchEquipment();
+                } else if (value == 'delete') {
+                  await _deleteEquipment(eq.id);
+                } else if (value == 'change_status') {
+                  await _showChangeStatusSheet(eq);
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'change_status',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.swap_horiz_rounded, color: AppPalette.brand, size: 18),
+                      const SizedBox(width: 8),
+                      Text('messages.change_equipment_status'.tr()),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.edit_outlined, color: AppPalette.textPrimary, size: 18),
+                      const SizedBox(width: 8),
+                      Text('common.edit'.tr()),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.delete_outline_rounded, color: AppPalette.textDanger, size: 18),
+                      const SizedBox(width: 8),
+                      Text('common.delete'.tr(), style: const TextStyle(color: AppPalette.textDanger)),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),

@@ -2,19 +2,14 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/models/equipment_request_model.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/services/equipment_request_service.dart';
+import '../../../driver/presentation/driver_ui.dart';
 
 /// Qidiruv va xabarnoma radiusi.
 ///
 /// Ega uchun: shu radiusdan uzoqdagi zayavkalar kelmaydi.
 /// Mijoz uchun: shu radiusdan uzoqdagi texnika ko'rsatilmaydi.
-///
-/// Nuqta belgilanmagan bo'lsa radius ISHLAMAYDI va hech narsa filtrlanmaydi —
-/// sozlamagan foydalanuvchi bo'sh ro'yxat ko'rmasligi kerak. Ekranda buni
-/// ochiq yozib qo'yamiz, aks holda "nega hech narsa yo'q" degan savol
-/// tug'iladi.
 class SearchAreaPage extends StatefulWidget {
   const SearchAreaPage({super.key, required this.isOwner});
 
@@ -29,7 +24,6 @@ class _SearchAreaPageState extends State<SearchAreaPage> {
 
   final EquipmentRequestService _service = EquipmentRequestService();
 
-  SearchAreaModel? _area;
   int _radius = 100;
   double? _lat;
   double? _lon;
@@ -50,7 +44,6 @@ class _SearchAreaPageState extends State<SearchAreaPage> {
       final area = await _service.getSearchArea();
       if (!mounted) return;
       setState(() {
-        _area = area;
         _radius = area.radiusKm;
         _lat = area.latitude;
         _lon = area.longitude;
@@ -94,10 +87,7 @@ class _SearchAreaPageState extends State<SearchAreaPage> {
         radiusKm: _radius,
       );
       if (!mounted) return;
-      setState(() {
-        _area = saved;
-        _isSaving = false;
-      });
+      setState(() => _isSaving = false);
       _snack('area.saved'.tr());
       Navigator.of(context).pop(saved);
     } catch (_) {
@@ -109,27 +99,23 @@ class _SearchAreaPageState extends State<SearchAreaPage> {
 
   void _snack(String text) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppPalette.page,
       appBar: AppBar(
-        backgroundColor: AppColors.white,
+        backgroundColor: AppPalette.surface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.black),
         title: Text(
           'area.title'.tr(),
-          style: const TextStyle(
-              color: AppColors.black, fontWeight: FontWeight.bold),
+          style: AppTypography.h2,
         ),
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryGreen))
+          ? const Center(child: CircularProgressIndicator(color: AppPalette.brand))
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -137,37 +123,17 @@ class _SearchAreaPageState extends State<SearchAreaPage> {
                   widget.isOwner
                       ? 'area.owner_hint'.tr()
                       : 'area.client_hint'.tr(),
-                  style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                  style: const TextStyle(color: AppPalette.textSecondary, fontSize: 14),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 _radiusCard(),
                 const SizedBox(height: 16),
                 _pointCard(),
-                const SizedBox(height: 28),
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _isSaving ? null : _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryGreen,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text('common.save'.tr(),
-                            style: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w600)),
-                  ),
+                const SizedBox(height: 24),
+                DPrimary(
+                  'common.save'.tr(),
+                  onPressed: _save,
+                  busy: _isSaving,
                 ),
               ],
             ),
@@ -178,9 +144,9 @@ class _SearchAreaPageState extends State<SearchAreaPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppPalette.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black12),
+        border: Border.all(color: AppPalette.borderDefault.withValues(alpha: 0.6)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,20 +154,25 @@ class _SearchAreaPageState extends State<SearchAreaPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('area.title'.tr(),
+              Text('area.title'.tr(), style: AppTypography.h3),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: DChip.blueBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$_radius ${'common.km'.tr()}',
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600)),
-              Text(
-                '$_radius ${'common.km'.tr()}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryGreen,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppPalette.brand,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -211,21 +182,22 @@ class _SearchAreaPageState extends State<SearchAreaPage> {
                 label: Text('$value ${'common.km'.tr()}'),
                 selected: selected,
                 onSelected: (_) => setState(() => _radius = value),
-                selectedColor: AppColors.primaryGreen,
+                selectedColor: DChip.blueBg,
                 labelStyle: TextStyle(
-                  color: selected ? Colors.white : Colors.black87,
+                  color: selected ? AppPalette.brand : AppPalette.textPrimary,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                 ),
               );
             }).toList(),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Slider(
             value: _radius.toDouble().clamp(1, 1000),
             min: 1,
             max: 1000,
             divisions: 999,
-            activeColor: AppColors.primaryGreen,
+            activeColor: AppPalette.brand,
+            inactiveColor: AppPalette.page,
             label: '$_radius ${'common.km'.tr()}',
             onChanged: (v) => setState(() => _radius = v.round()),
           ),
@@ -239,55 +211,53 @@ class _SearchAreaPageState extends State<SearchAreaPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppPalette.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black12),
+        border: Border.all(color: AppPalette.borderDefault.withValues(alpha: 0.6)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('area.point'.tr(),
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          Text('area.point'.tr(), style: AppTypography.h3),
+          const SizedBox(height: 10),
           Row(
             children: [
               Icon(
-                hasPoint ? Icons.place : Icons.place_outlined,
-                size: 18,
-                color: hasPoint ? AppColors.primaryGreen : Colors.grey,
+                hasPoint ? Icons.place_rounded : Icons.place_outlined,
+                size: 20,
+                color: hasPoint ? AppPalette.brand : AppPalette.iconSecondary,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   hasPoint
                       ? '${_lat!.toStringAsFixed(4)}, ${_lon!.toStringAsFixed(4)}'
                       : 'area.point_not_set'.tr(),
                   style: TextStyle(
-                    color: hasPoint ? Colors.black87 : Colors.grey[600],
+                    color: hasPoint ? AppPalette.textPrimary : AppPalette.textSecondary,
                     fontSize: 14,
+                    fontWeight: hasPoint ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           OutlinedButton.icon(
             onPressed: _isLocating ? null : _useMyLocation,
             icon: _isLocating
                 ? const SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.brand),
                   )
-                : const Icon(Icons.my_location, size: 18),
+                : const Icon(Icons.my_location_rounded, size: 18),
             label: Text('area.use_my_location'.tr()),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primaryGreen,
-              side: const BorderSide(color: AppColors.primaryGreen),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              foregroundColor: AppPalette.brand,
+              side: const BorderSide(color: AppPalette.brand),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
         ],

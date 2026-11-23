@@ -3,11 +3,13 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:map_launcher/map_launcher.dart' as map_launcher;
 import 'package:yandex_mapkit/yandex_mapkit.dart';
+
 import '../../../../core/models/equipment_model.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
+import '../../../driver/presentation/driver_ui.dart';
 
 class EquipmentDetailPage extends StatefulWidget {
   final EquipmentModel equipment;
@@ -26,53 +28,9 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
   bool _mapReady = false;
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   void dispose() {
     _mapController?.dispose();
     super.dispose();
-  }
-
-  Color _statusColor(String? status) {
-    switch (status) {
-      case 'available':
-        return Colors.green;
-      case 'busy':
-        return Colors.orange;
-      case 'repair':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _mapStatus(String? status) {
-    switch (status) {
-      case 'available':
-        return 'equipment.status_available'.tr();
-      case 'busy':
-        return 'equipment.status_busy'.tr();
-      case 'repair':
-        return 'equipment.status_repair'.tr();
-      default:
-        return 'equipment.status_unknown'.tr();
-    }
-  }
-
-  IconData _statusIcon(String? status) {
-    switch (status) {
-      case 'available':
-        return Icons.check_circle;
-      case 'busy':
-        return Icons.work;
-      case 'repair':
-        return Icons.build;
-      default:
-        return Icons.help_outline;
-    }
   }
 
   Future<void> _moveToLocation(Point point) async {
@@ -91,59 +49,45 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
 
   Widget _buildInfoRow(String label, String? value, {IconData? icon}) {
     if (value == null || value.isEmpty || value == '-') return const SizedBox.shrink();
-    
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 18, color: AppPalette.brand),
+            const SizedBox(width: 10),
           ],
-          color: Colors.white,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Padding(
-          padding: const EdgeInsets.all(4.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 20, color: AppColors.primaryGreen),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      value,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppPalette.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppPalette.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -176,62 +120,31 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
       if (mounted) {
         await showModalBottomSheet(
           context: context,
-          backgroundColor: Colors.white,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          builder: (context) => SafeArea(
+          backgroundColor: Colors.transparent,
+          builder: (context) => DSheet(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 12),
-                // Handle bar
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+                Text(
+                  'orders.open_in_map'.tr(),
+                  style: AppTypography.h2,
                 ),
                 const SizedBox(height: 12),
-
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    'orders.open_in_map'.tr(),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-
                 ...availableMaps.map((map) {
                   return Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 4,
-                        ),
-                      ],
+                      color: AppPalette.page,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: SvgPicture.asset(
                         map.icon,
-                        height: 30.0,
-                        width: 30.0,
+                        height: 28.0,
+                        width: 28.0,
                       ),
-                      title: Text(map.mapName),
+                      title: Text(map.mapName, style: const TextStyle(fontWeight: FontWeight.w600)),
                       onTap: () {
                         Navigator.pop(context);
                         map.showMarker(
@@ -246,44 +159,32 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                     ),
                   );
                 }),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
               ],
             ),
           ),
         );
       }
-    } catch (e) {
-      print('Error opening in map: $e');
-    }
+    } catch (_) {}
   }
 
   Widget _buildSection(String title, List<Widget> children) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppPalette.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: AppPalette.borderDefault.withValues(alpha: 0.6)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+            style: AppTypography.h3,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           ...children,
         ],
       ),
@@ -293,9 +194,9 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
   @override
   Widget build(BuildContext context) {
     final hasLocation = widget.equipment.latitude != null &&
-                       widget.equipment.longitude != null &&
-                       widget.equipment.latitude!.isNotEmpty &&
-                       widget.equipment.longitude!.isNotEmpty;
+        widget.equipment.longitude != null &&
+        widget.equipment.latitude!.isNotEmpty &&
+        widget.equipment.longitude!.isNotEmpty;
 
     Point? equipmentLocation;
     if (hasLocation) {
@@ -304,23 +205,41 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
           latitude: double.parse(widget.equipment.latitude!),
           longitude: double.parse(widget.equipment.longitude!),
         );
-      } catch (e) {
-        // Parse error
-      }
+      } catch (_) {}
     }
 
+    Widget statusChip;
+    switch (widget.equipment.status) {
+      case 'available':
+        statusChip = DChip('equipment.status_available'.tr(), bg: AppPalette.successSubtle, fg: AppPalette.textSuccess);
+        break;
+      case 'busy':
+        statusChip = DChip('equipment.status_busy'.tr(), bg: AppPalette.accentSubtle, fg: AppPalette.textOnAccent);
+        break;
+      case 'maintenance':
+      case 'repair':
+        statusChip = DChip('equipment.status_repair'.tr(), bg: AppPalette.dangerSubtle, fg: AppPalette.textDanger);
+        break;
+      default:
+        statusChip = DChip('equipment.status_unknown'.tr(), bg: AppPalette.page, fg: AppPalette.textSecondary);
+    }
+
+    final pricePerHour = widget.equipment.pricePerHourValue ??
+        (widget.equipment.pricePerDayValue > 0 ? (widget.equipment.pricePerDayValue / 8).round() : null);
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppPalette.page,
       body: CustomScrollView(
         slivers: [
           // App Bar
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: 180,
             pinned: true,
-            backgroundColor: AppColors.primaryGreen,
+            backgroundColor: AppPalette.brand,
+            foregroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
-                '${EquipmentTypes.label(widget.equipment.type)} ${widget.equipment.model}',
+                '${EquipmentTypes.label(widget.equipment.type)} ${widget.equipment.model}'.trim(),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -328,21 +247,21 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                 ),
               ),
               background: Container(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppColors.primaryGreen,
-                      AppColors.primaryGreen.withValues(alpha: 0.8),
+                      AppPalette.brand,
+                      Color(0xFF1B4FA0),
                     ],
                   ),
                 ),
                 child: Center(
                   child: Icon(
-                    Icons.construction,
-                    size: 80,
-                    color: Colors.white.withValues(alpha: 0.3),
+                    Icons.construction_rounded,
+                    size: 72,
+                    color: Colors.white.withValues(alpha: 0.25),
                   ),
                 ),
               ),
@@ -358,37 +277,12 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Status Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: _statusColor(widget.equipment.status).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _statusColor(widget.equipment.status).withValues(alpha: 0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _statusIcon(widget.equipment.status),
-                            color: _statusColor(widget.equipment.status),
-                            size: 24,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _mapStatus(widget.equipment.status),
-                            style: TextStyle(
-                              color: _statusColor(widget.equipment.status),
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
+                    Row(
+                      children: [
+                        statusChip,
+                      ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     // Description
                     if (widget.equipment.description != null && widget.equipment.description!.isNotEmpty)
@@ -397,9 +291,9 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                         [
                           Text(
                             widget.equipment.description!,
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: Colors.grey[700],
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppPalette.textPrimary,
                               height: 1.5,
                             ),
                           ),
@@ -413,32 +307,32 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                         _buildInfoRow(
                           'equipment.type'.tr(),
                           EquipmentTypes.label(widget.equipment.type),
-                          icon: Icons.category,
+                          icon: Icons.category_rounded,
                         ),
                         _buildInfoRow(
                           'equipment.model'.tr(),
                           widget.equipment.model,
-                          icon: Icons.precision_manufacturing,
+                          icon: Icons.precision_manufacturing_rounded,
                         ),
                         _buildInfoRow(
                           'equipment.year'.tr(),
                           widget.equipment.year?.toString(),
-                          icon: Icons.calendar_today,
+                          icon: Icons.calendar_today_rounded,
                         ),
                         _buildInfoRow(
                           'equipment.power_hp'.tr(),
                           widget.equipment.powerHp != null ? '${widget.equipment.powerHp} HP' : null,
-                          icon: Icons.speed,
+                          icon: Icons.speed_rounded,
                         ),
                         _buildInfoRow(
                           'equipment.payload_kg'.tr(),
                           widget.equipment.payloadKg != null ? '${widget.equipment.payloadKg} kg' : null,
-                          icon: Icons.fitness_center,
+                          icon: Icons.fitness_center_rounded,
                         ),
                         _buildInfoRow(
                           'equipment.dimensions'.tr(),
                           widget.equipment.dimensions,
-                          icon: Icons.straighten,
+                          icon: Icons.straighten_rounded,
                         ),
                       ],
                     ),
@@ -447,24 +341,23 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                     _buildSection(
                       'equipment.pricing'.tr(),
                       [
-                        _buildInfoRow(
-                          'equipment.price_per_hour'.tr(),
-                          widget.equipment.pricePerHour != null
-                              ? '${NumberFormatter.formatCurrency(widget.equipment.pricePerHour)} ${'common.currency'.tr()}'
-                              : null,
-                          icon: Icons.access_time,
-                        ),
+                        if (pricePerHour != null)
+                          _buildInfoRow(
+                            'equipment.price_per_hour'.tr(),
+                            '${NumberFormatter.formatCurrency(pricePerHour)} ${'common.currency'.tr()}',
+                            icon: Icons.access_time_rounded,
+                          ),
                         _buildInfoRow(
                           'equipment.price_per_shift'.tr(),
-                          widget.equipment.pricePerShift != null
-                              ? '${NumberFormatter.formatCurrency(widget.equipment.pricePerShift)} ${'common.currency'.tr()}'
+                          widget.equipment.pricePerShiftValue != null
+                              ? '${NumberFormatter.formatCurrency(widget.equipment.pricePerShiftValue!.round())} ${'common.currency'.tr()}'
                               : null,
-                          icon: Icons.work_history,
+                          icon: Icons.work_history_rounded,
                         ),
                         _buildInfoRow(
                           'equipment.price_per_day'.tr(),
-                          '${NumberFormatter.formatCurrency(widget.equipment.pricePerDay)} ${'common.currency'.tr()}',
-                          icon: Icons.calendar_today,
+                          '${NumberFormatter.formatCurrency(widget.equipment.pricePerDayValue.round())} ${'common.currency'.tr()}',
+                          icon: Icons.calendar_month_rounded,
                         ),
                       ],
                     ),
@@ -477,7 +370,7 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                           _buildInfoRow(
                             'equipment.address'.tr(),
                             widget.equipment.address,
-                            icon: Icons.location_on,
+                            icon: Icons.location_on_rounded,
                           ),
                         ],
                       ),
@@ -489,13 +382,7 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                         height: 220,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          border: Border.all(color: AppPalette.borderDefault.withValues(alpha: 0.6)),
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16),
@@ -508,46 +395,43 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                                   await _moveToLocation(equipmentLocation!);
                                 },
                               )),
-                              // Marker in center
                               Center(
                                 child: Icon(
                                   Icons.location_on,
-                                  size: 48,
-                                  color: Colors.red,
+                                  size: 44,
+                                  color: AppPalette.textDanger,
                                   shadows: [
                                     Shadow(
-                                      color: Colors.black.withAlpha(100),
+                                      color: Colors.black.withAlpha(80),
                                       blurRadius: 4,
                                       offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
                               ),
-
-                              //open in maps
                               Positioned(
-                                bottom: 8,
-                                right: 8,
+                                bottom: 10,
+                                right: 10,
                                 child: Material(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: AppPalette.surface,
+                                  borderRadius: BorderRadius.circular(10),
                                   elevation: 2,
                                   child: InkWell(
-                                    onTap: () => _openInMap(),
-                                    borderRadius: BorderRadius.circular(8),
+                                    onTap: _openInMap,
+                                    borderRadius: BorderRadius.circular(10),
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(Icons.map, size: 18, color: AppColors.primaryGreen),
-                                          const SizedBox(width: 4),
+                                          const Icon(Icons.map_rounded, size: 18, color: AppPalette.brand),
+                                          const SizedBox(width: 6),
                                           Text(
                                             'orders.open_in_map'.tr(),
-                                            style: TextStyle(
+                                            style: const TextStyle(
                                               fontSize: 12,
-                                              color: AppColors.primaryGreen,
-                                              fontWeight: FontWeight.w500,
+                                              color: AppPalette.brand,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
                                         ],
@@ -560,8 +444,6 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                           ),
                         ),
                       ),
-
-                    // const SizedBox(height: 80),
                   ],
                 ),
               ),
