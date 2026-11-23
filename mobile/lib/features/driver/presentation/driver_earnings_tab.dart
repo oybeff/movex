@@ -1,11 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../data/driver_api.dart';
+import 'driver_payout_page.dart';
 import 'driver_ui.dart';
 
 /// «Daromad» — макет 04 P1: сколько можно вывести и кнопка «Pul yechish»,
@@ -155,7 +155,9 @@ class _DriverEarningsTabState extends State<DriverEarningsTab> {
                             textStyle: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           onPressed: () async {
-                            await context.push('/payout');
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const DriverPayoutPage()),
+                            );
                             _load();
                           },
                           child: Text('driver.withdraw'.tr()),

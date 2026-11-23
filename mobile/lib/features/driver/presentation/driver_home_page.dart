@@ -11,8 +11,10 @@ import '../../../core/widgets/delete_account_button.dart';
 import '../../listings/presentation/pages/listings_page.dart';
 import '../../owner_home/presentation/pages/my_equipment_page.dart';
 import '../../requests/presentation/pages/search_area_page.dart';
+import 'driver_cards_page.dart';
 import 'driver_earnings_tab.dart';
 import 'driver_history_tab.dart';
+import 'driver_payout_page.dart';
 import 'driver_verification_page.dart';
 import 'driver_orders_tab.dart';
 
@@ -162,7 +164,8 @@ class _DriverProfileTabState extends State<DriverProfileTab> {
             ]),
             const SizedBox(height: 12),
             _group([
-              _item(Icons.credit_card_rounded, 'driver.withdraw'.tr(), () => context.push('/payout')),
+              _item(Icons.account_balance_wallet_outlined, 'driver.withdraw'.tr(), () => _push(const DriverPayoutPage())),
+              _item(Icons.credit_card_rounded, 'Kartalarim', () => _push(const DriverCardsPage())),
               _item(Icons.notifications_none_rounded, 'driver.notifications'.tr(), () => context.push('/notifications')),
               _item(Icons.language_rounded, 'driver.settings'.tr(), () => context.push('/settings')),
               _item(Icons.logout_rounded, 'driver.logout'.tr(), _logout, danger: true),
