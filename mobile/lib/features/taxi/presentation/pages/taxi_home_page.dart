@@ -27,6 +27,7 @@ import 'problem_page.dart';
 import '../../data/card_api.dart';
 import 'taxi_chat_page.dart';
 import 'taxi_profile_page.dart';
+import '../../../materials/presentation/pages/materials_catalog_page.dart';
 
 /// Главная клиента — заказ техники «как такси» (второй макет, клиентский
 /// файл, «Buyurtma oqimi — qadam-baqadam»):
@@ -319,6 +320,15 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   }
 
   Future<void> _pickType(String type) async {
+    if (type == 'materials') {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const MaterialsCatalogPage()),
+      );
+      return;
+    }
+    if (type == 'freight') {
+      type = 'dump_truck';
+    }
     setState(() {
       _surge = 0;
       _type = type;
@@ -1494,7 +1504,8 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   }
 
   Future<void> _moreTypes() async {
-    final rest = _orderedTypes.skip(7).toList();
+    const mainCodes = {'excavator', 'bulldozer', 'truck_crane', 'dump_truck', 'front_loader'};
+    final rest = _types.where((t) => !mainCodes.contains(t)).toList();
     if (rest.isEmpty) {
       _toast('taxi.no_more_types'.tr());
       return;
@@ -1519,11 +1530,19 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     if (picked != null) _pickType(picked);
   }
 
-  // 3 · Texnika turini tanlash — 4 в ряд, седьмая плитка и «Boshqalar».
+  // 3 · Texnika va xizmat turini tanlash (TT 2-qism):
+  // 1. Ekskavator, 2. Buldozer, 3. Avtokran, 4. Samosval,
+  // 5. Frontal yuklagich, 6. Yuk tashish, 7. Qurilish materiallari, 8. Boshqalar
   Widget _typePanel() {
     final types = _orderedTypes;
     final tiles = <Widget>[
-      for (final t in types.take(7)) TypeTile(type: t, onTap: _busy ? () {} : () => _pickType(t)),
+      TypeTile(type: 'excavator', onTap: _busy ? () {} : () => _pickType('excavator')),
+      TypeTile(type: 'bulldozer', onTap: _busy ? () {} : () => _pickType('bulldozer')),
+      TypeTile(type: 'truck_crane', onTap: _busy ? () {} : () => _pickType('truck_crane')),
+      TypeTile(type: 'dump_truck', onTap: _busy ? () {} : () => _pickType('dump_truck')),
+      TypeTile(type: 'front_loader', onTap: _busy ? () {} : () => _pickType('front_loader')),
+      TypeTile(type: 'freight', onTap: _busy ? () {} : () => _pickType('freight')),
+      TypeTile(type: 'materials', onTap: () => _pickType('materials')),
       TypeTile(type: 'more', label: 'taxi.more_types'.tr(), onTap: _moreTypes),
     ];
     final rows = <Widget>[];

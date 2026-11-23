@@ -202,13 +202,34 @@ class _MaterialsCatalogPageState extends State<MaterialsCatalogPage> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${NumberFormatter.formatCurrency(product.pricePerUnit)} '
+                    '${'materials.goods'.tr()}: ${NumberFormatter.formatCurrency(product.pricePerUnit)} '
                     '${'common.currency'.tr()} / ${product.unitLabel}',
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primaryGreen,
                     ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Icon(Icons.local_shipping_outlined, size: 14, color: Colors.blueGrey[700]),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          product.deliveryPricePerKm != null && product.deliveryPricePerKm! > 0
+                              ? "${'materials.delivery'.tr()}: ${NumberFormatter.formatCurrency(product.deliveryPricePerKm)} ${'common.currency'.tr()}/km"
+                              : "${'materials.delivery'.tr()}: alohida hisoblanadi",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.blueGrey[700],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                   if (product.availableQuantity != null)
                     Padding(

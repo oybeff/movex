@@ -387,17 +387,40 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
     final quote = _quote!;
     return _card(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _line('materials.goods'.tr(), quote.goodsAmount),
-          const SizedBox(height: 8),
-          _line(
-            quote.deliveryDistanceKm == null
-                ? 'materials.delivery'.tr()
-                : 'materials.delivery_km'.tr(namedArgs: {
-                    'km': quote.deliveryDistanceKm!.toStringAsFixed(0),
-                    'trips': '${quote.trips}',
-                  }),
-            quote.deliveryFee,
+          Row(
+            children: [
+              const Icon(Icons.receipt_long_outlined, size: 20, color: AppColors.primaryGreen),
+              const SizedBox(width: 8),
+              Text(
+                'materials.total'.tr(),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                _line('materials.goods'.tr(), quote.goodsAmount),
+                const SizedBox(height: 8),
+                _line(
+                  quote.deliveryDistanceKm == null
+                      ? 'materials.delivery'.tr()
+                      : 'materials.delivery_km'.tr(namedArgs: {
+                          'km': quote.deliveryDistanceKm!.toStringAsFixed(0),
+                          'trips': '${quote.trips}',
+                        }),
+                  quote.deliveryFee,
+                ),
+              ],
+            ),
           ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),

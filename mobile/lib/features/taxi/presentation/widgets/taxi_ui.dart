@@ -308,11 +308,20 @@ class TypeTile extends StatelessWidget {
                 alignment: Alignment.center,
                 child: type == 'more'
                     ? SvgPicture.asset('assets/brand/more_types.svg', width: 32, height: 32)
-                    : EquipmentPhoto(type),
+                    : (type == 'materials'
+                        ? const Icon(Icons.construction_outlined, size: 30, color: AppPalette.brand)
+                        : (type == 'freight'
+                            ? const Icon(Icons.local_shipping_outlined, size: 32, color: AppPalette.brand)
+                            : EquipmentPhoto(type))),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                label ?? EquipmentTypes.label(type),
+                label ??
+                    (type == 'materials'
+                        ? 'taxi.materials'.tr()
+                        : (type == 'freight'
+                            ? 'taxi.freight'.tr()
+                            : EquipmentTypes.label(type))),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
