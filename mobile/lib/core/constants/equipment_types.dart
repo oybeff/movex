@@ -45,6 +45,10 @@ class EquipmentTypes {
     return codes.contains(value) ? value : fallback;
   }
 
+  /// Vektorli toza SVG ikonkasi (interfeys, chiplar, kartochkalar uchun).
+  static String svgAsset(String? code) =>
+      'assets/equipment_types/${normalize(code)}.svg';
+
   /// Ikonka: qora ramkali belgi, ostida tur nomi. Ham ro'yxatlarda, ham
   /// Yandex xarita markeri sifatida ishlatiladi.
   ///

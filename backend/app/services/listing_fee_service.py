@@ -30,23 +30,13 @@ TX_TYPE_LISTING_FEE = "listing_fee"
 
 
 def general_fee(db: Session) -> Decimal:
-    from app.models.app_settings import AppSettings
-
-    row = db.query(AppSettings).filter(AppSettings.key == LISTING_FEE_KEY).first()
-    if row is None or row.value in (None, ""):
-        return Decimal("0")
-    try:
-        value = Decimal(str(row.value))
-    except (ArithmeticError, TypeError, ValueError):
-        return Decimal("0")
-    return value if value > 0 else Decimal("0")
+    # E'lon joylash mutlaqo bepul (0 so'm)
+    return Decimal("0")
 
 
 def fee_for(db: Session, user) -> Decimal:
-    override = getattr(user, "listing_fee_override", None)
-    if override is not None:
-        return Decimal(str(override))
-    return general_fee(db)
+    # E'lon joylash mutlaqo bepul (0 so'm)
+    return Decimal("0")
 
 
 def charge(db: Session, user, listing) -> Decimal:

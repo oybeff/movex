@@ -5,6 +5,7 @@ import '../../../../core/models/listing_model.dart';
 import '../../../../core/services/listing_service.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../balance/presentation/pages/balance_topup_page.dart';
 import '../widgets/listing_card.dart';
 
 /// O'z e'lonlari — muallif tomoni.
@@ -500,7 +501,9 @@ class MyListingsViewState extends State<MyListingsView> {
     final agreed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        content: Text('listings.confirm_money_warning'
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.xl)),
+        content: Text('listings.confirm_offer_prompt'
             .tr(namedArgs: {
           'amount': NumberFormatter.formatCurrency(chosenOffer.price),
         })),
@@ -509,8 +512,14 @@ class MyListingsViewState extends State<MyListingsView> {
             onPressed: () => Navigator.pop(dialogContext, false),
             child: Text('common.no'.tr()),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppPalette.brand,
+              foregroundColor: AppPalette.textOnBrand,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md)),
+            ),
             child: Text('common.yes'.tr()),
           ),
         ],
@@ -526,9 +535,52 @@ class MyListingsViewState extends State<MyListingsView> {
       await _load();
     } catch (e) {
       if (!mounted) return;
-      _snack(_detail(e) ?? 'errors.something_went_wrong'.tr());
+      final msg = _detail(e) ?? 'errors.something_went_wrong'.tr();
+      if (msg.contains('100 000') || msg.contains('100000')) {
+        await _offerTopUp(msg);
+      } else {
+        _snack(msg);
+      }
     } finally {
       if (mounted) setState(() => _busyId = null);
+    }
+  }
+
+  Future<void> _offerTopUp(String message) async {
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.xl)),
+        backgroundColor: AppPalette.surface,
+        content: Text(message, style: AppTypography.body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'settings.cancel'.tr(),
+              style: const TextStyle(color: AppPalette.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppPalette.brand,
+              foregroundColor: AppPalette.textOnBrand,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md)),
+            ),
+            child: Text('listings.top_up'.tr()),
+          ),
+        ],
+      ),
+    );
+    if (go == true && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => const BalanceTopUpPage(requiredAmount: 100000)),
+      );
     }
   }
 

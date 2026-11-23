@@ -41,6 +41,8 @@ class ListingModel {
   /// Faqat ishtirokchilarga keladi. Boshqalarda null — bu ataylab:
   /// aks holda taxta raqamlarni yig'ish uchun ochiq manba bo'lardi.
   final String? contactPhone;
+  final String? contactTelegram;
+  final bool allowChat;
 
   final bool takenByMe;
   final double? distanceKm;
@@ -79,6 +81,8 @@ class ListingModel {
     this.clientName,
     this.takerName,
     this.contactPhone,
+    this.contactTelegram,
+    this.allowChat = true,
     this.takenByMe = false,
     this.distanceKm,
     this.likesCount = 0,
@@ -125,6 +129,8 @@ class ListingModel {
       clientName: json['client_name'] as String?,
       takerName: json['taker_name'] as String?,
       contactPhone: json['contact_phone'] as String?,
+      contactTelegram: json['contact_telegram'] as String?,
+      allowChat: json['allow_chat'] as bool? ?? true,
       takenByMe: json['taken_by_me'] as bool? ?? false,
       distanceKm: _toDouble(json['distance_km']),
       likesCount: json['likes_count'] as int? ?? 0,
@@ -143,6 +149,8 @@ class ListingModel {
 
   /// Telefon ochiqmi — server hal qiladi, ilova faqat natijani ko'radi.
   bool get hasPhone => contactPhone != null && contactPhone!.isNotEmpty;
+  bool get hasTelegram =>
+      contactTelegram != null && contactTelegram!.isNotEmpty;
 
   String? get typeLabel =>
       equipmentType == null ? null : EquipmentTypes.label(equipmentType);

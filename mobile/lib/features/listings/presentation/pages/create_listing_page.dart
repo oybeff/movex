@@ -9,7 +9,6 @@ import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/services/listing_service.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
-import '../../../balance/presentation/pages/balance_topup_page.dart';
 
 /// E'lon joylash (Create Listing) ekrani.
 ///
@@ -34,6 +33,9 @@ class _CreateListingPageState extends State<CreateListingPage> {
   final TextEditingController _budget = TextEditingController();
   final TextEditingController _address = TextEditingController();
   final TextEditingController _phone = TextEditingController();
+  final TextEditingController _telegram = TextEditingController();
+
+  bool _allowChat = true;
 
   String? _equipmentType;
   DateTime? _from;
@@ -46,17 +48,6 @@ class _CreateListingPageState extends State<CreateListingPage> {
   bool _isSending = false;
   String? _error;
 
-  /// Joylash narxi (0 — bepul).
-  double _fee = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _service.listingFee().then((fee) {
-      if (mounted) setState(() => _fee = fee);
-    }).catchError((_) {});
-  }
-
   @override
   void dispose() {
     _title.dispose();
@@ -64,6 +55,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
     _budget.dispose();
     _address.dispose();
     _phone.dispose();
+    _telegram.dispose();
     super.dispose();
   }
 
@@ -152,70 +144,18 @@ class _CreateListingPageState extends State<CreateListingPage> {
         neededFrom: _from,
         neededTo: _to,
         contactPhone: _phone.text.trim(),
+        contactTelegram: _telegram.text.trim(),
+        allowChat: _allowChat,
         photos: _photos,
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isSending = false);
-      // 402 — joylash pullik, balansda pul yetmaydi: to'ldirishga yo'l
-      if (_status(e) == 402) {
-        await _offerTopUp(_detail(e) ?? '');
-        return;
-      }
-      setState(() => _error = _detail(e) ?? 'errors.something_went_wrong'.tr());
+      setState(() {
+        _isSending = false;
+        _error = _detail(e) ?? 'errors.something_went_wrong'.tr();
+      });
     }
-  }
-
-  int? _status(Object e) {
-    try {
-      return (e as dynamic).response?.statusCode as int?;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> _offerTopUp(String message) async {
-    final go = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.xl)),
-        backgroundColor: AppPalette.surface,
-        content: Text(message, style: AppTypography.body),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'settings.cancel'.tr(),
-              style: const TextStyle(color: AppPalette.textSecondary),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppPalette.brand,
-              foregroundColor: AppPalette.textOnBrand,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md)),
-            ),
-            child: Text('listings.top_up'.tr()),
-          ),
-        ],
-      ),
-    );
-    if (go == true && mounted) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) => BalanceTopUpPage(requiredAmount: _fee)),
-      );
-    }
-  }
-
-  String _money(double v) {
-    final s = v.toStringAsFixed(0);
-    return s.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ' ');
   }
 
   String? _detail(Object e) {
@@ -421,6 +361,80 @@ class _CreateListingPageState extends State<CreateListingPage> {
               ),
               const SizedBox(height: AppSpacing.lg),
 
+              _fieldLabel(
+                'listings.contact_methods'.tr(),
+                subtitle: 'listings.contact_methods_helper'.tr(),
+              ),
+
+              // 1) Ilova ichidagi chat
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _allowChat ? AppPalette.brandSubtle : AppPalette.page,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(
+                    color: _allowChat
+                        ? AppPalette.brand.withValues(alpha: 0.3)
+                        : AppPalette.borderDefault,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _allowChat ? AppPalette.brand : Colors.grey[300],
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.chat_outlined,
+                          color: Colors.white, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'listings.contact_chat_title'.tr(),
+                            style: AppTypography.bodyMMedium.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppPalette.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'listings.contact_chat_subtitle'.tr(),
+                            style: AppTypography.captionS.copyWith(
+                              color: AppPalette.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _allowChat,
+                      activeThumbColor: AppPalette.brand,
+                      onChanged: (val) => setState(() => _allowChat = val),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+
+              // 2) Telegram
+              _fieldLabel('listings.contact_telegram'.tr()),
+              TextField(
+                controller: _telegram,
+                textInputAction: TextInputAction.next,
+                style: AppTypography.body,
+                decoration: _fieldInputDecoration(
+                  hint: 'listings.contact_telegram_hint'.tr(),
+                  prefixIcon: Icons.send_rounded,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+
+              // 3) Telefon raqam
               _fieldLabel('listings.contact_phone'.tr()),
               TextField(
                 controller: _phone,
@@ -453,7 +467,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
             ],
           ),
 
-          // ── Xato va to'lov bildirishnomalari ──────────────────────
+          // ── Xato bildirishnomalari ────────────────────────────────
           if (_error != null) ...[
             const SizedBox(height: AppSpacing.lg),
             Container(
@@ -473,36 +487,6 @@ class _CreateListingPageState extends State<CreateListingPage> {
                       _error!,
                       style: AppTypography.bodyM.copyWith(
                         color: AppPalette.textDanger,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          if (_fee > 0) ...[
-            const SizedBox(height: AppSpacing.lg),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: AppPalette.brandSubtle,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(
-                  color: AppPalette.brand.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.payments_outlined,
-                      color: AppPalette.brand, size: 20),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Text(
-                      'listings.fee_note'.tr(args: [_money(_fee)]),
-                      style: AppTypography.bodyM.copyWith(
-                        color: AppPalette.brand,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
@@ -817,7 +801,8 @@ class _CreateListingPageState extends State<CreateListingPage> {
             selected: _equipmentType == code,
             onSelected: (selected) =>
                 setState(() => _equipmentType = selected ? code : null),
-            avatar: EquipmentTypeIcon(code, size: 20),
+            avatar: EquipmentTypeIcon(code, size: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             label: Text(
               EquipmentTypes.label(code),
               style: AppTypography.captionS.copyWith(

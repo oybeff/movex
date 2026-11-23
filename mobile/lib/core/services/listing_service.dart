@@ -64,6 +64,8 @@ class ListingService {
     DateTime? neededFrom,
     DateTime? neededTo,
     String? contactPhone,
+    String? contactTelegram,
+    bool allowChat = true,
     List<String> photos = const [],
   }) async {
     final response = await _dio.post('/listings/', data: {
@@ -80,6 +82,9 @@ class ListingService {
       if (neededTo != null) 'needed_to': _date(neededTo),
       if (contactPhone != null && contactPhone.isNotEmpty)
         'contact_phone': contactPhone,
+      if (contactTelegram != null && contactTelegram.isNotEmpty)
+        'contact_telegram': contactTelegram,
+      'allow_chat': allowChat,
       if (photos.isNotEmpty) 'photos': photos,
     });
     return ListingModel.fromJson(response.data as Map<String, dynamic>);
@@ -189,6 +194,27 @@ class ListingService {
 
   Future<ListingModel> finish(int id) async =>
       _one(await _dio.post('/listings/$id/finish'));
+
+  // ------------------------------------------------------------- xabarlar
+
+  Future<List<Map<String, dynamic>>> getListingMessages(int listingId) async {
+    final response = await _dio.get('/listings/$listingId/messages');
+    return (response.data as List<dynamic>).cast<Map<String, dynamic>>();
+  }
+
+  Future<void> sendListingMessage(
+    int listingId,
+    String text, {
+    int? receiverId,
+  }) async {
+    await _dio.post(
+      '/listings/$listingId/messages',
+      data: {
+        'message_text': text,
+        if (receiverId != null) 'receiver_id': receiverId,
+      },
+    );
+  }
 
   // ------------------------------------------------------------- ichki
 

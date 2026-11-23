@@ -14,6 +14,7 @@ o'tkazish kerak bo'lsa, bu alohida ish: buyurtma jadvali aniq texnikaga
 bog'langan, e'londa esa texnika umuman bo'lmasligi mumkin.
 """
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Column,
     Date,
@@ -73,6 +74,8 @@ class Listing(Base):
     needed_to = Column(Date, nullable=True)
 
     contact_phone = Column(String(20), nullable=True)
+    contact_telegram = Column(String(100), nullable=True)
+    allow_chat = Column(Boolean, default=True, nullable=False)
 
     # open      — javob kutilmoqda
     # taken     — egasi oldi, mijozning tasdig'i kutilmoqda
@@ -231,3 +234,23 @@ class ListingPhoto(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     listing = relationship("Listing", back_populates="photos")
+
+
+class ListingMessage(Base):
+    """E'lon doirasidagi xabar (mijoz va haydovchi o'rtasidagi chat)."""
+
+    __tablename__ = "listing_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(
+        Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    sender_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    receiver_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    message_text = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+

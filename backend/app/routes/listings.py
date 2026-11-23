@@ -21,6 +21,8 @@ from app.models.user import User
 from app.routes.auth import get_current_user
 from app.schemas.listing import (
     ListingCreate,
+    ListingMessageCreate,
+    ListingMessageRead,
     ListingOfferCreate,
     ListingOfferRead,
     ListingRead,
@@ -54,11 +56,10 @@ def _to_read(
         data.taker_name = taker.full_name if taker else None
 
     data.taken_by_me = listing.taken_by == viewer.id
-    data.contact_phone = (
-        listing.contact_phone
-        if listing_service.can_see_phone(listing, viewer)
-        else None
-    )
+    can_see = listing_service.can_see_phone(listing, viewer)
+    data.contact_phone = listing.contact_phone if can_see else None
+    data.contact_telegram = listing.contact_telegram if can_see else None
+    data.allow_chat = bool(getattr(listing, "allow_chat", True))
 
     v_lat, v_lon = _as_float(viewer.search_latitude), _as_float(viewer.search_longitude)
     l_lat, l_lon = _as_float(listing.latitude), _as_float(listing.longitude)
@@ -397,3 +398,42 @@ def unsave(
     current_user=Depends(get_current_user),
 ):
     return _reaction(db, listing_id, current_user, "save", False)
+
+
+# ------------------------------------------------------------- xabarlar (chat)
+
+
+@router.get("/{listing_id}/messages", response_model=List[ListingMessageRead])
+def get_listing_messages(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    messages = listing_service.get_listing_messages(db, listing_id, current_user)
+    results = []
+    for m in messages:
+        sender = db.query(User).filter(User.id == m.sender_id).first()
+        item = ListingMessageRead.model_validate(m)
+        item.sender_name = sender.full_name if sender else None
+        results.append(item)
+    return results
+
+
+@router.post("/{listing_id}/messages", response_model=ListingMessageRead)
+def send_listing_message(
+    listing_id: int,
+    data: ListingMessageCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    msg = listing_service.send_listing_message(
+        db,
+        listing_id=listing_id,
+        sender=current_user,
+        text=data.message_text,
+        receiver_id=data.receiver_id,
+    )
+    res = ListingMessageRead.model_validate(msg)
+    res.sender_name = current_user.full_name
+    return res
+

@@ -30,6 +30,8 @@ class ListingCreate(BaseModel):
 
     #: Ko'rsatilmasa — profildagi raqam ishlatiladi
     contact_phone: Optional[str] = Field(default=None, max_length=20)
+    contact_telegram: Optional[str] = Field(default=None, max_length=100)
+    allow_chat: bool = True
 
     photos: Optional[List[str]] = None
 
@@ -73,6 +75,8 @@ class ListingRead(BaseModel):
 
     #: Faqat ishtirokchilarga qaytadi, boshqalarga None
     contact_phone: Optional[str] = None
+    contact_telegram: Optional[str] = None
+    allow_chat: bool = True
 
     #: Ko'ruvchiga nisbatan: shu e'lonni u olganmi
     taken_by_me: bool = False
@@ -117,6 +121,24 @@ class ListingOfferRead(BaseModel):
     #: Faqat MUALLIF va qabul qilingan ijrochi ko'radi. Aks holda taxta
     #: raqam yig'ish uchun ochiq manbaga aylanardi.
     user_phone: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ListingMessageCreate(BaseModel):
+    message_text: str = Field(min_length=1, max_length=2000)
+    receiver_id: Optional[int] = None
+
+
+class ListingMessageRead(BaseModel):
+    id: int
+    listing_id: int
+    sender_id: int
+    receiver_id: int
+    message_text: str
+    created_at: datetime
+    sender_name: Optional[str] = None
 
     class Config:
         from_attributes = True

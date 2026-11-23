@@ -1,11 +1,13 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_config.dart';
 import '../../../../core/models/listing_model.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../pages/listing_chat_page.dart';
 
 /// E'lon kartochkasi — mijozning ro'yxatida ham, ega taxtasida ham bir xil.
 ///
@@ -149,10 +151,8 @@ class ListingCard extends StatelessWidget {
               _row(Icons.person_outline,
                   '${'listings.taken_by'.tr()}: ${listing.takerName}'),
 
-            // Telefon serverdan kelgan bo'lsa — demak ko'rsatishga ruxsat bor.
-            // Ilova o'zi hech qanday shart tekshirmaydi.
-            if (listing.hasPhone)
-              _row(Icons.phone_outlined, listing.contactPhone!, bold: true),
+            // Aloqa usullari: Chat, Telegram, Telefon
+            _buildContactMethods(context),
 
             _stats(),
 
@@ -184,6 +184,94 @@ class ListingCard extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildContactMethods(BuildContext context) {
+    final bool canChat = listing.allowChat;
+    final bool hasTelegram = listing.hasTelegram;
+    final bool hasPhone = listing.hasPhone;
+
+    if (!canChat && !hasTelegram && !hasPhone) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (canChat)
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ListingChatPage(listing: listing),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.chat_outlined, size: 16),
+                  label: Text('listings.contact_chat_btn'.tr()),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primaryGreen,
+                    side: const BorderSide(color: AppColors.primaryGreen),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              if (hasTelegram)
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    String clean = listing.contactTelegram!.trim();
+                    if (clean.startsWith('@')) clean = clean.substring(1);
+                    final url = clean.startsWith('http') ? clean : 'https://t.me/$clean';
+                    final uri = Uri.parse(url);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  icon: const Icon(Icons.send_rounded, size: 15, color: Color(0xFF0088CC)),
+                  label: Text('listings.contact_telegram_btn'.tr()),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0088CC),
+                    side: const BorderSide(color: Color(0xFF0088CC)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              if (hasPhone)
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final uri = Uri.parse('tel:${listing.contactPhone!}');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                    }
+                  },
+                  icon: const Icon(Icons.phone_outlined, size: 15),
+                  label: Text(listing.contactPhone!),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

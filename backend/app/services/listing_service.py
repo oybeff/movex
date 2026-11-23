@@ -33,7 +33,7 @@ Telefon raqami e'londa hammaga ko'rinmaydi: uni faqat muallif va TASDIQLANGAN
 ijrochi ko'radi. Aks holda taxta raqamlarni yig'ish uchun ochiq manba bo'lib
 qolardi.
 """
-from app.core.messages import insufficient_funds
+from app.core.messages import format_sum, insufficient_funds
 import logging
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -52,6 +52,7 @@ from app.models.listing import (
     MAX_LISTING_PHOTOS,
     MAX_OPEN_LISTINGS_PER_CLIENT,
     Listing,
+    ListingMessage,
     ListingOffer,
     ListingPhoto,
     ListingReaction,
@@ -145,27 +146,16 @@ def create_listing(db: Session, client: User, data) -> Listing:
         needed_to=data.needed_to,
         # Telefon ko'rsatilmasa — profildagisi
         contact_phone=(data.contact_phone or client.phone),
+        contact_telegram=(getattr(data, "contact_telegram", None) or None),
+        allow_chat=bool(getattr(data, "allow_chat", True)),
         status="open",
         expires_at=_now() + timedelta(days=LISTING_TTL_DAYS),
     )
     db.add(listing)
     db.flush()
 
-    # E'lon joylash narxi (adminkada yoqilgan bo'lsa). Byudjetni muzlatishdan
-    # OLDIN: ikkalasi bitta balansdan, va pul yetmasa e'lon umuman saqlanmaydi.
-    listing_fee_service.charge(db, client, listing)
-
-    # Byudjet KO'RSATILGAN bo'lsa — uni darhol muzlatamiz. Ilgari pul faqat
-    # tasdiqlashda muzlatilardi, ya'ni puli yo'q odam ham byudjetli e'lon
-    # joylay olardi: kimdir uni olardi, muallif esa tasdiqlay olmasdi
-    # (balansida pul yo'q) — ijrochi bekorga kutib qolardi. Buyurtma va
-    # materiallarda pul YARATILGANDA tekshiriladi; e'lon ham shunday
-    # bo'lishi kerak edi, aks holda uch joyda uch xil qoida.
-    #
-    # Byudjetsiz e'lon ("narxni ayting") muzlatilmaydi: unda summa faqat
-    # taklif tanlanganda paydo bo'ladi.
-    if listing.budget is not None and Decimal(str(listing.budget)) > 0:
-        _reserve_for_listing(db, listing, listing.budget)
+    # E'lon joylash mutlaqo bepul (0 so'm). Byudjet ham joylashda muzlatilmaydi.
+    # Foydalanuvchi qoidasi: "elon berish bepul bo'lsin"
 
     for url in photos:
         db.add(ListingPhoto(listing_id=listing.id, url=url))
@@ -281,70 +271,51 @@ def _fix_commission(db: Session, listing: Listing) -> None:
     listing.commission = pricing_service.calculate_commission(db, amount, amount)
 
 
-def _unfreeze_listing(db: Session, listing: Listing) -> None:
-    """Muzlatishni olib tashlaydi. Pul muallifda qoladi.
+LISTING_DEPOSIT_AMOUNT = Decimal("100000")
 
-    Rad etish va bekor qilishda AYNAN shu bo'ladi — pul hech qayerga
-    ketmaydi. Buni yakunlash bilan adashtirish = pulni yo'qdan bor qilish.
-    """
-    if listing.agreed_price is None:
-        return
-    amount = Decimal(str(listing.agreed_price))
+
+def _unfreeze_listing(db: Session, listing: Listing) -> None:
+    """Muzlatilgan kafolat garovini (100 000 so'm) muallifga qaytaradi."""
     balance = _lock_balance(db, listing.client_id)
     current = Decimal(str(balance.frozen_balance))
-    balance.frozen_balance = current - amount if current >= amount else Decimal("0")
+    if current >= LISTING_DEPOSIT_AMOUNT:
+        balance.frozen_balance = current - LISTING_DEPOSIT_AMOUNT
+    else:
+        balance.frozen_balance = Decimal("0")
     listing.agreed_price = None
     listing.commission = None
 
 
 def _settle_listing(db: Session, listing: Listing) -> None:
     """
-    Ish yakunlandi: pul muallifdan CHIQADI va ijrochiga o'tadi.
-
-    Muzlatishni olib tashlashning o'zi yetarli emas — summa balansdan ham
-    yechilishi kerak, aks holda pul yo'qdan bor bo'lardi.
+    Ish yakunlandi.
+    Mijozning 100 000 so'm garovi yechiladi (unfreeze).
+    Platforma komissiyasi bo'lsa, ijrochining (haydovchining) balansidan yechiladi.
     """
-    if listing.agreed_price is None or not listing.taken_by:
+    if not listing.taken_by:
         return
 
-    amount = Decimal(str(listing.agreed_price))
+    _unfreeze_listing(db, listing)
+
     commission = Decimal(str(listing.commission or 0))
-    if commission > amount:          # ehtiyot chorasi: ijrochi minusga ketmasin
-        commission = amount
-    payout = amount - commission
-
-    author_balance = _lock_balance(db, listing.client_id)
-    author_balance.frozen_balance = Decimal(str(author_balance.frozen_balance)) - amount
-    author_balance.balance = Decimal(str(author_balance.balance)) - amount
-
-    taker_balance = _lock_balance(db, listing.taken_by)
-    taker_balance.balance = Decimal(str(taker_balance.balance)) + payout
-
-    db.add(BalanceTransaction(
-        user_id=listing.client_id,
-        amount=amount,
-        type="payment",
-        status="completed",
-        description=t("tx.listing_payment", _language(db, listing.client_id),
-                      listing_id=listing.id, title=listing.title),
-    ))
-    db.add(BalanceTransaction(
-        user_id=listing.taken_by,
-        amount=payout,
-        type="income",
-        status="completed",
-        description=t("tx.listing_income", _language(db, listing.taken_by),
-                      listing_id=listing.id, title=listing.title),
-    ))
-
-    # Nol summani jadval qabul qilmaydi (check_budget_reserve_amount).
     if commission > 0:
-        db.add(BudgetReserve(
-            listing_id=listing.id,
-            amount=commission,
-            description=t("tx.listing_commission", None,
-                          listing_id=listing.id, title=listing.title),
-        ))
+        taker_balance = _lock_balance(db, listing.taken_by)
+        if taker_balance.balance >= commission:
+            taker_balance.balance = Decimal(str(taker_balance.balance)) - commission
+            db.add(BalanceTransaction(
+                user_id=listing.taken_by,
+                amount=commission,
+                type="payment",
+                status="completed",
+                description=t("tx.listing_commission", _language(db, listing.taken_by),
+                              listing_id=listing.id, title=listing.title),
+            ))
+            db.add(BudgetReserve(
+                listing_id=listing.id,
+                amount=commission,
+                description=t("tx.listing_commission", None,
+                              listing_id=listing.id, title=listing.title),
+            ))
 
 def take_listing(db: Session, listing_id: int, taker: User) -> Listing:
     """
@@ -354,6 +325,16 @@ def take_listing(db: Session, listing_id: int, taker: User) -> Listing:
     blokirovkasiz ikkalasi ham muvaffaqiyat javobini olardi.
     """
     assert_not_frozen(taker)
+
+    # Haydovchi balansi faol (aktiv) bo'lishi shart
+    taker_balance = _lock_balance(db, taker.id)
+    if Decimal(str(taker_balance.balance)) <= Decimal("0"):
+        raise HTTPException(
+            400,
+            "E'lonni qabul qilish uchun balansingiz faol (kamida 1 so'm) bo'lishi kerak. Iltimos, hisobingizni to'ldiring."
+            if taker.language != "ru" else
+            "Для принятия объявления ваш баланс должен быть активным. Пожалуйста, пополните баланс.",
+        )
 
     listing = (
         db.query(Listing).filter(Listing.id == listing_id).with_for_update().first()
@@ -392,13 +373,24 @@ def confirm_listing(db: Session, listing_id: int, client: User) -> Listing:
     if listing.status != "taken":
         raise HTTPException(400, "Tasdiqlash uchun avval kimdir e'lonni olishi kerak")
 
-    # Byudjet e'lon JOYLANGANDA muzlatilgan. Eski e'lonlarda (fiksdan
-    # oldin joylangan) muzlatish bo'lmagan bo'lishi mumkin — o'shanda
-    # hozir muzlatamiz. Ulush esa har doim shu yerda, tasdiqlashda
-    # yoziladi.
-    if listing.agreed_price is None:
-        _reserve_for_listing(db, listing, listing.budget)
+    # Mijoz haydovchi taklifini qabul qilishi uchun balansida kamida 100 000 so'm bo'lsin
+    MIN_CLIENT_BALANCE_TO_ACCEPT = Decimal("100000")
+    client_balance = _lock_balance(db, client.id)
+    available = Decimal(str(client_balance.balance)) - Decimal(str(client_balance.frozen_balance))
+    if available < MIN_CLIENT_BALANCE_TO_ACCEPT:
+        raise HTTPException(
+            400,
+            f"Haydovchi taklifini qabul qilish uchun balansingizda kamida 100 000 so'm bo'lishi kerak. Mavjud: {format_sum(available)} so'm."
+            if client.language != "ru" else
+            f"Для принятия предложения на вашем балансе должно быть не менее 100 000 сум. Доступно: {format_sum(available)} сум.",
+        )
+
+    listing.agreed_price = listing.budget or Decimal("0")
     _fix_commission(db, listing)
+
+    # 100 000 so'm kafolat sifatida muzlatiladi
+    deposit = min(available, MIN_CLIENT_BALANCE_TO_ACCEPT)
+    client_balance.frozen_balance = Decimal(str(client_balance.frozen_balance)) + deposit
 
     listing.status = "confirmed"
     listing.confirmed_at = _now()
@@ -517,6 +509,16 @@ def make_offer(db: Session, listing_id: int, user: User, price, comment=None) ->
     """
     assert_not_frozen(user)
 
+    # Haydovchi balansi faol (aktiv) bo'lishi shart
+    driver_balance = _lock_balance(db, user.id)
+    if Decimal(str(driver_balance.balance)) <= Decimal("0"):
+        raise HTTPException(
+            400,
+            "Taklif yuborish uchun balansingiz faol (kamida 1 so'm) bo'lishi kerak. Iltimos, hisobingizni to'ldiring."
+            if user.language != "ru" else
+            "Для отправки предложения ваш баланс должен быть активным. Пожалуйста, пополните баланс.",
+        )
+
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if listing is None:
         raise HTTPException(404, "E'lon topilmadi")
@@ -608,6 +610,18 @@ def accept_offer(db: Session, listing_id: int, offer_id: int, author: User) -> L
     if offer.status != "pending":
         raise HTTPException(400, "Taklif allaqachon ko'rib chiqilgan")
 
+    # Mijoz haydovchi taklifini qabul qilishi uchun balansida kamida 100 000 so'm bo'lsin
+    MIN_CLIENT_BALANCE_TO_ACCEPT = Decimal("100000")
+    client_balance = _lock_balance(db, author.id)
+    available = Decimal(str(client_balance.balance)) - Decimal(str(client_balance.frozen_balance))
+    if available < MIN_CLIENT_BALANCE_TO_ACCEPT:
+        raise HTTPException(
+            400,
+            f"Haydovchi taklifini qabul qilish uchun balansingizda kamida 100 000 so'm bo'lishi kerak. Mavjud: {format_sum(available)} so'm."
+            if author.language != "ru" else
+            f"Для принятия предложения на вашем балансе должно быть не менее 100 000 сум. Доступно: {format_sum(available)} сум.",
+        )
+
     offer.status = "accepted"
 
     # Qolganlari rad etilgan deb belgilanadi — ijrochilar javobni kutib
@@ -623,11 +637,12 @@ def accept_offer(db: Session, listing_id: int, offer_id: int, author: User) -> L
     )
 
     listing.taken_by = offer.user_id
-    # Byudjet joylashda muzlatilgan bo'lishi mumkin; qabul qilingan taklif
-    # narxiga keltiramiz (byudjetsiz e'londa noldan muzlatiladi). Ulush
-    # ham shu narxdan hisoblanadi.
-    _adjust_reservation(db, listing, offer.price)
+    listing.agreed_price = offer.price
     _fix_commission(db, listing)
+
+    # 100 000 so'm kafolat sifatida muzlatiladi
+    deposit = min(available, MIN_CLIENT_BALANCE_TO_ACCEPT)
+    client_balance.frozen_balance = Decimal(str(client_balance.frozen_balance)) + deposit
 
     listing.status = "confirmed"
     listing.taken_at = _now()
@@ -883,3 +898,97 @@ def can_see_phone(listing: Listing, viewer: User) -> bool:
     # kerak. Agar telefon "olaman" bosilishi bilanoq ochilsa, tasdiqlashning
     # ma'nosi qolmaydi: raqamni olish uchun tugmani bosish yetarli bo'lardi.
     return listing.taken_by == viewer.id and listing.status in ("confirmed", "done")
+
+
+def send_listing_message(
+    db: Session,
+    listing_id: int,
+    sender: User,
+    text: str,
+    receiver_id: Optional[int] = None,
+) -> ListingMessage:
+    """E'lon ichida xabar yuborish."""
+    assert_not_frozen(sender)
+
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(404, "E'lon topilmadi")
+    if not listing.allow_chat:
+        raise HTTPException(400, "Bu e'londa chat o'chirilgan")
+
+    content = text.strip()
+    if not content:
+        raise HTTPException(400, "Xabar matni bo'sh bo'lishi mumkin emas")
+
+    if sender.id == listing.client_id:
+        rec_id = receiver_id or listing.taken_by
+        if not rec_id:
+            last_msg = (
+                db.query(ListingMessage)
+                .filter(
+                    ListingMessage.listing_id == listing_id,
+                    ListingMessage.receiver_id == sender.id,
+                )
+                .order_by(ListingMessage.id.desc())
+                .first()
+            )
+            if last_msg:
+                rec_id = last_msg.sender_id
+            else:
+                raise HTTPException(400, "Qabul qiluvchi ko'rsatilmadi")
+    else:
+        rec_id = listing.client_id
+
+    msg = ListingMessage(
+        listing_id=listing_id,
+        sender_id=sender.id,
+        receiver_id=rec_id,
+        message_text=content[:2000],
+    )
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+
+    notification_service.create_localized(
+        db,
+        rec_id,
+        "system",
+        "chat.new_message_title",
+        "chat.new_message_body",
+        None,
+        listing.equipment_type,
+        None,
+        title=listing.title,
+        who=sender.full_name,
+    )
+    return msg
+
+
+def get_listing_messages(
+    db: Session, listing_id: int, user: User
+) -> List[ListingMessage]:
+    """E'lon ichidagi xabarlar ro'yxati."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(404, "E'lon topilmadi")
+
+    if user.role != "admin" and user.id != listing.client_id:
+        # Foydalanuvchi faqat o'zi qatnashgan xabarlarni ko'radi
+        return (
+            db.query(ListingMessage)
+            .filter(
+                ListingMessage.listing_id == listing_id,
+                (ListingMessage.sender_id == user.id)
+                | (ListingMessage.receiver_id == user.id),
+            )
+            .order_by(ListingMessage.created_at.asc())
+            .all()
+        )
+
+    return (
+        db.query(ListingMessage)
+        .filter(ListingMessage.listing_id == listing_id)
+        .order_by(ListingMessage.created_at.asc())
+        .all()
+    )
+

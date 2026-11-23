@@ -1,25 +1,9 @@
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../constants/equipment_types.dart';
 
-/// Texnika turining ikonkasi.
-///
-/// Ikonka RANGLI: sariq korpus, qora ramka, pastida nomi yozilgan rasm.
-/// Foni shaffof — kartochkaning rangli foni ustida oq kvadrat qolmaydi.
-/// Nom rasmning ichida, shuning uchun fayl ilova tiliga qarab tanlanadi.
-///
-/// PNG ishlatiladi, SVG emas: dizayner rasmlarni SVG qobig'iga o'ralgan
-/// PNG qilib bergan, `flutter_svg`/`vector_graphics` esa bunday ichki
-/// rastrni ochmaydi — ikonka o'rniga bo'sh joy chiqardi.
-///
-/// [color] berilsa — butun ikonka bitta rangga bo'yaladi va detallar
-/// yo'qoladi. Buni faqat zarur bo'lganda ishlating: 18-20 px da bo'yalgan
-/// ikonka tanib bo'lmaydigan dog'ga aylanadi, shuning uchun ro'yxatlardagi
-/// chip ham endi uni bo'yamaydi.
-///
-/// Turi noma'lum bo'lsa ham bo'sh joy qolmaydi — 'other' ikonkasi
-/// ko'rsatiladi (qarang: [EquipmentTypes.normalize]).
+/// Texnika turining toza, sifatli vektorli SVG ikonkasi.
 class EquipmentTypeIcon extends StatelessWidget {
   const EquipmentTypeIcon(
     this.typeCode, {
@@ -34,13 +18,14 @@ class EquipmentTypeIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      EquipmentTypes.markerAsset(typeCode, context.locale.languageCode),
+    return SvgPicture.asset(
+      EquipmentTypes.svgAsset(typeCode),
       width: size,
       height: size,
       fit: BoxFit.contain,
-      color: color,
-      colorBlendMode: color == null ? null : BlendMode.srcIn,
+      colorFilter: color == null
+          ? null
+          : ColorFilter.mode(color!, BlendMode.srcIn),
     );
   }
 }
