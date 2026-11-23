@@ -72,26 +72,17 @@ class EquipmentPhoto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!_photos.contains(type)) {
-      // Фото в макете есть только у семи типов. У остальных — круг с
-      // машиной из старой метки, без самой булавки и подписи под ней:
-      // целиком она в плитке читалась как логотип с нечитаемым текстом.
-      final side = height / .56;
+      // Agar texnikaning fotosurati bo'lmasa, toza vektorli SVG ikonkasi
+      // ko'rsatiladi (eskirgan va noaniq kesilgan marker o'rniga).
       return SizedBox(
         width: width,
         height: height,
         child: Center(
-          child: ClipOval(
-            child: Align(
-              alignment: const Alignment(0, -.5),
-              widthFactor: .56,
-              heightFactor: .56,
-              child: Image.asset(
-                EquipmentTypes.markerAsset(type, context.locale.languageCode),
-                width: side,
-                height: side,
-                fit: BoxFit.contain,
-              ),
-            ),
+          child: SvgPicture.asset(
+            EquipmentTypes.svgAsset(type),
+            width: width * 0.85,
+            height: height * 0.85,
+            fit: BoxFit.contain,
           ),
         ),
       );
@@ -309,9 +300,9 @@ class TypeTile extends StatelessWidget {
                 child: type == 'more'
                     ? SvgPicture.asset('assets/brand/more_types.svg', width: 32, height: 32)
                     : (type == 'materials'
-                        ? const Icon(Icons.construction_outlined, size: 30, color: AppPalette.brand)
+                        ? SvgPicture.asset('assets/material_types/brick.svg', width: 38, height: 38, fit: BoxFit.contain)
                         : (type == 'freight'
-                            ? const Icon(Icons.local_shipping_outlined, size: 32, color: AppPalette.brand)
+                            ? SvgPicture.asset('assets/equipment_types/dump_truck.svg', width: 42, height: 42, fit: BoxFit.contain)
                             : EquipmentPhoto(type))),
               ),
               const SizedBox(height: AppSpacing.sm),

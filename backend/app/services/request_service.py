@@ -130,11 +130,10 @@ def _release_quick(db: Session, request: EquipmentRequest) -> None:
     request.frozen_amount = Decimal("0")
 
 
-#: Залог клиента за наличный тарифный заказ (правки 21.11.2026): без
-#: него клиент мог вызвать технику и не выйти, а владелец ехал впустую.
-#: Сумма — app_settings.cash_deposit_amount (commission.php), 0 — без залога.
+#: Залог клиента за наличный тарифный заказ: 0 — без залога (наличный заказ
+#: доступен сразу без предоплаты и блокировки средств).
 CASH_DEPOSIT_KEY = "cash_deposit_amount"
-CASH_DEPOSIT_DEFAULT = Decimal("50000")
+CASH_DEPOSIT_DEFAULT = Decimal("0")
 
 
 def cash_deposit_amount(db: Session) -> Decimal:

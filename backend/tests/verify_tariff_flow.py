@@ -482,7 +482,7 @@ def deposit_section():
     owner_id, owner = register("owner")
     add_equipment(owner)
     r = requests.get(f"{API}/requests/cash-deposit", headers=client)
-    check("по умолчанию залог 50 000", r.status_code == 200 and r.json()["amount"] == 50000, r.text)
+    check("по умолчанию залог 0 (без залога)", r.status_code == 200 and r.json()["amount"] == 0, r.text)
     set_deposit(70000)
     r = requests.get(f"{API}/requests/cash-deposit", headers=client)
     check("сумма из настройки: 70 000", r.json()["amount"] == 70000, r.text)
