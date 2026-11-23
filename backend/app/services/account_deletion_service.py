@@ -91,7 +91,8 @@ def blockers(db: Session, user: User, lock: bool = False) -> List[str]:
         db.query(MaterialOrder.id)
         .filter(
             MaterialOrder.status.in_(ACTIVE_MATERIAL_ORDER),
-            or_(MaterialOrder.buyer_id == user.id, MaterialOrder.seller_id == user.id),
+            or_(MaterialOrder.buyer_id == user.id, MaterialOrder.seller_id == user.id,
+                MaterialOrder.driver_id == user.id),
         )
         .first()
     )

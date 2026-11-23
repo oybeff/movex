@@ -18,7 +18,11 @@ import '../../../core/widgets/app_logo.dart';
 import '../../../core/widgets/map_or_placeholder.dart';
 import '../../owner_home/presentation/pages/my_equipment_page.dart';
 import '../../taxi/data/taxi_geo.dart';
+import '../data/delivery_api.dart';
 import '../data/driver_api.dart';
+import 'delivery_incoming_page.dart';
+import 'delivery_order_page.dart';
+import 'delivery_setup_page.dart';
 import 'driver_equipment_step.dart';
 import 'driver_incoming_page.dart';
 import 'driver_order_page.dart';
@@ -70,6 +74,22 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
   // E3: последний опрос сервера не дошёл — сети нет
   bool _netDown = false;
 
+  // Доставка стройматериалов (23.11.2026): свой профиль машины, свои
+  // входящие и активная поездка — рядом с заказами техники.
+  final _delivery = DeliveryApi();
+  DeliveryProfile? _dProfile;
+  List<DeliveryIncoming> _dIncoming = const [];
+  List<DeliveryOrder> _dOrders = const [];
+  final Set<int> _dSeen = {};
+
+  bool get _isDeliveryDriver => _dProfile?.registered ?? false;
+
+  DeliveryOrder? get _activeDelivery {
+    final live = _dOrders.where((o) => o.active).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return live.isEmpty ? null : live.first;
+  }
+
   DriverOrder? get _active {
     // Работа закончена и ждёт только подтверждения клиента — водитель
     // уже свободен, такой заказ не держит его и не прячет новые
@@ -115,6 +135,7 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
     try {
       _equipment = await _api.myEquipment();
     } catch (_) {}
+    await _loadDeliveryProfile();
     await _loadVerification();
     // Проверка не пройдена — водитель офлайн, что бы ни сохранилось раньше
     if (_verification != null && !_verification!.approved && _online) await _setOnline(false);
@@ -126,6 +147,57 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
     _moveTo(here.point);
   }
 
+  Future<void> _loadDeliveryProfile() async {
+    try {
+      _dProfile = await _delivery.profile();
+    } catch (_) {}
+  }
+
+  /// «Yuk mashinam»: машина и что возит. После сохранения — сразу в опрос.
+  Future<void> _openDeliverySetup() async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const DeliverySetupPage()),
+    );
+    if (saved != true) return;
+    await _loadDeliveryProfile();
+    if (mounted) setState(() {});
+    _refresh();
+  }
+
+  /// Нет ни техники, ни грузовика — спросить, с чего начать.
+  Future<String?> _askWhatYouHave() {
+    return showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppPalette.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('driver.what_you_have'.tr(), style: AppTypography.h2),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.construction_rounded, color: AppPalette.brand),
+                title: Text('driver.have_equipment'.tr()),
+                subtitle: Text('driver.have_equipment_hint'.tr()),
+                onTap: () => Navigator.of(ctx).pop('equipment'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.local_shipping_outlined, color: AppPalette.brand),
+                title: Text('driver.have_truck'.tr()),
+                subtitle: Text('driver.have_truck_hint'.tr()),
+                onTap: () => Navigator.of(ctx).pop('truck'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _loadVerification() async {
     try {
       _verification = await _api.verification();
@@ -134,7 +206,19 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
 
   /// Регистрация водителя по макету 00: нет техники — R4, затем документы.
   Future<void> _startVerification() async {
-    if (_equipment.isEmpty) {
+    if (_equipment.isEmpty && !_isDeliveryDriver) {
+      final what = await _askWhatYouHave();
+      if (what == null || !mounted) return;
+      if (what == 'truck') {
+        await _openDeliverySetup();
+        if (!_isDeliveryDriver || !mounted) return;
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DriverVerificationPage()));
+        await _loadVerification();
+        if (mounted) setState(() {});
+        return;
+      }
+    }
+    if (_equipment.isEmpty && !_isDeliveryDriver) {
       final added = await Navigator.of(context).push<bool>(
         MaterialPageRoute(builder: (_) => const DriverEquipmentStep()),
       );
@@ -166,6 +250,9 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
       await prefs.remove(_onlineSinceKey);
     }
     setState(() => _online = v);
+    if (!v && _isDeliveryDriver) {
+      _delivery.heartbeat(online: false).catchError((_) {});
+    }
     _restartPolling();
   }
 
@@ -177,12 +264,36 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
       // Ждём решения админа — подхватываем его без перезапуска приложения
       if (!(_verification?.approved ?? true)) await _loadVerification();
       List<QuickIncomingModel> incoming = const [];
-      final busy = orders.any((o) => o.active && !o.scheduled && o.finishedAt == null);
+      List<DeliveryIncoming> dIncoming = const [];
+      List<DeliveryOrder> dOrders = _dOrders;
+      if (_isDeliveryDriver) {
+        // Точка водителя — для подбора по радиусу от склада. Ошибка опроса
+        // доставки не должна ломать заказы техники.
+        try {
+          if (_online) {
+            // Водитель едет — точка с прошлого раза устарела. Последняя
+            // известная — дёшево и без ожидания спутников.
+            final pos = await Geolocator.getLastKnownPosition();
+            if (pos != null) _here = TaxiPlace(pos.latitude, pos.longitude);
+          }
+          await _delivery.heartbeat(online: _online, lat: _here?.lat, lon: _here?.lon);
+          dOrders = await _delivery.orders();
+        } catch (_) {}
+      }
+      final busy = orders.any((o) => o.active && !o.scheduled && o.finishedAt == null) ||
+          dOrders.any((o) => o.active);
       if (_online && !busy) incoming = await _requests.quickIncoming();
+      if (_online && !busy && _isDeliveryDriver) {
+        try {
+          dIncoming = await _delivery.incoming();
+        } catch (_) {}
+      }
       if (!mounted) return;
       setState(() {
         _orders = orders;
         _incoming = incoming;
+        _dIncoming = dIncoming;
+        _dOrders = dOrders;
         _loaded = true;
         _netDown = false;
       });
@@ -205,10 +316,53 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
   }
 
   Future<void> _maybeShowIncoming() async {
-    if (_showingIncoming || !_online || _active != null) return;
+    if (_showingIncoming || !_online || _active != null || _activeDelivery != null) return;
     final fresh = _incoming.where((o) => !_seen.contains(o.id)).toList();
-    if (fresh.isEmpty) return;
-    await _openIncoming(fresh.first);
+    if (fresh.isNotEmpty) {
+      await _openIncoming(fresh.first);
+      return;
+    }
+    final dFresh = _dIncoming.where((o) => !_dSeen.contains(o.id)).toList();
+    if (dFresh.isNotEmpty) await _openDeliveryIncoming(dFresh.first);
+  }
+
+  Future<void> _openDeliveryIncoming(DeliveryIncoming o) async {
+    _dSeen.add(o.id);
+    _showingIncoming = true;
+    final accepted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(fullscreenDialog: true, builder: (_) => DeliveryIncomingPage(order: o)),
+    );
+    _showingIncoming = false;
+    await _countMissed(accepted == null);
+    await _refresh();
+    final a = _activeDelivery;
+    if (accepted == true && a != null && mounted) await _openDelivery(a);
+  }
+
+  Future<void> _openDelivery(DeliveryOrder o) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => DeliveryOrderPage(order: o)));
+    await _refresh();
+  }
+
+  /// Активная доставка стройматериала вместо листа «ждём заказы».
+  Widget _activeDeliveryCard(DeliveryOrder o) {
+    final toPickup = o.deliveryStatus == 'accepted';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('driver.delivery_active'.tr(), style: AppTypography.h2),
+        const SizedBox(height: 4),
+        Text(
+          toPickup ? 'driver.delivery_go_pickup'.tr() : 'driver.delivery_go_client'.tr(),
+          style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary),
+        ),
+        const SizedBox(height: 4),
+        Text((toPickup ? o.pickupAddress : o.deliveryAddress) ?? '—',
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 12),
+        DPrimary('driver.open'.tr(), onPressed: () => _openDelivery(o)),
+      ],
+    );
   }
 
   Future<void> _openIncoming(QuickIncomingModel o) async {
@@ -497,6 +651,8 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
     }
     final a = _active;
     if (a != null) return _activeCard(a);
+    final d = _activeDelivery;
+    if (d != null) return _activeDeliveryCard(d);
     if (_netDown && _online) return _netSheet();
     return _online ? _onlineSheet() : _offlineSheet();
   }
@@ -577,6 +733,8 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
             ),
           ),
         ),
+        const SizedBox(height: 8),
+        _truckTile(),
         const SizedBox(height: 10),
         Row(children: [
           DStat(money(_todayEarning), 'driver.today'.tr()),
@@ -592,9 +750,55 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
         ],
         DPrimary(
           'driver.go_online'.tr(),
-          onPressed: eq == null || !(_verification?.approved ?? false) ? null : _goOnline,
+          onPressed: (eq == null && !_isDeliveryDriver) || !(_verification?.approved ?? false) ? null : _goOnline,
         ),
       ],
+    );
+  }
+
+  /// «Yuk mashinam»: зарегистрирован — машина и номер, нет — предложение.
+  Widget _truckTile() {
+    final p = _dProfile;
+    final reg = p?.registered ?? false;
+    return Material(
+      color: AppPalette.page,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: _openDeliverySetup,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(color: DChip.blueBg, borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.local_shipping_outlined, color: AppPalette.brand),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(reg ? (p!.vehicleName ?? '') : 'driver.delivery_add'.tr(),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    Text(
+                      reg
+                          ? [p!.plate, 'driver.delivery_cats_n'.tr(args: ['${p.categories.length}'])]
+                              .whereType<String>()
+                              .join(' · ')
+                          : 'driver.delivery_add_hint'.tr(),
+                      style: const TextStyle(fontSize: 12, color: AppPalette.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppPalette.textSecondary),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

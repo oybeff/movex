@@ -73,6 +73,30 @@ def _order_to_read(db: Session, order: MaterialOrder) -> MaterialOrderRead:
     seller = db.query(User).filter(User.id == order.seller_id).first()
     data.buyer_name = buyer.full_name if buyer else None
     data.seller_name = seller.full_name if seller else None
+
+    # Контакты доставки — только когда водитель уже принял заказ.
+    if order.driver_id:
+        from app.models.catalog import DeliveryDriverProfile, DeliveryVehicleRow
+
+        driver = db.query(User).filter(User.id == order.driver_id).first()
+        prof = (
+            db.query(DeliveryDriverProfile)
+            .filter(DeliveryDriverProfile.user_id == order.driver_id)
+            .first()
+        )
+        data.driver_name = driver.full_name if driver else None
+        data.driver_phone = driver.phone if driver else None
+        data.driver_plate = prof.plate if prof else None
+        data.buyer_phone = buyer.phone if buyer else None
+        data.seller_phone = seller.phone if seller else None
+        if product is not None:
+            data.pickup_address = product.address
+            data.pickup_latitude = product.latitude
+            data.pickup_longitude = product.longitude
+    from app.models.catalog import DeliveryVehicleRow as _V
+
+    v = db.query(_V).filter(_V.code == order.vehicle_code).first()
+    data.vehicle_name = v.name if v else None
     return data
 
 

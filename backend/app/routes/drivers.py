@@ -97,3 +97,89 @@ def document_file(doc_id: int, db: Session = Depends(get_db)):
 def review_document(doc_id: int, data: _ReviewIn, db: Session = Depends(get_db)):
     doc = driver_service.review(db, doc_id, data.approve, data.reason)
     return {"id": doc.id, "status": doc.status, "reject_reason": doc.reject_reason}
+
+
+# ------------------------------------------- доставка стройматериалов
+# (23.11.2026) — водитель грузовой машины: профиль, опрос, входящие,
+# принять, «Tovarni oldim», «Yetib keldim», отказ до погрузки.
+
+from fastapi import HTTPException  # noqa: E402
+
+from app.schemas.material import DeliveryHeartbeat, DeliveryProfileIn  # noqa: E402
+from app.services import delivery_service  # noqa: E402
+
+
+def _driver(user: User) -> User:
+    if user.role not in ("owner", "admin"):
+        raise HTTPException(403, "Faqat haydovchilar uchun")
+    return user
+
+
+def _read(db: Session, order):
+    from app.routes.materials import _order_to_read
+
+    return _order_to_read(db, order)
+
+
+@router.get("/delivery/categories")
+def delivery_categories(lang: str = "uz", db: Session = Depends(get_db),
+                        current_user: User = Depends(get_current_user)):
+    """10 категорий из ТЗ: что водитель может возить и в чём меряется минимум."""
+    ru = lang == "ru"
+    return [
+        {"code": c.code, "name": c.name_ru if ru else c.name_uz, "unit": c.unit}
+        for c in delivery_service.categories(db)
+    ]
+
+
+@router.get("/delivery/profile")
+def delivery_profile(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return delivery_service.profile_dict(db, _driver(current_user))
+
+
+@router.put("/delivery/profile")
+def save_delivery_profile(data: DeliveryProfileIn, db: Session = Depends(get_db),
+                          current_user: User = Depends(get_current_user)):
+    return delivery_service.save_profile(db, _driver(current_user), data)
+
+
+@router.post("/delivery/heartbeat")
+def delivery_heartbeat(data: DeliveryHeartbeat, db: Session = Depends(get_db),
+                       current_user: User = Depends(get_current_user)):
+    """Раз в 10 с, пока водитель онлайн: точка GPS. online=false — ушёл."""
+    delivery_service.heartbeat(db, _driver(current_user), data.online, data.latitude, data.longitude)
+    return {"ok": True}
+
+
+@router.get("/delivery/incoming")
+def delivery_incoming(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return delivery_service.incoming(db, _driver(current_user))
+
+
+@router.get("/delivery/orders")
+def delivery_orders(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return [_read(db, o) for o in delivery_service.my_deliveries(db, _driver(current_user))]
+
+
+@router.post("/delivery/orders/{order_id}/accept")
+def delivery_accept(order_id: int, db: Session = Depends(get_db),
+                    current_user: User = Depends(get_current_user)):
+    return _read(db, delivery_service.accept(db, _driver(current_user), order_id))
+
+
+@router.post("/delivery/orders/{order_id}/picked-up")
+def delivery_picked_up(order_id: int, db: Session = Depends(get_db),
+                       current_user: User = Depends(get_current_user)):
+    return _read(db, delivery_service.picked_up(db, _driver(current_user), order_id))
+
+
+@router.post("/delivery/orders/{order_id}/arrived")
+def delivery_arrived(order_id: int, db: Session = Depends(get_db),
+                     current_user: User = Depends(get_current_user)):
+    return _read(db, delivery_service.arrived(db, _driver(current_user), order_id))
+
+
+@router.post("/delivery/orders/{order_id}/cancel")
+def delivery_cancel(order_id: int, db: Session = Depends(get_db),
+                    current_user: User = Depends(get_current_user)):
+    return _read(db, delivery_service.driver_cancel(db, _driver(current_user), order_id))

@@ -205,6 +205,17 @@ class MaterialOrderModel {
   final String? buyerName;
   final String? sellerName;
 
+  /// Доставка водителем (с 23.11.2026): balance | cash.
+  final String deliveryPayment;
+
+  /// waiting_seller → searching → accepted → picked_up → arrived → done.
+  final String? deliveryStatus;
+  final String? driverName;
+  final String? driverPhone;
+  final String? driverPlate;
+  final String? vehicleName;
+  final double? driverFee;
+
   const MaterialOrderModel({
     required this.id,
     required this.buyerId,
@@ -229,7 +240,22 @@ class MaterialOrderModel {
     this.materialType,
     this.buyerName,
     this.sellerName,
+    this.deliveryPayment = 'balance',
+    this.deliveryStatus,
+    this.driverName,
+    this.driverPhone,
+    this.driverPlate,
+    this.vehicleName,
+    this.driverFee,
   });
+
+  bool get cashDelivery => deliveryPayment == 'cash';
+
+  /// Водитель забрал товар — клиент может нажать «Yetkazildi», отменить нельзя.
+  bool get onTheWay => deliveryStatus == 'picked_up' || deliveryStatus == 'arrived';
+
+  /// Отменить можно, пока товар не в машине.
+  bool get cancellable => (isPending || isConfirmed) && !onTheWay;
 
   bool get isPending => status == 'pending';
   bool get isConfirmed => status == 'confirmed';
@@ -263,6 +289,13 @@ class MaterialOrderModel {
       materialType: json['material_type'] as String?,
       buyerName: json['buyer_name'] as String?,
       sellerName: json['seller_name'] as String?,
+      deliveryPayment: json['delivery_payment'] as String? ?? 'balance',
+      deliveryStatus: json['delivery_status'] as String?,
+      driverName: json['driver_name'] as String?,
+      driverPhone: json['driver_phone'] as String?,
+      driverPlate: json['driver_plate'] as String?,
+      vehicleName: json['vehicle_name'] as String?,
+      driverFee: _toDouble(json['driver_fee']),
     );
   }
 }

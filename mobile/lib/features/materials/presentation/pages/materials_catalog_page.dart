@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'material_orders_page.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_config.dart';
@@ -67,6 +68,15 @@ class _MaterialsCatalogPageState extends State<MaterialsCatalogPage> {
           style: const TextStyle(
               color: AppColors.black, fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'material_orders.title'.tr(),
+            icon: const Icon(Icons.receipt_long_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MaterialOrdersPage()),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [

@@ -226,25 +226,21 @@ r = requests.post(f"{API}/materials/orders/{oid}/deliver", headers=seller)
 check("ПРОДАВЕЦ не может отметить доставку сам — иначе заберёт деньги не привезя",
       r.status_code == 403, f"{r.status_code} {r.text[:120]}")
 
+# С 23.11.2026 товар везёт водитель (verify_material_delivery.py — весь
+# путь денег через водителя). Здесь — что без водителя «доставлено» не
+# нажать: товар ещё у продавца.
 r = requests.post(f"{API}/materials/orders/{oid}/deliver", headers=buyer)
-check("покупатель подтвердил получение", r.status_code == 200,
-      f"{r.status_code} {r.text[:150]}")
+check("без водителя «доставлено» не нажать — товар ещё на складе",
+      r.status_code == 400, f"{r.status_code} {r.text[:150]}")
+check("после подтверждения продавца заказ ищет водителя",
+      requests.get(f"{API}/materials/orders", headers=buyer).json()[0].get("delivery_status") == "searching")
 
+r = requests.post(f"{API}/materials/orders/{oid}/cancel", headers=buyer)
+check("покупатель может отменить, пока водитель не забрал товар",
+      r.status_code == 200 and r.json()["status"] == "cancelled", f"{r.status_code} {r.text[:120]}")
 b2, f2 = balance_of(buyer)
-s2, _ = balance_of(seller)
-total = float(order["total_amount"])
-commission = float(order["commission"])
-
-check("с покупателя списана полная сумма, а не только снята заморозка",
-      round(b0 - b2, 2) == total, f"списано {money(b0 - b2)}, ждали {money(total)}")
-check("заморозка снята", round(f2, 2) == round(f0, 2),
-      f"{money(f2)} vs {money(f0)}")
-check("продавец получил сумму МИНУС комиссию",
-      round(s2 - s0, 2) == round(total - commission, 2),
-      f"получил {money(s2 - s0)}, ждали {money(total - commission)}")
-
-r = requests.post(f"{API}/materials/orders/{oid}/deliver", headers=buyer)
-check("повторная доставка отклонена", r.status_code == 400, f"{r.status_code}")
+check("после отмены баланс прежний", b2 == b0, f"{money(b2)} vs {money(b0)}")
+check("и заморозка снята", round(f2, 2) == round(f0, 2), f"{money(f2)} vs {money(f0)}")
 
 head("6. ОТМЕНА: ДЕНЬГИ ОСТАЮТСЯ У ПОКУПАТЕЛЯ")
 

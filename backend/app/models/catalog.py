@@ -12,7 +12,7 @@ delivery_vehicles — машины доставки стройматериало
 везёт (кг), объём кузова, цена подачи и километра. Раньше это был список
 из четырёх машин в коде (Labo 0,7 т → сразу Isuzu 5 т).
 """
-from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, Integer, Numeric, String
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy.sql import func
 
 from app.db.base import Base
@@ -55,3 +55,47 @@ class DeliveryVehicleRow(Base):
         CheckConstraint("base_fee >= 0", name="check_delivery_vehicle_base_fee"),
         CheckConstraint("price_per_km IS NULL OR price_per_km >= 0", name="check_delivery_vehicle_km"),
     )
+
+
+class MaterialCategory(Base):
+    """Категория стройматериала из ТЗ (qum, penablok…). unit: piece|bag|tonne|m3."""
+
+    __tablename__ = "material_categories"
+
+    code = Column(String(30), primary_key=True)
+    name_uz = Column(String(100), nullable=False)
+    name_ru = Column(String(100), nullable=False)
+    unit = Column(String(10), nullable=False)
+    is_enabled = Column(Boolean, nullable=False, default=True)
+    sort_order = Column(Integer, nullable=False, default=0)
+
+
+class DeliveryDriverProfile(Base):
+    """
+    Водитель, который возит стройматериалы. Одна машина на водителя: её
+    выбирают из списка админки, грузоподъёмность берётся оттуда же.
+    Своя цена за км/подачу — необязательна; клиент всё равно не платит
+    больше расчёта по ценам админки.
+    """
+
+    __tablename__ = "delivery_driver_profiles"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    vehicle_code = Column(String(30), ForeignKey("delivery_vehicles.code", ondelete="RESTRICT"), nullable=False)
+    plate = Column(String(20), nullable=True)
+    price_per_km = Column(Numeric(12, 2), nullable=True)
+    base_fee = Column(Numeric(12, 2), nullable=True)
+    is_online = Column(Boolean, nullable=False, default=False)
+    latitude = Column(Numeric(10, 7), nullable=True)
+    longitude = Column(Numeric(10, 7), nullable=True)
+    location_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class DeliveryDriverCategory(Base):
+    __tablename__ = "delivery_driver_categories"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    category_code = Column(String(30), ForeignKey("material_categories.code", ondelete="CASCADE"), primary_key=True)
+    min_quantity = Column(Numeric(12, 2), nullable=False, default=1)

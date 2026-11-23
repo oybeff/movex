@@ -16,6 +16,7 @@ import 'driver_cards_page.dart';
 import 'driver_earnings_tab.dart';
 import 'driver_history_tab.dart';
 import 'driver_payout_page.dart';
+import 'delivery_setup_page.dart';
 import 'driver_verification_page.dart';
 import 'driver_orders_tab.dart';
 
@@ -159,6 +160,7 @@ class _DriverProfileTabState extends State<DriverProfileTab> {
             const SizedBox(height: 12),
             _group([
               _item(Icons.construction_rounded, 'driver.my_equipment'.tr(), () => _push(const MyEquipmentPage())),
+              _item(Icons.local_shipping_outlined, 'driver.delivery_title'.tr(), () => _push(const DeliverySetupPage())),
               _item(Icons.badge_outlined, 'driver.documents'.tr(), () => _push(const DriverVerificationPage())),
               _item(Icons.radar_rounded, 'driver.work_area'.tr(), () => _push(const SearchAreaPage(isOwner: true))),
               _item(Icons.campaign_outlined, 'driver.listings'.tr(), () => _push(const ListingsPage())),

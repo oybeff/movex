@@ -190,6 +190,25 @@ class MaterialOrder(Base):
     comment = Column(Text, nullable=True)
     status = Column(String(20), nullable=False, default=STATUS_PENDING, index=True)
 
+    # --- доставка водителем (с 23.11.2026) ---
+    #: seller — старые заказы: доставку делает и получает продавец;
+    #: driver — заказ уходит водителям «как такси», доставка — водителю.
+    dispatch = Column(String(10), nullable=False, default="seller")
+    #: balance — доставка заморожена на Go wallet; cash — водителю в руки.
+    delivery_payment = Column(String(10), nullable=False, default="balance")
+    #: waiting_seller → searching → accepted → picked_up → arrived → done
+    delivery_status = Column(String(20), nullable=True, index=True)
+    driver_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    #: Сколько получит водитель — не больше delivery_fee, фиксируется при
+    #: принятии (своя цена водителя, если она ниже).
+    driver_fee = Column(Numeric(12, 2), nullable=True)
+    driver_commission = Column(Numeric(12, 2), nullable=False, default=0)
+    #: Комиссия, замороженная на балансе водителя при наличной доставке.
+    driver_frozen = Column(Numeric(12, 2), nullable=False, default=0)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    picked_up_at = Column(DateTime(timezone=True), nullable=True)
+    arrived_at = Column(DateTime(timezone=True), nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

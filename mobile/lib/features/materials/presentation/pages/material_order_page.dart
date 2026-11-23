@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'material_orders_page.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/constants/app_colors.dart';
@@ -158,12 +159,16 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
         longitude: _destLon,
         vehicleCode: _vehicleCode,
         comment: _commentController.text.trim(),
+        deliveryPayment: _cashDelivery ? 'cash' : 'balance',
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('materials.order_created'.tr())),
       );
-      Navigator.pop(context, true);
+      // Сразу к заказам: там видно, принял ли продавец и кто везёт.
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MaterialOrdersPage()),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -199,6 +204,7 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
           if (_error != null) _errorCard(),
           if (_quote != null) ...[
             _vehicleCard(),
+            _deliveryPaymentCard(),
             const SizedBox(height: 14),
             _totalCard(),
             const SizedBox(height: 14),
@@ -326,6 +332,50 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
       );
 
   /// Server tanlagan mashina va uni almashtirish imkoni.
+  /// Доставку водителю — с Go wallet (заморожена вместе с товаром) или
+  /// наличными в руки. Товар — всегда через Go wallet: эскроу.
+  bool _cashDelivery = false;
+
+  Widget _deliveryPaymentCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E9EE)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('material_orders.delivery_pay_title'.tr(),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              ChoiceChip(
+                label: Text('material_orders.pay_wallet'.tr()),
+                selected: !_cashDelivery,
+                onSelected: (_) => setState(() => _cashDelivery = false),
+              ),
+              ChoiceChip(
+                label: Text('material_orders.pay_cash'.tr()),
+                selected: _cashDelivery,
+                onSelected: (_) => setState(() => _cashDelivery = true),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _cashDelivery ? 'material_orders.pay_cash_hint'.tr() : 'material_orders.pay_wallet_hint'.tr(),
+            style: const TextStyle(fontSize: 12, color: Color(0xFF7D8793)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _vehicleCard() {
     final quote = _quote!;
     return _card(

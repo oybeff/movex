@@ -31,7 +31,7 @@ from app.core.account_state import assert_not_frozen
 from app.models.balance import Balance, BalanceTransaction
 from app.models.material import MAX_MATERIAL_PHOTOS, MaterialOrder, MaterialPhoto, MaterialProduct
 from app.models.user import User
-from app.services import notification_service, pricing_service
+from app.services import delivery_service, notification_service, pricing_service
 from app.services.balance_service import get_or_create_balance
 
 logger = logging.getLogger(__name__)
@@ -406,6 +406,14 @@ def create_order(db: Session, buyer: User, data) -> MaterialOrder:
     if product.owner_id == buyer.id:
         raise HTTPException(400, "O'z tovaringizni sotib ololmaysiz")
 
+    # С 23.11.2026 доставку делает водитель «как такси» (delivery_service),
+    # и ему нужна точка: без неё нет ни расстояния, ни цены доставки.
+    if data.delivery_latitude is None or data.delivery_longitude is None:
+        raise HTTPException(400, "Yetkazib berish manzilini xaritada belgilang")
+    delivery_payment = getattr(data, "delivery_payment", None) or "balance"
+    if delivery_payment not in ("balance", "cash"):
+        raise HTTPException(400, "Yetkazib berish to'lovi: balance yoki cash")
+
     quote = calculate(
         db,
         product,
@@ -413,6 +421,15 @@ def create_order(db: Session, buyer: User, data) -> MaterialOrder:
         data.delivery_latitude,
         data.delivery_longitude,
         data.vehicle_code,
+    )
+    # Комиссия продавца — только с товара: доставку получает водитель, и
+    # с неё своя комиссия (delivery_service).
+    seller_commission = pricing_service.calculate_commission(
+        db, quote.goods_amount, quote.goods_amount
+    )
+    # Наличная доставка — водителю в руки, на Go wallet держим только товар.
+    to_freeze = quote.goods_amount + (
+        quote.delivery_fee if delivery_payment == "balance" else Decimal("0")
     )
 
     get_or_create_balance(db, buyer.id)
@@ -423,13 +440,13 @@ def create_order(db: Session, buyer: User, data) -> MaterialOrder:
         .one()
     )
     available = _dec(balance.balance) - _dec(balance.frozen_balance)
-    if available < quote.total:
+    if available < to_freeze:
         raise HTTPException(
             400,
-            insufficient_funds(db, buyer.id, available, quote.total),
+            insufficient_funds(db, buyer.id, available, to_freeze),
         )
 
-    balance.frozen_balance = _dec(balance.frozen_balance) + quote.total
+    balance.frozen_balance = _dec(balance.frozen_balance) + to_freeze
 
     order = MaterialOrder(
         buyer_id=buyer.id,
@@ -444,9 +461,12 @@ def create_order(db: Session, buyer: User, data) -> MaterialOrder:
         trips=quote.trips,
         delivery_distance_km=quote.distance_km,
         delivery_fee=quote.delivery_fee,
-        commission=quote.commission,
+        commission=seller_commission,
         total_amount=quote.total,
-        frozen_amount=quote.total,
+        frozen_amount=to_freeze,
+        dispatch="driver",
+        delivery_payment=delivery_payment,
+        delivery_status="waiting_seller",
         delivery_address=(data.delivery_address or None),
         delivery_latitude=data.delivery_latitude,
         delivery_longitude=data.delivery_longitude,
@@ -471,7 +491,7 @@ def _load_order(db: Session, order_id: int, user: User) -> MaterialOrder:
     order = db.query(MaterialOrder).filter(MaterialOrder.id == order_id).first()
     if order is None:
         raise HTTPException(404, "Buyurtma topilmadi")
-    if user.id not in (order.buyer_id, order.seller_id) and user.role != "admin":
+    if user.id not in (order.buyer_id, order.seller_id, order.driver_id) and user.role != "admin":
         raise HTTPException(403, "Bu buyurtmaga ruxsat yo'q")
     return order
 
@@ -485,6 +505,9 @@ def confirm_order(db: Session, order_id: int, seller: User) -> MaterialOrder:
         raise HTTPException(400, f"Buyurtma holati: {order.status}")
 
     order.status = MaterialOrder.STATUS_CONFIRMED
+    if order.dispatch == "driver":
+        # Товар готов — заказ виден водителям (delivery_service.incoming).
+        order.delivery_status = "searching"
     db.commit()
     db.refresh(order)
 
@@ -513,6 +536,8 @@ def deliver_order(db: Session, order_id: int, user: User) -> MaterialOrder:
     # olganida, u yetkazmasdan turib pulni olib qo'ya olardi.
     if user.id != order.buyer_id and user.role != "admin":
         raise HTTPException(403, "Yetkazilganini xaridor tasdiqlaydi")
+    if order.dispatch == "driver":
+        return _deliver_by_driver(db, order)
 
     total = _dec(order.total_amount)
     commission = _dec(order.commission)
@@ -574,6 +599,59 @@ def deliver_order(db: Session, order_id: int, user: User) -> MaterialOrder:
     return order
 
 
+def _deliver_by_driver(db: Session, order: MaterialOrder) -> MaterialOrder:
+    """
+    «Yetkazildi» у заказа, который вёз водитель. Товар — продавцу минус
+    комиссия (с товара), доставка — водителю (delivery_service.settle).
+    Заморозка клиента снимается ЦЕЛИКОМ, списывается — товар и доставка
+    по цене водителя (она не выше заморожённой).
+    """
+    if order.delivery_status not in ("picked_up", "arrived"):
+        raise HTTPException(400, "Haydovchi hali tovarni olib kelmadi")
+
+    goods = _dec(order.goods_amount)
+    commission = _dec(order.commission)
+    seller_amount = max(goods - commission, Decimal("0"))
+
+    buyer_balance = (
+        db.query(Balance).filter(Balance.user_id == order.buyer_id).with_for_update().one()
+    )
+    frozen_here = _dec(order.frozen_amount)
+    frozen = _dec(buyer_balance.frozen_balance)
+    buyer_balance.frozen_balance = frozen - frozen_here if frozen >= frozen_here else Decimal("0")
+    buyer_balance.balance = _dec(buyer_balance.balance) - goods
+
+    get_or_create_balance(db, order.seller_id)
+    seller_balance = (
+        db.query(Balance).filter(Balance.user_id == order.seller_id).with_for_update().one()
+    )
+    seller_balance.balance = _dec(seller_balance.balance) + seller_amount
+
+    delivery_paid = delivery_service.settle(db, order, buyer_balance)
+
+    db.add(BalanceTransaction(
+        user_id=order.buyer_id, amount=goods + delivery_paid, type="payment",
+        status="completed", description=f"Material buyurtmasi #{order.id}",
+    ))
+    db.add(BalanceTransaction(
+        user_id=order.seller_id, amount=seller_amount, type="income",
+        status="completed", description=f"Material buyurtmasi #{order.id}",
+    ))
+
+    order.status = MaterialOrder.STATUS_DELIVERED
+    order.delivery_status = "done"
+    order.frozen_amount = Decimal("0")
+    db.commit()
+    db.refresh(order)
+
+    notification_service.create_localized(
+        db, order.seller_id, "material_delivered",
+        "material_delivered.title", "material_delivered.body",
+        None, None, None, order_number=order.id,
+    )
+    return order
+
+
 def cancel_order(db: Session, order_id: int, user: User, reject: bool = False):
     """
     Bekor qilish yoki rad etish — pul QAYTMAYDI, chunki u hali
@@ -591,6 +669,13 @@ def cancel_order(db: Session, order_id: int, user: User, reject: bool = False):
     else:
         if order.buyer_id != user.id and user.role != "admin":
             raise HTTPException(403, "Faqat xaridor bekor qila oladi")
+    # Товар уже в машине водителя — отменить нельзя: он его везёт.
+    if order.delivery_status in ("picked_up", "arrived") and user.role != "admin":
+        raise HTTPException(400, "Haydovchi tovarni olib bo'ldi — bekor qilib bo'lmaydi")
+    driver_to_notify = order.driver_id
+    if order.dispatch == "driver":
+        delivery_service.release_driver(db, order)
+        order.delivery_status = "cancelled"
 
     frozen = _dec(order.frozen_amount)
     if frozen > 0:
@@ -617,6 +702,12 @@ def cancel_order(db: Session, order_id: int, user: User, reject: bool = False):
         "material_cancelled.title", "material_cancelled.body",
         None, None, None, order_number=order.id,
     )
+    if driver_to_notify:
+        notification_service.create_localized(
+            db, driver_to_notify, "material_cancelled",
+            "material_cancelled.title", "material_cancelled.body",
+            None, None, None, order_number=order.id,
+        )
     return order
 
 

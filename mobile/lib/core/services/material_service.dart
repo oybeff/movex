@@ -138,8 +138,10 @@ class MaterialService {
     double? longitude,
     String? vehicleCode,
     String? comment,
+    String deliveryPayment = 'balance',
   }) async {
     final response = await _dio.post('/materials/orders', data: {
+      'delivery_payment': deliveryPayment,
       'product_id': productId,
       'quantity': quantity,
       if (address != null && address.isNotEmpty) 'delivery_address': address,

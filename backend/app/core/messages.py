@@ -385,6 +385,30 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "Buyurtma #{order_number} yopildi",
         "ru": "Заказ #{order_number} закрыт",
     },
+    "material_driver_found.title": {
+        "uz": "Haydovchi topildi",
+        "ru": "Водитель найден",
+    },
+    "material_driver_found.body": {
+        "uz": "Buyurtma #{order_number}: haydovchi tovarni olishga yo'l oldi",
+        "ru": "Заказ #{order_number}: водитель едет за товаром",
+    },
+    "material_picked_up.title": {
+        "uz": "Tovar yo'lda",
+        "ru": "Товар в пути",
+    },
+    "material_picked_up.body": {
+        "uz": "Buyurtma #{order_number}: haydovchi tovarni oldi va sizga kelmoqda",
+        "ru": "Заказ #{order_number}: водитель забрал товар и едет к вам",
+    },
+    "material_driver_arrived.title": {
+        "uz": "Haydovchi yetib keldi",
+        "ru": "Водитель на месте",
+    },
+    "material_driver_arrived.body": {
+        "uz": "Buyurtma #{order_number}: tovarni qabul qiling va «Yetkazildi» ni bosing",
+        "ru": "Заказ #{order_number}: примите товар и нажмите «Доставлено»",
+    },
     "tx.topup": {
         "uz": "Hisobni to'ldirish — {method}",
         "ru": "Пополнение счёта — {method}",

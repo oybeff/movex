@@ -134,6 +134,8 @@ class MaterialOrderCreate(BaseModel):
 
     vehicle_code: Optional[str] = Field(default=None, max_length=20)
     comment: Optional[str] = Field(default=None, max_length=1000)
+    #: Доставка: balance — с Go wallet (заморожена), cash — водителю в руки.
+    delivery_payment: Optional[str] = Field(default=None, pattern="^(balance|cash)$")
 
 
 class MaterialOrderRead(BaseModel):
@@ -161,11 +163,34 @@ class MaterialOrderRead(BaseModel):
     status: str
     created_at: datetime
 
+    dispatch: str = "seller"
+    delivery_payment: str = "balance"
+    delivery_status: Optional[str] = None
+    driver_id: Optional[int] = None
+    driver_fee: Optional[Decimal] = None
+    driver_commission: Decimal = Decimal("0")
+    delivery_latitude: Optional[Decimal] = None
+    delivery_longitude: Optional[Decimal] = None
+    accepted_at: Optional[datetime] = None
+    picked_up_at: Optional[datetime] = None
+    arrived_at: Optional[datetime] = None
+
     #: Qo'lda to'ldiriladi
     product_title: Optional[str] = None
     material_type: Optional[str] = None
     buyer_name: Optional[str] = None
     seller_name: Optional[str] = None
+    #: Видят участники доставки после принятия водителем: клиенту — кто
+    #: везёт, водителю — где забрать и кому отдать.
+    driver_name: Optional[str] = None
+    driver_phone: Optional[str] = None
+    driver_plate: Optional[str] = None
+    vehicle_name: Optional[str] = None
+    buyer_phone: Optional[str] = None
+    seller_phone: Optional[str] = None
+    pickup_address: Optional[str] = None
+    pickup_latitude: Optional[Decimal] = None
+    pickup_longitude: Optional[Decimal] = None
 
     class Config:
         from_attributes = True
@@ -177,6 +202,25 @@ class MaterialTypeRead(BaseModel):
     code: str
     default_unit: str
     default_unit_weight_kg: Decimal
+
+
+class DeliveryCategoryIn(BaseModel):
+    code: str = Field(max_length=30)
+    min_quantity: Decimal = Field(gt=0, le=Decimal("1000000"))
+
+
+class DeliveryProfileIn(BaseModel):
+    vehicle_code: str = Field(max_length=30)
+    plate: Optional[str] = Field(default=None, max_length=20)
+    price_per_km: Optional[Decimal] = Field(default=None, ge=0, le=Decimal("1000000"))
+    base_fee: Optional[Decimal] = Field(default=None, ge=0, le=Decimal("100000000"))
+    categories: List[DeliveryCategoryIn] = Field(default_factory=list, max_length=30)
+
+
+class DeliveryHeartbeat(BaseModel):
+    online: bool = True
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
 
 
 class DeliveryVehicleRead(BaseModel):
