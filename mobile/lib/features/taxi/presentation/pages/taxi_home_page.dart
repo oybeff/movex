@@ -186,18 +186,11 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     if (_netLost && mounted) setState(() => _netLost = false);
   }
 
-  /// K4 «Asosiy karta qilish — keyingi buyurtmalarda avtomatik tanlanadi»:
-  /// есть основная карта — заказ по умолчанию оплачивается ею, а не наличными.
+  /// Sukut bo'yicha to'lov har doim NAQD PULDA qoladi:
+  /// foydalanuvchidan buyurtma berish paytida SMS-kod so'ramasligi va
+  /// kartadagi pulni oldindan muzlatmasligi uchun.
   Future<void> _pickDefaultCard() async {
-    try {
-      final cards = await CardApi().list();
-      final card = cards.where((c) => c.isDefault).firstOrNull;
-      if (card == null || !mounted || _payment != 'cash') return;
-      setState(() {
-        _payment = 'card:${card.id}';
-        _card = card;
-      });
-    } catch (_) {}
+    // Avtomatik kartaga o'tkazilmaydi — sukut bo'yicha 'cash'.
   }
 
   /// Android 13+ и iOS: «Texnika yo'lda» и «Ish yakunlandi» приходят

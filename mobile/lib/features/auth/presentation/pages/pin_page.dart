@@ -117,6 +117,9 @@ class _PinPageState extends State<PinPage> {
           return;
         }
         await PinService.setPin(code);
+        if (await PinService.biometricsAvailable()) {
+          await PinService.setBiometricEnabled(true);
+        }
         if (mounted) _finish();
         return;
 
@@ -406,8 +409,22 @@ class _PinPageState extends State<PinPage> {
   }
 
   Future<void> _tryBiometricManually() async {
-    _biometricOffered = false;
-    await _tryBiometric();
+    final canBio = await PinService.biometricsAvailable();
+    if (!canBio) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('pin.biometric_desc'.tr())),
+        );
+      }
+      return;
+    }
+    final ok = await PinService.authenticateBiometric(
+      'pin.biometric_reason'.tr(),
+    );
+    if (ok && mounted) {
+      await PinService.setBiometricEnabled(true);
+      _finish();
+    }
   }
 
   Widget _digitButton(String digit) {

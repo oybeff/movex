@@ -76,13 +76,12 @@ class PinService {
   /// egasi uni sozlaganmi.
   static Future<bool> biometricsAvailable() async {
     try {
-      if (!await _auth.isDeviceSupported()) return false;
-      if (!await _auth.canCheckBiometrics) return false;
+      final isSupported = await _auth.isDeviceSupported();
+      final canCheck = await _auth.canCheckBiometrics;
+      if (!isSupported && !canCheck) return false;
       final types = await _auth.getAvailableBiometrics();
-      return types.isNotEmpty;
+      return types.isNotEmpty || canCheck;
     } catch (_) {
-      // Qo'llab-quvvatlamaydigan telefon xato beradi — bu xato emas,
-      // shunchaki biometriya yo'q.
       return false;
     }
   }
@@ -106,7 +105,7 @@ class PinService {
       return await _auth.authenticate(
         localizedReason: reason,
         options: const AuthenticationOptions(
-          biometricOnly: true,
+          biometricOnly: false,
           stickyAuth: true,
           useErrorDialogs: true,
         ),
