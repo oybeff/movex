@@ -40,7 +40,12 @@ venv/bin/pip install -r requirements.txt
 pg_dump movex_go > /root/movex_go_$(date +%F_%H%M).sql
 
 venv/bin/alembic upgrade head
-systemctl restart movex_go
+systemctl restart movex-api
+
+# Админка: на машине разработки PHP может не быть — проверяйте синтаксис
+# ЗДЕСЬ. 23.11.2026 config.php с неэкранированной кавычкой положил всю
+# панель (500 на каждой странице).
+for f in /opt/movex/admin/*.php; do php -l "$f" | grep -v '^No syntax'; done
 ```
 
 #### Релиз 5 сентября 2026 — что обязательно сделать руками

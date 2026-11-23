@@ -417,7 +417,7 @@ function internalApiPost(string $path, array $payload = []): array {
  */
 function internalApiGet(string $path, bool $raw = false): array {
     if (ADMIN_INTERNAL_SECRET === '') {
-        return ['ok' => false, 'data' => null, 'type' => '', 'error' => 'ADMIN_INTERNAL_SECRET backend/.env da to'ldirilmagan'];
+        return ['ok' => false, 'data' => null, 'type' => '', 'error' => 'ADMIN_INTERNAL_SECRET backend/.env da to\'ldirilmagan'];
     }
     $ch = curl_init(rtrim(API_BASE_URL, '/') . $path);
     curl_setopt_array($ch, [
