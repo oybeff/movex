@@ -22,6 +22,7 @@ import 'address_pick_page.dart';
 import '../../data/app_status.dart';
 import '../../../../core/services/equipment_catalog.dart';
 import 'catalog_all_page.dart';
+import '../../../freight/presentation/freight_page.dart';
 import '../../../../core/services/permission_service.dart';
 import 'package:dio/dio.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -333,8 +334,14 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
       );
       return;
     }
-    if (type == 'freight') {
-      type = 'dump_truck';
+    // «Yuk tashish» — перевозка груза клиента А→Б на грузовике (24.11.2026),
+    // а не самосвал по часам, как было.
+    if (type == 'freight' || type.startsWith('truck:')) {
+      final code = type.startsWith('truck:') ? type.substring(6) : null;
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => FreightPage(from: _from, vehicleCode: code)),
+      );
+      return;
     }
     setState(() {
       _surge = 0;

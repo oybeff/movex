@@ -1,7 +1,10 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/material_types.dart';
+import '../../../../core/models/material_model.dart';
 import '../../../../core/services/equipment_catalog.dart';
+import '../../../../core/services/material_service.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../widgets/taxi_ui.dart';
 
@@ -24,6 +27,10 @@ class _CatalogAllPageState extends State<CatalogAllPage> {
   bool _loading = true;
   bool _failed = false;
 
+  /// Грузовики «Yuk tashish» (Labo, Porter, Gazel, Isuzu…) — сверху группы
+  /// transport. Выбор возвращает `truck:<код>`, главная открывает перевозку.
+  List<DeliveryVehicleModel> _trucks = const [];
+
   @override
   void initState() {
     super.initState();
@@ -43,7 +50,11 @@ class _CatalogAllPageState extends State<CatalogAllPage> {
       _loading = !hadData;
       _failed = false;
     });
-    final ok = await EquipmentCatalog.load(context.locale.languageCode);
+    final lang = context.locale.languageCode;
+    MaterialService().getVehicles().then((v) {
+      if (mounted) setState(() => _trucks = v);
+    }).catchError((_) {});
+    final ok = await EquipmentCatalog.load(lang);
     if (!mounted) return;
     setState(() {
       _loading = false;
@@ -75,7 +86,8 @@ class _CatalogAllPageState extends State<CatalogAllPage> {
   @override
   Widget build(BuildContext context) {
     final groups = EquipmentCatalog.groups;
-    final usedGroups = EquipmentCatalog.types.map((t) => t.group).toSet();
+    final usedGroups = EquipmentCatalog.types.map((t) => t.group).toSet()
+      ..addAll(_trucks.isEmpty ? const <String>[] : const ['transport']);
     final items = _visible;
 
     return Scaffold(
@@ -195,7 +207,7 @@ class _CatalogAllPageState extends State<CatalogAllPage> {
         ),
       );
     }
-    if (items.isEmpty) {
+    if (items.isEmpty && _trucks.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
@@ -205,9 +217,12 @@ class _CatalogAllPageState extends State<CatalogAllPage> {
     }
 
     final children = <Widget>[];
+    final q = _search.text.trim().toLowerCase();
+    final trucks = _trucks.where((t) => q.isEmpty || (t.name ?? t.code).toLowerCase().contains(q)).toList();
     for (final g in groups) {
       final inGroup = items.where((t) => t.group == g.code).toList();
-      if (inGroup.isEmpty) continue;
+      final withTrucks = g.code == 'transport' && (_group == 'all' || _group == 'transport') && trucks.isNotEmpty;
+      if (inGroup.isEmpty && !withTrucks) continue;
       children.add(Padding(
         padding: const EdgeInsets.fromLTRB(AppSpacing.gutter, AppSpacing.md, AppSpacing.gutter, AppSpacing.xs),
         child: Text(
@@ -215,6 +230,11 @@ class _CatalogAllPageState extends State<CatalogAllPage> {
           style: AppTypography.captionSemibold.copyWith(color: AppPalette.textSecondary, letterSpacing: 0.4),
         ),
       ));
+      if (withTrucks) {
+        for (final t in trucks) {
+          children.add(_truckRow(t));
+        }
+      }
       for (final t in inGroup) {
         children.add(_row(t));
       }
@@ -232,6 +252,47 @@ class _CatalogAllPageState extends State<CatalogAllPage> {
         children: children,
       ),
     );
+  }
+
+  Widget _truckRow(DeliveryVehicleModel t) {
+    return InkWell(
+      onTap: () => Navigator.of(context).pop('truck:${t.code}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter, vertical: 6),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppPalette.brandSubtle,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(Icons.local_shipping_outlined, color: AppPalette.iconBrand),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(t.name ?? DeliveryVehicles.label(t.code),
+                      style: AppTypography.bodyMedium.copyWith(color: AppPalette.textPrimary)),
+                  Text('catalog.truck_up_to'.tr(args: [_tonnes(t.capacityKg)]),
+                      style: AppTypography.captionS.copyWith(color: AppPalette.textSecondary)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppPalette.iconPrimary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _tonnes(int kg) {
+    final t = kg / 1000;
+    return t == t.roundToDouble() ? t.toStringAsFixed(0) : t.toString().replaceAll('.', ',');
   }
 
   Widget _row(CatalogType t) {

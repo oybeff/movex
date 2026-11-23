@@ -25,6 +25,9 @@ class DeliveryProfile {
   String? get vehicleName => (j['vehicle'] as Map?)?['name'] as String?;
   int? get capacityKg => (j['vehicle'] as Map?)?['capacity_kg'] as int?;
   String? get plate => j['plate'] as String?;
+
+  /// tent | open — кузов для «Yuk tashish».
+  String? get bodyType => j['body_type'] as String?;
   double? get pricePerKm => _numOrNull(j['price_per_km']);
   double? get baseFee => _numOrNull(j['base_fee']);
   Map<String, double> get categories => {
@@ -110,6 +113,7 @@ class DeliveryApi {
     String? plate,
     double? pricePerKm,
     double? baseFee,
+    String? bodyType,
     required Map<String, double> categories,
   }) async {
     final r = await _dio.put('/drivers/delivery/profile', data: {
@@ -117,6 +121,7 @@ class DeliveryApi {
       'plate': plate,
       'price_per_km': pricePerKm,
       'base_fee': baseFee,
+      'body_type': bodyType,
       'categories': [
         for (final e in categories.entries) {'code': e.key, 'min_quantity': e.value},
       ],

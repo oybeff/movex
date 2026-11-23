@@ -21,7 +21,7 @@ TTL_SECONDS = 30
 GROUPS: List[Dict[str, str]] = [
     {"code": "earth", "name_uz": "Yer ishlari", "name_ru": "Земляные работы"},
     {"code": "lifting", "name_uz": "Ko'tarish", "name_ru": "Подъём"},
-    {"code": "transport", "name_uz": "Tashish", "name_ru": "Перевозка"},
+    {"code": "transport", "name_uz": "Yuk tashish", "name_ru": "Грузоперевозки"},
     {"code": "concrete", "name_uz": "Beton ishlari", "name_ru": "Бетонные работы"},
     {"code": "other", "name_uz": "Boshqa", "name_ru": "Другое"},
 ]

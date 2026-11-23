@@ -409,6 +409,26 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "Buyurtma #{order_number}: tovarni qabul qiling va «Yetkazildi» ni bosing",
         "ru": "Заказ #{order_number}: примите товар и нажмите «Доставлено»",
     },
+    "freight_driver_found.title": {"uz": "Yuk mashinasi topildi", "ru": "Грузовик найден"},
+    "freight_driver_found.body": {
+        "uz": "Buyurtma #{order_number}: haydovchi yuk olish joyiga yo'l oldi",
+        "ru": "Заказ #{order_number}: водитель едет к месту погрузки",
+    },
+    "freight_loaded.title": {"uz": "Yuk ortildi", "ru": "Груз погружен"},
+    "freight_loaded.body": {
+        "uz": "Buyurtma #{order_number}: yuk yo'lda",
+        "ru": "Заказ #{order_number}: груз в пути",
+    },
+    "freight_arrived.title": {"uz": "Yuk yetib keldi", "ru": "Груз доставлен"},
+    "freight_arrived.body": {
+        "uz": "Buyurtma #{order_number}: yukni qabul qiling va «Yakunlash» ni bosing",
+        "ru": "Заказ #{order_number}: примите груз и нажмите «Завершить»",
+    },
+    "freight_cancelled.title": {"uz": "Yuk tashish bekor qilindi", "ru": "Перевозка отменена"},
+    "freight_cancelled.body": {
+        "uz": "Buyurtma #{order_number} mijoz tomonidan bekor qilindi",
+        "ru": "Заказ #{order_number} отменён клиентом",
+    },
     "tx.topup": {
         "uz": "Hisobni to'ldirish — {method}",
         "ru": "Пополнение счёта — {method}",

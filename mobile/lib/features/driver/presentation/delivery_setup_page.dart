@@ -33,6 +33,9 @@ class _DeliverySetupPageState extends State<DeliverySetupPage> {
   List<DeliveryVehicleModel> _vehicles = const [];
   List<DeliveryCategory> _cats = const [];
   String? _vehicle;
+  String? _body;
+
+  bool get _bodyChoice => _vehicles.where((v) => v.code == _vehicle).firstOrNull?.hasBodyChoice ?? false;
   final Map<String, TextEditingController> _mins = {};
   final Set<String> _picked = {};
   bool _loading = true;
@@ -73,6 +76,7 @@ class _DeliverySetupPageState extends State<DeliverySetupPage> {
         if (min != null) _picked.add(c.code);
       }
       _vehicle = p.vehicleCode;
+      _body = p.bodyType;
       _plate.text = p.plate ?? '';
       _perKm.text = p.pricePerKm == null ? '' : _fmt(p.pricePerKm!);
       _base.text = p.baseFee == null ? '' : _fmt(p.baseFee!);
@@ -95,8 +99,8 @@ class _DeliverySetupPageState extends State<DeliverySetupPage> {
       _toast('driver.delivery_pick_vehicle'.tr());
       return;
     }
-    if (_picked.isEmpty) {
-      _toast('driver.delivery_pick_category'.tr());
+    if (_bodyChoice && _body == null) {
+      _toast('driver.delivery_pick_body'.tr());
       return;
     }
     final cats = <String, double>{};
@@ -115,6 +119,7 @@ class _DeliverySetupPageState extends State<DeliverySetupPage> {
         plate: _plate.text.trim().isEmpty ? null : _plate.text.trim(),
         pricePerKm: _parse(_perKm.text),
         baseFee: _parse(_base.text),
+        bodyType: _bodyChoice ? _body : null,
         categories: cats,
       );
       if (!mounted) return;
@@ -167,6 +172,23 @@ class _DeliverySetupPageState extends State<DeliverySetupPage> {
                           ),
                       ],
                     ),
+                    if (_bodyChoice) ...[
+                      const SizedBox(height: 12),
+                      Text('driver.delivery_body'.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      Wrap(spacing: 8, children: [
+                        ChoiceChip(
+                          label: Text('freight.body_tent'.tr()),
+                          selected: _body == 'tent',
+                          onSelected: (_) => setState(() => _body = 'tent'),
+                        ),
+                        ChoiceChip(
+                          label: Text('freight.body_open'.tr()),
+                          selected: _body == 'open',
+                          onSelected: (_) => setState(() => _body = 'open'),
+                        ),
+                      ]),
+                    ],
                     const SizedBox(height: 12),
                     _field(_plate, 'driver.delivery_plate'.tr(), hint: '01 A 123 BC', caps: true),
                     const SizedBox(height: 20),

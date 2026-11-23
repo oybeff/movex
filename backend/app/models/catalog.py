@@ -12,7 +12,7 @@ delivery_vehicles — машины доставки стройматериало
 везёт (кг), объём кузова, цена подачи и километра. Раньше это был список
 из четырёх машин в коде (Labo 0,7 т → сразу Isuzu 5 т).
 """
-from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.sql import func
 
 from app.db.base import Base
@@ -47,6 +47,13 @@ class DeliveryVehicleRow(Base):
     # цена км из товара продавца, как было до 23.11.2026.
     base_fee = Column(Numeric(12, 2), nullable=False, default=0)
     price_per_km = Column(Numeric(12, 2), nullable=True)
+    # «Yuk tashish» (24.11.2026): админ выбирает, как считать перевозку —
+    # km: подача + км × цена; hour: часы × цена часа (не меньше min_hours).
+    price_mode = Column(String(10), nullable=False, default="km")
+    price_per_hour = Column(Numeric(12, 2), nullable=True)
+    min_hours = Column(Integer, nullable=False, default=1)
+    #: Клиент выбирает кузов tentli / tentsiz (Labo, Porter, Gazel, Isuzu…)
+    has_body_choice = Column(Boolean, nullable=False, default=False)
     is_enabled = Column(Boolean, nullable=False, default=True)
     sort_order = Column(Integer, nullable=False, default=0)
 
@@ -85,6 +92,8 @@ class DeliveryDriverProfile(Base):
     plate = Column(String(20), nullable=True)
     price_per_km = Column(Numeric(12, 2), nullable=True)
     base_fee = Column(Numeric(12, 2), nullable=True)
+    #: tent — tentli (крытый), open — tentsiz; NULL — не указан
+    body_type = Column(String(10), nullable=True)
     is_online = Column(Boolean, nullable=False, default=False)
     latitude = Column(Numeric(10, 7), nullable=True)
     longitude = Column(Numeric(10, 7), nullable=True)
@@ -99,3 +108,46 @@ class DeliveryDriverCategory(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     category_code = Column(String(30), ForeignKey("material_categories.code", ondelete="CASCADE"), primary_key=True)
     min_quantity = Column(Numeric(12, 2), nullable=False, default=1)
+
+
+
+class FreightOrder(Base):
+    """
+    «Yuk tashish»: клиент везёт СВОЙ груз из А в Б на выбранном грузовике.
+    Цена — из админки по режиму машины (км или часы), фиксируется при
+    создании. Водитель — из тех же, что возят стройматериалы.
+    """
+
+    __tablename__ = "freight_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    driver_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    vehicle_code = Column(String(30), nullable=False)
+    body_type = Column(String(10), nullable=True)
+    cargo_tonnes = Column(Numeric(8, 2), nullable=True)
+    cargo_note = Column(Text, nullable=True)
+    from_address = Column(Text, nullable=True)
+    from_latitude = Column(Numeric(10, 7), nullable=False)
+    from_longitude = Column(Numeric(10, 7), nullable=False)
+    to_address = Column(Text, nullable=True)
+    to_latitude = Column(Numeric(10, 7), nullable=False)
+    to_longitude = Column(Numeric(10, 7), nullable=False)
+    distance_km = Column(Numeric(10, 2), nullable=False)
+    price_mode = Column(String(10), nullable=False)
+    hours = Column(Integer, nullable=True)
+    price = Column(Numeric(12, 2), nullable=False)
+    payment_method = Column(String(10), nullable=False, default="balance")
+    frozen_amount = Column(Numeric(12, 2), nullable=False, default=0)
+    driver_fee = Column(Numeric(12, 2), nullable=True)
+    driver_commission = Column(Numeric(12, 2), nullable=False, default=0)
+    driver_frozen = Column(Numeric(12, 2), nullable=False, default=0)
+    #: searching → accepted → loaded → arrived → done | cancelled
+    status = Column(String(20), nullable=False, default="searching", index=True)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    loaded_at = Column(DateTime(timezone=True), nullable=True)
+    arrived_at = Column(DateTime(timezone=True), nullable=True)
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+    cancelled_by = Column(String(10), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

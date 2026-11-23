@@ -183,3 +183,34 @@ def delivery_arrived(order_id: int, db: Session = Depends(get_db),
 def delivery_cancel(order_id: int, db: Session = Depends(get_db),
                     current_user: User = Depends(get_current_user)):
     return _read(db, delivery_service.driver_cancel(db, _driver(current_user), order_id))
+
+
+# ---------------------------------------- «Yuk tashish» (24.11.2026)
+
+from app.services import freight_service  # noqa: E402
+
+
+@router.get("/freight/incoming")
+def freight_incoming(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return freight_service.incoming(db, _driver(current_user))
+
+
+@router.get("/freight/orders")
+def freight_driver_orders(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    me = _driver(current_user)
+    return [freight_service.read(db, o, me) for o in freight_service.driver_orders(db, me)]
+
+
+@router.post("/freight/orders/{order_id}/{step}")
+def freight_step(order_id: int, step: str, db: Session = Depends(get_db),
+                 current_user: User = Depends(get_current_user)):
+    me = _driver(current_user)
+    actions = {
+        "accept": freight_service.accept,
+        "loaded": freight_service.loaded,
+        "arrived": freight_service.arrived,
+        "cancel": freight_service.driver_cancel,
+    }
+    if step not in actions:
+        raise HTTPException(404, "Not Found")
+    return freight_service.read(db, actions[step](db, me, order_id), me)

@@ -30,6 +30,7 @@ class DeliveryVehicle:
         self.volume_m3 = volume_m3
         self.base_fee = base_fee
         self.price_per_km = price_per_km
+        self.has_body_choice = False
 
 
 #: Zaxira ro'yxat: delivery_vehicles jadvali bo'sh yoki hali yo'q bo'lsa.
@@ -98,15 +99,17 @@ def load(db) -> List[DeliveryVehicle]:
         rows = []
     if not rows:
         return list(VEHICLES)
-    return [
-        DeliveryVehicle(
+    out = []
+    for r in rows:
+        v = DeliveryVehicle(
             r.code, int(r.capacity_kg), r.name,
             Decimal(r.volume_m3) if r.volume_m3 is not None else None,
             Decimal(r.base_fee or 0),
             Decimal(r.price_per_km) if r.price_per_km is not None else None,
         )
-        for r in rows
-    ]
+        v.has_body_choice = bool(r.has_body_choice)
+        out.append(v)
+    return out
 
 
 def choose(weight_kg: Decimal, preferred: Optional[str] = None,

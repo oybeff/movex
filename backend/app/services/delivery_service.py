@@ -108,6 +108,7 @@ def profile_dict(db: Session, user: User) -> dict:
         if v is not None:
             vehicle = {
                 "code": v.code, "name": v.name, "capacity_kg": v.capacity_kg,
+                "has_body_choice": bool(v.has_body_choice),
                 "base_fee": v.base_fee, "price_per_km": v.price_per_km,
             }
     return {
@@ -115,6 +116,7 @@ def profile_dict(db: Session, user: User) -> dict:
         "vehicle_code": p.vehicle_code if p else None,
         "vehicle": vehicle,
         "plate": p.plate if p else None,
+        "body_type": p.body_type if p else None,
         "price_per_km": p.price_per_km if p else None,
         "base_fee": p.base_fee if p else None,
         "is_online": bool(p.is_online) if p else False,
@@ -142,8 +144,6 @@ def save_profile(db: Session, user: User, data) -> dict:
         if c.code in seen:
             raise HTTPException(400, f"Toifa ikki marta: {c.code}")
         seen.add(c.code)
-    if not data.categories:
-        raise HTTPException(400, "Kamida bitta toifani tanlang — nima tashiysiz?")
 
     p = db.query(DeliveryDriverProfile).filter(DeliveryDriverProfile.user_id == user.id).first()
     if p is None:
@@ -153,6 +153,7 @@ def save_profile(db: Session, user: User, data) -> dict:
     p.plate = (data.plate or "").strip().upper() or None
     p.price_per_km = data.price_per_km
     p.base_fee = data.base_fee
+    p.body_type = data.body_type if vehicle.has_body_choice else None
 
     db.query(DeliveryDriverCategory).filter(DeliveryDriverCategory.user_id == user.id).delete()
     for c in data.categories:

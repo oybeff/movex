@@ -123,7 +123,8 @@ def vehicle_list(db: Session = Depends(get_db)):
     """Yetkazadigan mashinalar — ro'yxatni admin yuritadi (vehicles.php)."""
     return [
         DeliveryVehicleRead(code=v.code, capacity_kg=v.capacity_kg,
-                            name=v.name, volume_m3=v.volume_m3)
+                            name=v.name, volume_m3=v.volume_m3,
+                            has_body_choice=v.has_body_choice)
         for v in delivery_vehicles.load(db)
     ]
 

@@ -160,7 +160,10 @@ class DeliveryVehicleModel {
   /// Название из админки (catalog.php → «Yetkazib berish mashinalari»).
   final String? name;
 
-  const DeliveryVehicleModel({required this.code, required this.capacityKg, this.name});
+  /// Tentli / tentsiz — у бортовых (Labo, Porter, Gazel, Isuzu…).
+  final bool hasBodyChoice;
+
+  const DeliveryVehicleModel({required this.code, required this.capacityKg, this.name, this.hasBodyChoice = false});
 
   double get capacityTonnes => capacityKg / 1000;
 
@@ -169,6 +172,7 @@ class DeliveryVehicleModel {
         code: json['code'] as String,
         capacityKg: json['capacity_kg'] as int,
         name: json['name'] as String?,
+        hasBodyChoice: json['has_body_choice'] == true,
       );
 }
 

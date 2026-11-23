@@ -21,6 +21,8 @@ import '../../taxi/data/taxi_geo.dart';
 import '../data/delivery_api.dart';
 import '../data/driver_api.dart';
 import 'delivery_incoming_page.dart';
+import '../../freight/data/freight_api.dart';
+import 'freight_driver_pages.dart';
 import 'delivery_order_page.dart';
 import 'delivery_setup_page.dart';
 import 'driver_equipment_step.dart';
@@ -81,6 +83,18 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
   List<DeliveryIncoming> _dIncoming = const [];
   List<DeliveryOrder> _dOrders = const [];
   final Set<int> _dSeen = {};
+
+  // «Yuk tashish» (24.11.2026): те же водители, свои заказы А→Б.
+  final _freight = FreightApi();
+  List<FreightIncoming> _fIncoming = const [];
+  List<FreightOrder> _fOrders = const [];
+  final Set<int> _fSeen = {};
+
+  FreightOrder? get _activeFreight {
+    final live = _fOrders.where((o) => o.busyForDriver).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return live.isEmpty ? null : live.first;
+  }
 
   bool get _isDeliveryDriver => _dProfile?.registered ?? false;
 
@@ -279,13 +293,21 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
           await _delivery.heartbeat(online: _online, lat: _here?.lat, lon: _here?.lon);
           dOrders = await _delivery.orders();
         } catch (_) {}
+        try {
+          _fOrders = await _freight.driverOrders();
+        } catch (_) {}
       }
       final busy = orders.any((o) => o.active && !o.scheduled && o.finishedAt == null) ||
-          dOrders.any((o) => o.active);
+          dOrders.any((o) => o.active) ||
+          _fOrders.any((o) => o.busyForDriver);
       if (_online && !busy) incoming = await _requests.quickIncoming();
+      List<FreightIncoming> fIncoming = const [];
       if (_online && !busy && _isDeliveryDriver) {
         try {
           dIncoming = await _delivery.incoming();
+        } catch (_) {}
+        try {
+          fIncoming = await _freight.incoming();
         } catch (_) {}
       }
       if (!mounted) return;
@@ -293,6 +315,7 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
         _orders = orders;
         _incoming = incoming;
         _dIncoming = dIncoming;
+        _fIncoming = fIncoming;
         _dOrders = dOrders;
         _loaded = true;
         _netDown = false;
@@ -316,14 +339,39 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
   }
 
   Future<void> _maybeShowIncoming() async {
-    if (_showingIncoming || !_online || _active != null || _activeDelivery != null) return;
+    if (_showingIncoming || !_online || _active != null || _activeDelivery != null || _activeFreight != null) {
+      return;
+    }
     final fresh = _incoming.where((o) => !_seen.contains(o.id)).toList();
     if (fresh.isNotEmpty) {
       await _openIncoming(fresh.first);
       return;
     }
     final dFresh = _dIncoming.where((o) => !_dSeen.contains(o.id)).toList();
-    if (dFresh.isNotEmpty) await _openDeliveryIncoming(dFresh.first);
+    if (dFresh.isNotEmpty) {
+      await _openDeliveryIncoming(dFresh.first);
+      return;
+    }
+    final fFresh = _fIncoming.where((o) => !_fSeen.contains(o.id)).toList();
+    if (fFresh.isNotEmpty) await _openFreightIncoming(fFresh.first);
+  }
+
+  Future<void> _openFreightIncoming(FreightIncoming o) async {
+    _fSeen.add(o.id);
+    _showingIncoming = true;
+    final accepted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(fullscreenDialog: true, builder: (_) => FreightIncomingPage(order: o)),
+    );
+    _showingIncoming = false;
+    await _countMissed(accepted == null);
+    await _refresh();
+    final a = _activeFreight;
+    if (accepted == true && a != null && mounted) await _openFreight(a);
+  }
+
+  Future<void> _openFreight(FreightOrder o) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => FreightDriverOrderPage(order: o)));
+    await _refresh();
   }
 
   Future<void> _openDeliveryIncoming(DeliveryIncoming o) async {
@@ -653,6 +701,20 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
     if (a != null) return _activeCard(a);
     final d = _activeDelivery;
     if (d != null) return _activeDeliveryCard(d);
+    final f = _activeFreight;
+    if (f != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('driver.freight_active'.tr(), style: AppTypography.h2),
+          const SizedBox(height: 4),
+          Text(f.status == 'accepted' ? (f.fromAddress ?? '—') : (f.toAddress ?? '—'),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          DPrimary('driver.open'.tr(), onPressed: () => _openFreight(f)),
+        ],
+      );
+    }
     if (_netDown && _online) return _netSheet();
     return _online ? _onlineSheet() : _offlineSheet();
   }

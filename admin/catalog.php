@@ -136,6 +136,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $base = cleanInt((string)($_POST['base_fee'] ?? '0'));
         $km = cleanInt((string)($_POST['price_per_km'] ?? ''));
         $sort = cleanInt((string)($_POST['sort_order'] ?? '0'));
+        // «Yuk tashish»: как считать перевозку и есть ли выбор кузова
+        $mode = ($_POST['price_mode'] ?? 'km') === 'hour' ? 'hour' : 'km';
+        $perHour = cleanInt((string)($_POST['price_per_hour'] ?? ''));
+        $minHours = cleanInt((string)($_POST['min_hours'] ?? '1'));
+        $bodyChoice = isset($_POST['has_body_choice']) ? 'true' : 'false';
 
         if (!preg_match('/^[a-z][a-z0-9_]{1,19}$/', $code)) {
             $error = 'Kod — lotin kichik harflar, raqam va _ (20 belgigacha)';
@@ -145,8 +150,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Sig'im, kg — musbat butun son";
         } elseif ($volRaw !== '' && (!is_numeric($volRaw) || (float)$volRaw <= 0)) {
             $error = 'Kuzov hajmi, m³ — musbat son yoki bo\'sh';
-        } elseif ($base === false || $km === false || $sort === false) {
+        } elseif ($base === false || $km === false || $sort === false || $perHour === false) {
             $error = 'Narxlar va tartib — butun son';
+        } elseif (!$minHours || $minHours > 48) {
+            $error = 'Eng kam soat 1 dan 48 gacha';
+        } elseif ($mode === 'hour' && !$perHour) {
+            $error = "«Soatbay» rejimida soat narxini yozing";
         } elseif ($form === 'vehicle_add') {
             $exists = $db->prepare('SELECT 1 FROM delivery_vehicles WHERE code = ?');
             $exists->execute([$code]);
@@ -154,17 +163,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = 'Bu kod band';
             } else {
                 $db->prepare('
-                    INSERT INTO delivery_vehicles (code, name, capacity_kg, volume_m3, base_fee, price_per_km, sort_order)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ')->execute([$code, $name, $kg, $volRaw === '' ? null : $volRaw, (int)$base, $km, (int)$sort]);
+                    INSERT INTO delivery_vehicles (code, name, capacity_kg, volume_m3, base_fee, price_per_km, sort_order,
+                                                   price_mode, price_per_hour, min_hours, has_body_choice)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ' . $bodyChoice . ')
+                ')->execute([$code, $name, $kg, $volRaw === '' ? null : $volRaw, (int)$base, $km, (int)$sort,
+                             $mode, $perHour, (int)$minHours]);
                 $message = "«$name» qo'shildi.";
             }
         } else {
             $db->prepare('
                 UPDATE delivery_vehicles
-                   SET name = ?, capacity_kg = ?, volume_m3 = ?, base_fee = ?, price_per_km = ?, sort_order = ?
+                   SET name = ?, capacity_kg = ?, volume_m3 = ?, base_fee = ?, price_per_km = ?, sort_order = ?,
+                       price_mode = ?, price_per_hour = ?, min_hours = ?, has_body_choice = ' . $bodyChoice . '
                  WHERE code = ?
-            ')->execute([$name, $kg, $volRaw === '' ? null : $volRaw, (int)$base, $km, (int)$sort, $code]);
+            ')->execute([$name, $kg, $volRaw === '' ? null : $volRaw, (int)$base, $km, (int)$sort,
+                         $mode, $perHour, (int)$minHours, $code]);
             $message = "«$name» saqlandi.";
         }
 
@@ -309,10 +322,12 @@ function money($v) {
             <p style="margin-top:0;color:#6b7280">
                 Material buyurtmasida tizim yuk og'irligiga qarab bir reysga sig'adigan eng kichik mashinani tanlaydi.
                 Yetkazish = (podacha + km × narx) × reys. Km narxi bo'sh — sotuvchi tovarga yozgan km narxi olinadi.
+                <br>«Yuk tashish» (mijozning yuki A→B): <b>Km</b> rejimi — podacha + km × narx;
+                <b>Soatbay</b> — soat × soat narxi (eng kam soatdan kam emas). «Kuzov» belgilansa, mijoz tentli/tentsiz tanlaydi.
             </p>
             <table>
                 <thead>
-                    <tr><th>Kod</th><th>Nomi</th><th>Sig'im, kg</th><th>Kuzov, m³</th><th>Podacha, so'm</th><th>1 km, so'm</th><th>Tartib</th><th>Holati</th><th></th></tr>
+                    <tr><th>Kod</th><th>Nomi</th><th>Sig'im, kg</th><th>Kuzov, m³</th><th>Podacha, so'm</th><th>1 km, so'm</th><th>Rejim</th><th>1 soat / kamida</th><th>Tent</th><th>Tartib</th><th>Holati</th><th></th></tr>
                 </thead>
                 <tbody>
                 <?php foreach ($vehicles as $v): $fid = 've_' . $v['code']; ?>
@@ -323,6 +338,17 @@ function money($v) {
                         <td><input form="<?= $fid ?>" name="volume_m3" value="<?= $v['volume_m3'] !== null ? rtrim(rtrim((string)$v['volume_m3'], '0'), '.') : '' ?>" style="width:70px"></td>
                         <td><input form="<?= $fid ?>" name="base_fee" value="<?= (int)$v['base_fee'] ?>" style="width:100px"></td>
                         <td><input form="<?= $fid ?>" name="price_per_km" value="<?= $v['price_per_km'] !== null ? (int)$v['price_per_km'] : '' ?>" placeholder="sotuvchi" style="width:90px"></td>
+                        <td>
+                            <select form="<?= $fid ?>" name="price_mode">
+                                <option value="km" <?= $v['price_mode'] === 'km' ? 'selected' : '' ?>>Km</option>
+                                <option value="hour" <?= $v['price_mode'] === 'hour' ? 'selected' : '' ?>>Soatbay</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input form="<?= $fid ?>" name="price_per_hour" value="<?= $v['price_per_hour'] !== null ? (int)$v['price_per_hour'] : '' ?>" placeholder="—" style="width:90px">
+                            <input form="<?= $fid ?>" name="min_hours" value="<?= (int)$v['min_hours'] ?>" style="width:44px" title="eng kam soat">
+                        </td>
+                        <td><input form="<?= $fid ?>" type="checkbox" name="has_body_choice" value="1" <?= $v['has_body_choice'] ? 'checked' : '' ?>></td>
                         <td><input form="<?= $fid ?>" name="sort_order" value="<?= (int)$v['sort_order'] ?>" style="width:60px"></td>
                         <td><?= $v['is_enabled'] ? 'Faol' : "O'chirilgan" ?></td>
                         <td style="display:flex;gap:6px">
@@ -354,6 +380,10 @@ function money($v) {
                 <label>Kuzov, m³<br><input name="volume_m3" style="width:70px"></label>
                 <label>Podacha<br><input name="base_fee" value="0" style="width:100px"></label>
                 <label>1 km<br><input name="price_per_km" placeholder="sotuvchi" style="width:90px"></label>
+                <label>Rejim<br><select name="price_mode"><option value="km">Km</option><option value="hour">Soatbay</option></select></label>
+                <label>1 soat<br><input name="price_per_hour" style="width:90px"></label>
+                <label>Kamida soat<br><input name="min_hours" value="1" style="width:60px"></label>
+                <label><input type="checkbox" name="has_body_choice" value="1"> Tentli/tentsiz</label>
                 <label>Tartib<br><input name="sort_order" value="0" style="width:60px"></label>
                 <button type="submit" class="btn btn-primary">Qo'shish</button>
             </form>

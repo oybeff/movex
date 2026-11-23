@@ -141,9 +141,13 @@ try:
     r = requests.put(f"{API}/drivers/delivery/profile", headers=d1, json={
         "vehicle_code": "tank", "categories": [{"code": "sand", "min_quantity": 1}]})
     check("несуществующая машина — 400", r.status_code == 400, f"{r.status_code}")
-    r = requests.put(f"{API}/drivers/delivery/profile", headers=d1, json={
-        "vehicle_code": "gazel", "categories": []})
-    check("без категорий — 400", r.status_code == 400, f"{r.status_code}")
+    # С 24.11.2026 без категорий можно: водитель возит только грузы клиентов
+    # («Yuk tashish»), стройматериалы ему просто не приходят.
+    r = requests.put(f"{API}/drivers/delivery/profile", headers=d3, json={
+        "vehicle_code": "labo", "categories": []})
+    check("без категорий — можно (только «Yuk tashish»)", r.status_code == 200, f"{r.status_code}")
+    requests.put(f"{API}/drivers/delivery/profile", headers=d3, json={
+        "vehicle_code": "labo", "categories": [{"code": "fired_brick", "min_quantity": 50}]})
     r = requests.put(f"{API}/drivers/delivery/profile", headers=buyer, json={
         "vehicle_code": "gazel", "categories": [{"code": "sand", "min_quantity": 1}]})
     check("клиент водителем не становится — 403", r.status_code == 403, f"{r.status_code}")
