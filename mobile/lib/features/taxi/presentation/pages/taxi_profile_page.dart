@@ -9,8 +9,6 @@ import '../../../../core/services/order_service.dart';
 import '../../../../core/services/pin_service.dart';
 import '../../../../core/services/user_service.dart';
 import '../../../../core/theme/app_tokens.dart';
-import '../../../client_home/presentation/pages/client_catalog_page.dart';
-import '../../../client_home/presentation/pages/client_main_page.dart';
 import '../../../listings/presentation/pages/listings_page.dart';
 import '../../../settings/presentation/pages/privacy_page.dart';
 import '../../../settings/presentation/pages/terms_page.dart';
@@ -28,10 +26,11 @@ import 'taxi_notifications_page.dart';
 /// «Profil»). В новом дизайне у клиента НЕТ нижнего меню: главная — заказ
 /// на весь экран, а всё остальное открывается отсюда.
 ///
-/// Каталог и объявления в макете не нарисованы, но они остаются в
-/// приложении (решение владельца от 12.11.2026) — поэтому лежат в разделе
-/// «Asosiy» рядом с заказами. «Saqlangan manzillar» и карты из макета
-/// пока не сделаны: на сервере их нет.
+/// Объявления в макете не нарисованы, но остаются в приложении (решение
+/// владельца от 12.11.2026) — поэтому лежат в разделе «Asosiy» рядом с
+/// заказами. Каталога техники и «Texnika xaritada» здесь больше нет:
+/// 23.11.2026 владелец продукта убрал каталог из клиентского приложения —
+/// клиент заказывает технику только через тарифный заказ на главной.
 class TaxiProfilePage extends StatefulWidget {
   const TaxiProfilePage({super.key});
 
@@ -388,14 +387,8 @@ class _TaxiProfilePageState extends State<TaxiProfilePage> {
                       value: _addresses?.toString(),
                       onTap: () => _push(const SavedAddressesPage()),
                     ),
-                    // Каталог, объявления и старая карта в макете не нарисованы,
-                    // но остаются в приложении (решение владельца, 12.11.2026).
-                    MenuRow(iconData: Icons.grid_view_outlined, title: 'client.catalog'.tr(),
-                        onTap: () => _open(const ClientCatalogPage())),
                     MenuRow(iconData: Icons.campaign_outlined, title: 'client.listings'.tr(),
                         onTap: () => _open(const ListingsPage())),
-                    MenuRow(iconData: Icons.map_outlined, title: 'taxi.equipment_map'.tr(),
-                        onTap: () => _open(const _WithBack(child: ClientMainPage()))),
                   ]),
                   const SizedBox(height: 20),
                   GroupLabel('profile.section_settings'.tr()),
@@ -443,27 +436,4 @@ class _TaxiProfilePageState extends State<TaxiProfilePage> {
       ),
     );
   }
-}
-
-/// Старая страница-вкладка без своей шапки: поверх неё — «назад».
-class _WithBack extends StatelessWidget {
-  const _WithBack({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Stack(
-        children: [
-          Positioned.fill(child: child),
-          Positioned(
-            top: MediaQuery.of(context).padding.top + AppSpacing.sm,
-            left: AppSpacing.gutter,
-            child: MapIconButton(
-              icon: 'back',
-              label: 'auth.back'.tr(),
-              onTap: () => Navigator.of(context).pop(),
-            ),
-          ),
-        ],
-      );
 }

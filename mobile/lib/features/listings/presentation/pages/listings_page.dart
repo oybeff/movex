@@ -1,7 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/app_tokens.dart';
 import 'create_listing_page.dart';
 import 'listings_feed_view.dart';
 import 'my_listings_view.dart';
@@ -72,24 +72,24 @@ class _ListingsPageState extends State<ListingsPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppPalette.page,
       appBar: AppBar(
-        backgroundColor: AppColors.white,
+        backgroundColor: AppPalette.surface,
         elevation: 0,
         // «Назад» показывается сам, только если есть куда вернуться: у
         // клиента раздел открывается из профиля, у владельца — вкладка.
         title: Text(
           'listings.section_title'.tr(),
-          style: const TextStyle(
-              color: AppColors.black, fontWeight: FontWeight.bold),
+          style: AppTypography.h3.copyWith(
+              color: AppPalette.textPrimary, fontWeight: FontWeight.bold),
         ),
         bottom: TabBar(
           controller: _tabs,
-          labelColor: AppColors.primaryGreen,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: AppColors.primaryGreen,
-          labelStyle: const TextStyle(
-              fontSize: 14, fontWeight: FontWeight.w600),
+          labelColor: AppPalette.brand,
+          unselectedLabelColor: AppPalette.textSecondary,
+          indicatorColor: AppPalette.brand,
+          labelStyle: AppTypography.bodyMMedium.copyWith(
+              fontWeight: FontWeight.w600),
           tabs: [
             Tab(text: 'listings.tab_board'.tr()),
             Tab(text: 'listings.tab_mine'.tr()),
@@ -104,8 +104,8 @@ class _ListingsPageState extends State<ListingsPage>
         padding: const EdgeInsets.only(bottom: 72),
         child: FloatingActionButton.extended(
           onPressed: _create,
-          backgroundColor: AppColors.primaryGreen,
-          foregroundColor: Colors.white,
+          backgroundColor: AppPalette.brand,
+          foregroundColor: AppPalette.textOnBrand,
           icon: const Icon(Icons.add),
           label: Text('listings.create'.tr()),
         ),

@@ -4,18 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_config.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/services/listing_service.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import '../../../balance/presentation/pages/balance_topup_page.dart';
 
-/// E'lon joylash.
+/// E'lon joylash (Create Listing) ekrani.
 ///
-/// Faqat sarlavha majburiy. Qolganining hammasi ixtiyoriy — odam ko'chada
-/// turib yozadi, o'n qatorni to'ldirishga majbur qilsak hech kim yozmaydi.
-/// Bo'sh qolgan maydonlar e'londa ko'rsatilmaydi.
+/// Mijoz stsenariysi:
+/// Odam uyida ish qildirmoqchi (masalan: «Uyga hovuz kovlash kerak, chuqurligi 3 m,
+/// eni 2 m, uzunligi 5 m, byudjet 1 000 000 so'm»). Aniq soat yoki tarifni bilmaydi,
+/// e'lon qoldiradi — haydovchilar esa o'z narxi va muddatini taklif qilishadi.
+/// Mijoz eng ma'qul taklifni qabul qiladi.
 class CreateListingPage extends StatefulWidget {
   const CreateListingPage({super.key});
 
@@ -37,16 +39,14 @@ class _CreateListingPageState extends State<CreateListingPage> {
   DateTime? _from;
   DateTime? _to;
 
-  /// Yuklangan rasm manzillari. Rasm E'LON YARATILISHIDAN OLDIN yuklanadi:
-  /// odam "joylash" bosishidan avval ularni ko'rib turishi kerak.
+  /// Yuklangan rasm manzillari.
   final List<String> _photos = [];
   bool _isUploading = false;
 
   bool _isSending = false;
   String? _error;
 
-  /// Joylash narxi (0 — bepul). Tugmadan oldin ko'rsatiladi: pul
-  /// yechilishini odam oldindan bilsin.
+  /// Joylash narxi (0 — bepul).
   double _fee = 0;
 
   @override
@@ -87,7 +87,6 @@ class _CreateListingPageState extends State<CreateListingPage> {
 
     setState(() => _isUploading = true);
     try {
-      // Webda faylning yo'li yo'q — faqat mazmuni bor.
       final String url;
       if (kIsWeb) {
         final Uint8List bytes = await picked.readAsBytes();
@@ -121,7 +120,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
         data: Theme.of(context).copyWith(
           colorScheme: Theme.of(context)
               .colorScheme
-              .copyWith(primary: AppColors.primaryGreen),
+              .copyWith(primary: AppPalette.brand),
         ),
         child: child!,
       ),
@@ -180,19 +179,25 @@ class _CreateListingPageState extends State<CreateListingPage> {
     final go = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
-        content: Text(message),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.xl)),
+        backgroundColor: AppPalette.surface,
+        content: Text(message, style: AppTypography.body),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('settings.cancel'.tr()),
+            child: Text(
+              'settings.cancel'.tr(),
+              style: const TextStyle(color: AppPalette.textSecondary),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGreen,
-              foregroundColor: Colors.white,
+              backgroundColor: AppPalette.brand,
+              foregroundColor: AppPalette.textOnBrand,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md)),
             ),
             child: Text('listings.top_up'.tr()),
           ),
@@ -202,7 +207,8 @@ class _CreateListingPageState extends State<CreateListingPage> {
     if (go == true && mounted) {
       await Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => BalanceTopUpPage(requiredAmount: _fee)),
+        MaterialPageRoute(
+            builder: (_) => BalanceTopUpPage(requiredAmount: _fee)),
       );
     }
   }
@@ -215,7 +221,9 @@ class _CreateListingPageState extends State<CreateListingPage> {
   String? _detail(Object e) {
     try {
       final data = (e as dynamic).response?.data;
-      if (data is Map && data['detail'] is String) return data['detail'] as String;
+      if (data is Map && data['detail'] is String) {
+        return data['detail'] as String;
+      }
     } catch (_) {}
     return null;
   }
@@ -228,146 +236,274 @@ class _CreateListingPageState extends State<CreateListingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppPalette.page,
       appBar: AppBar(
-        backgroundColor: AppColors.white,
+        backgroundColor: AppPalette.surface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.black),
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new,
+              size: 20, color: AppPalette.textPrimary),
+          onPressed: () => Navigator.maybePop(context),
+        ),
         title: Text(
           'listings.create'.tr(),
-          style: const TextStyle(
-              color: AppColors.black, fontWeight: FontWeight.bold),
+          style: AppTypography.h3.copyWith(fontWeight: FontWeight.w700),
         ),
+        centerTitle: true,
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.gutter,
+          AppSpacing.lg,
+          AppSpacing.gutter,
+          AppSpacing.xxl,
+        ),
         children: [
-          _label('listings.title_field'.tr(), required: true),
-          TextField(
-            controller: _title,
-            textInputAction: TextInputAction.next,
-            maxLength: 120,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: _box('listings.title_hint'.tr()),
+          // ── Scenario Explainer Banner ─────────────────────────────
+          _buildScenarioBanner(),
+          const SizedBox(height: AppSpacing.lg),
+
+          // ── Section 1: Ish haqida (Sarlavha & Tafsilotlar) ─────────
+          _cardWrapper(
+            children: [
+              _fieldLabel(
+                'listings.title_field'.tr(),
+                required: true,
+              ),
+              TextField(
+                controller: _title,
+                textInputAction: TextInputAction.next,
+                maxLength: 120,
+                textCapitalization: TextCapitalization.sentences,
+                style: AppTypography.body,
+                decoration: _fieldInputDecoration(
+                  hint: 'listings.title_hint'.tr(),
+                  prefixIcon: Icons.edit_note_outlined,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+
+              _fieldLabel(
+                'listings.description'.tr(),
+                subtitle: 'listings.description_helper'.tr(),
+              ),
+              TextField(
+                controller: _description,
+                maxLines: 4,
+                maxLength: 4000,
+                textCapitalization: TextCapitalization.sentences,
+                style: AppTypography.body,
+                decoration: _fieldInputDecoration(
+                  hint: 'listings.description_hint'.tr(),
+                  prefixIcon: Icons.description_outlined,
+                  isMultiline: true,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // ── Section 2: Rasmlar ────────────────────────────────────
+          _cardWrapper(
+            children: [
+              _fieldLabel(
+                'listings.photos'.tr(),
+                subtitle: 'listings.photos_subtitle'.tr(),
+              ),
+              _photoRow(),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // ── Section 3: Texnika turi ───────────────────────────────
+          _cardWrapper(
+            children: [
+              _fieldLabel(
+                'listings.type_optional'.tr(),
+                subtitle: 'listings.type_helper'.tr(),
+              ),
+              _typePicker(),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // ── Section 4: Narx va Manzil ─────────────────────────────
+          _cardWrapper(
+            children: [
+              _fieldLabel(
+                'listings.budget'.tr(),
+                subtitle: 'listings.budget_helper'.tr(),
+              ),
+              TextField(
+                controller: _budget,
+                textInputAction: TextInputAction.next,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                style: AppTypography.bodyMedium,
+                decoration: _fieldInputDecoration(
+                  hint: 'listings.budget_hint'.tr(),
+                  prefixIcon: Icons.payments_outlined,
+                ).copyWith(
+                  suffixText: 'common.currency'.tr(),
+                  suffixStyle: AppTypography.bodyMedium.copyWith(
+                    color: AppPalette.textSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+
+              _fieldLabel('listings.address'.tr()),
+              TextField(
+                controller: _address,
+                textInputAction: TextInputAction.next,
+                textCapitalization: TextCapitalization.sentences,
+                style: AppTypography.body,
+                decoration: _fieldInputDecoration(
+                  hint: 'listings.address_hint'.tr(),
+                  prefixIcon: Icons.location_on_outlined,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // ── Section 5: Sanalar va Aloqa ───────────────────────────
+          _cardWrapper(
+            children: [
+              _fieldLabel('listings.dates'.tr()),
+              InkWell(
+                onTap: _pickDates,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.lg,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppPalette.page,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(color: AppPalette.borderDefault),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined,
+                          size: 20, color: AppPalette.brand),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Text(
+                          _from == null
+                              ? 'listings.dates_hint'.tr()
+                              : '${DateFormat('dd.MM.yyyy').format(_from!)} — '
+                                  '${DateFormat('dd.MM.yyyy').format(_to!)}',
+                          style: AppTypography.body.copyWith(
+                            color: _from == null
+                                ? AppPalette.textPlaceholder
+                                : AppPalette.textPrimary,
+                          ),
+                        ),
+                      ),
+                      if (_from != null)
+                        InkWell(
+                          onTap: () => setState(() {
+                            _from = null;
+                            _to = null;
+                          }),
+                          child: const Padding(
+                            padding: EdgeInsets.all(4),
+                            child: Icon(Icons.close,
+                                size: 18, color: AppPalette.textSecondary),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+
+              _fieldLabel('listings.contact_phone'.tr()),
+              TextField(
+                controller: _phone,
+                textInputAction: TextInputAction.done,
+                keyboardType: TextInputType.phone,
+                style: AppTypography.body,
+                decoration: _fieldInputDecoration(
+                  hint: 'listings.contact_phone_hint'.tr(),
+                  prefixIcon: Icons.phone_outlined,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lock_outline,
+                        size: 14, color: AppPalette.textSecondary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'listings.phone_privacy'.tr(),
+                        style: AppTypography.captionS.copyWith(
+                          color: AppPalette.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
 
-          _label('listings.description'.tr()),
-          TextField(
-            controller: _description,
-            maxLines: 4,
-            maxLength: 4000,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: _box('listings.description_hint'.tr()),
-          ),
-
-          _label('listings.photos'.tr()),
-          _photoRow(),
-
-          _label('listings.type_optional'.tr()),
-          _typePicker(),
-
-          _label('listings.budget'.tr()),
-          TextField(
-            controller: _budget,
-            textInputAction: TextInputAction.next,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: _box('listings.budget_hint'.tr()).copyWith(
-              suffixText: 'common.currency'.tr(),
-            ),
-          ),
-
-          _label('listings.address'.tr()),
-          TextField(
-            controller: _address,
-            textInputAction: TextInputAction.next,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: _box('listings.address_hint'.tr()).copyWith(
-              prefixIcon: const Icon(Icons.place_outlined, size: 20),
-            ),
-          ),
-
-          _label('listings.dates'.tr()),
-          InkWell(
-            onTap: _pickDates,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+          // ── Xato va to'lov bildirishnomalari ──────────────────────
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.black12),
+                color: AppPalette.dangerSubtle,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppPalette.borderDanger),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.calendar_today_outlined,
-                      size: 18, color: Colors.grey),
-                  const SizedBox(width: 10),
+                  const Icon(Icons.error_outline,
+                      color: AppPalette.textDanger, size: 20),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      _from == null
-                          ? 'listings.dates_hint'.tr()
-                          : '${DateFormat('dd.MM.yyyy').format(_from!)} — '
-                              '${DateFormat('dd.MM.yyyy').format(_to!)}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: _from == null ? Colors.grey[600] : AppColors.black,
+                      _error!,
+                      style: AppTypography.bodyM.copyWith(
+                        color: AppPalette.textDanger,
                       ),
                     ),
                   ),
-                  if (_from != null)
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 18),
-                      onPressed: () => setState(() {
-                        _from = null;
-                        _to = null;
-                      }),
-                    ),
                 ],
               ),
             ),
-          ),
-
-          _label('listings.contact_phone'.tr()),
-          TextField(
-            controller: _phone,
-            textInputAction: TextInputAction.done,
-            keyboardType: TextInputType.phone,
-            decoration: _box('listings.contact_phone_hint'.tr()).copyWith(
-              prefixIcon: const Icon(Icons.phone_outlined, size: 20),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(
-              'listings.phone_privacy'.tr(),
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
-          ),
-
-          if (_error != null) ...[
-            const SizedBox(height: 14),
-            Text(_error!,
-                style: const TextStyle(color: AppColors.error, fontSize: 13)),
           ],
 
           if (_fee > 0) ...[
-            const SizedBox(height: 18),
+            const SizedBox(height: AppSpacing.lg),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: AppColors.primaryGreen.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
+                color: AppPalette.brandSubtle,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: AppPalette.brand.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.payments_outlined,
-                      color: AppColors.primaryGreen, size: 20),
-                  const SizedBox(width: 10),
+                      color: AppPalette.brand, size: 20),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Text(
                       'listings.fee_note'.tr(args: [_money(_fee)]),
-                      style: const TextStyle(fontSize: 13),
+                      style: AppTypography.bodyM.copyWith(
+                        color: AppPalette.brand,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
@@ -375,115 +511,246 @@ class _CreateListingPageState extends State<CreateListingPage> {
             ),
           ],
 
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xl),
+
+          // ── Submit Button ─────────────────────────────────────────
           SizedBox(
-            height: 52,
+            height: AppSpacing.buttonHeight,
             child: ElevatedButton(
               onPressed: _isSending ? null : _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryGreen,
-                foregroundColor: Colors.white,
+                backgroundColor: AppPalette.brand,
+                foregroundColor: AppPalette.textOnBrand,
+                elevation: 0,
+                shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                ),
               ),
               child: _isSending
                   ? const SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2,
+                        color: AppPalette.textOnBrand,
+                      ),
                     )
-                  : Text('listings.publish'.tr(),
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
+                  : Text(
+                      'listings.publish'.tr(),
+                      style: AppTypography.buttonLarge.copyWith(
+                        color: AppPalette.textOnBrand,
+                      ),
+                    ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.md),
           Text(
             'listings.ttl_note'.tr(args: ['14']),
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            style: AppTypography.captionS.copyWith(
+              color: AppPalette.textSecondary,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _label(String text, {bool required = false}) => Padding(
-        padding: const EdgeInsets.only(top: 16, bottom: 6),
-        child: Row(
-          children: [
-            Text(text,
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600)),
-            if (required)
-              const Text(' *', style: TextStyle(color: AppColors.error)),
-          ],
+  /// Tushuntiruvchi banner: mijoz e'lon joylaydi, haydovchilar taklif kiritadi.
+  Widget _buildScenarioBanner() {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppPalette.brandSubtle,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: AppPalette.brand.withValues(alpha: 0.2),
         ),
-      );
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppPalette.surface,
+              shape: BoxShape.circle,
+              boxShadow: AppShadows.xs,
+            ),
+            child: const Icon(
+              Icons.handyman_outlined,
+              color: AppPalette.brand,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'listings.scenario_title'.tr(),
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppPalette.brand,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'listings.scenario_desc'.tr(),
+                  style: AppTypography.captionS.copyWith(
+                    color: AppPalette.textPrimary,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  InputDecoration _box(String hint) => InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(fontSize: 14, color: Colors.grey[500]),
-        filled: true,
-        fillColor: AppColors.white,
-        counterText: '',
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.black12),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.black12),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primaryGreen),
-        ),
-      );
+  Widget _cardWrapper({required List<Widget> children}) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppPalette.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppPalette.borderDefault),
+        boxShadow: AppShadows.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
+
+  Widget _fieldLabel(
+    String text, {
+    bool required = false,
+    String? subtitle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                text,
+                style: AppTypography.bodyMMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppPalette.textPrimary,
+                ),
+              ),
+              if (required)
+                const Text(
+                  ' *',
+                  style: TextStyle(
+                    color: AppPalette.textDanger,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+            ],
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: AppTypography.captionS.copyWith(
+                color: AppPalette.textSecondary,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _fieldInputDecoration({
+    required String hint,
+    IconData? prefixIcon,
+    bool isMultiline = false,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: AppTypography.hint.copyWith(
+        color: AppPalette.textPlaceholder,
+      ),
+      filled: true,
+      fillColor: AppPalette.page,
+      counterText: '',
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: isMultiline ? AppSpacing.md : AppSpacing.lg,
+      ),
+      prefixIcon: prefixIcon != null
+          ? Icon(prefixIcon, size: 20, color: AppPalette.iconSecondary)
+          : null,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderSide: const BorderSide(color: AppPalette.borderDefault),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderSide: const BorderSide(color: AppPalette.borderDefault),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderSide: const BorderSide(color: AppPalette.borderFocus, width: 1.5),
+      ),
+    );
+  }
 
   Widget _photoRow() {
     return SizedBox(
-      height: 88,
+      height: 92,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
           for (int i = 0; i < _photos.length; i++)
             Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
               child: Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     child: Image.network(
                       AppConfig.mediaUrl(_photos[i]),
-                      width: 88,
-                      height: 88,
+                      width: 92,
+                      height: 92,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
-                        width: 88,
-                        height: 88,
-                        color: AppColors.lightGrey,
-                        child: const Icon(Icons.broken_image_outlined,
-                            color: Colors.grey),
+                        width: 92,
+                        height: 92,
+                        color: AppPalette.page,
+                        child: const Icon(
+                          Icons.broken_image_outlined,
+                          color: AppPalette.textPlaceholder,
+                        ),
                       ),
                     ),
                   ),
                   Positioned(
-                    top: 2,
-                    right: 2,
+                    top: 4,
+                    right: 4,
                     child: InkWell(
                       onTap: () => setState(() => _photos.removeAt(i)),
                       child: Container(
-                        padding: const EdgeInsets.all(3),
+                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(20),
+                          color: AppPalette.inverse.withValues(alpha: 0.65),
+                          shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close,
-                            size: 14, color: Colors.white),
+                        child: const Icon(
+                          Icons.close,
+                          size: 14,
+                          color: AppPalette.surface,
+                        ),
                       ),
                     ),
                   ),
@@ -492,33 +759,45 @@ class _CreateListingPageState extends State<CreateListingPage> {
             ),
           InkWell(
             onTap: _isUploading ? null : _pickPhoto,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.md),
             child: Container(
-              width: 88,
-              height: 88,
+              width: 92,
+              height: 92,
               decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.black12),
+                color: AppPalette.page,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: AppPalette.borderDefault,
+                  width: 1.2,
+                ),
               ),
               child: _isUploading
                   ? const Center(
                       child: SizedBox(
-                        width: 20,
-                        height: 20,
+                        width: 22,
+                        height: 22,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: AppColors.primaryGreen),
+                          strokeWidth: 2,
+                          color: AppPalette.brand,
+                        ),
                       ),
                     )
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_a_photo_outlined,
-                            size: 22, color: Colors.grey[600]),
-                        const SizedBox(height: 4),
-                        Text('listings.add_photo'.tr(),
-                            style: TextStyle(
-                                fontSize: 11, color: Colors.grey[600])),
+                        const Icon(
+                          Icons.add_a_photo_outlined,
+                          size: 24,
+                          color: AppPalette.brand,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'listings.add_photo'.tr(),
+                          style: AppTypography.captionS.copyWith(
+                            color: AppPalette.brand,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
             ),
@@ -528,12 +807,10 @@ class _CreateListingPageState extends State<CreateListingPage> {
     );
   }
 
-  /// Tur ixtiyoriy: e'lon aynan shuning uchun kerak — ma'lumotnomada
-  /// yo'q narsani ham so'rash mumkin bo'lsin.
   Widget _typePicker() {
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
       children: [
         for (final code in EquipmentTypes.codes)
           ChoiceChip(
@@ -541,14 +818,27 @@ class _CreateListingPageState extends State<CreateListingPage> {
             onSelected: (selected) =>
                 setState(() => _equipmentType = selected ? code : null),
             avatar: EquipmentTypeIcon(code, size: 20),
-            label: Text(EquipmentTypes.label(code),
-                style: const TextStyle(fontSize: 12)),
-            selectedColor: AppColors.primaryGreen.withValues(alpha: 0.18),
-            backgroundColor: AppColors.white,
+            label: Text(
+              EquipmentTypes.label(code),
+              style: AppTypography.captionS.copyWith(
+                fontWeight: _equipmentType == code
+                    ? FontWeight.w600
+                    : FontWeight.w400,
+                color: _equipmentType == code
+                    ? AppPalette.brand
+                    : AppPalette.textPrimary,
+              ),
+            ),
+            selectedColor: AppPalette.brandSubtle,
+            backgroundColor: AppPalette.page,
             side: BorderSide(
               color: _equipmentType == code
-                  ? AppColors.primaryGreen
-                  : Colors.black12,
+                  ? AppPalette.brand
+                  : AppPalette.borderDefault,
+              width: _equipmentType == code ? 1.5 : 1,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
           ),
       ],

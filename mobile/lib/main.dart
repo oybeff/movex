@@ -13,7 +13,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:movex_go/features/auth/presentation/pages/splash_screen_page.dart';
 import 'package:movex_go/features/auth/presentation/pages/language_select_page.dart';
 import 'package:movex_go/features/auth/presentation/pages/onboarding_page.dart';
-import 'package:movex_go/features/auth/presentation/pages/role_select_page.dart';
 import 'package:movex_go/features/auth/presentation/pages/register_page.dart';
 import 'package:movex_go/features/auth/presentation/pages/register_complete_page.dart';
 import 'package:movex_go/features/auth/presentation/pages/otp_verification_page.dart';
@@ -24,7 +23,6 @@ import 'package:movex_go/features/owner_home/presentation/pages/add_equipment_pa
 import 'package:movex_go/features/owner_home/presentation/pages/edit_equipment_page.dart';
 import 'package:movex_go/features/owner_home/presentation/pages/equipment_detail_page.dart';
 import 'package:movex_go/features/owner_home/presentation/pages/order_statistics_page.dart';
-import 'package:movex_go/features/client_home/presentation/pages/rent_equipment_page.dart';
 import 'package:movex_go/features/balance/presentation/pages/balance_topup_page.dart';
 import 'package:movex_go/core/models/equipment_model.dart';
 import 'dart:async';
@@ -62,9 +60,11 @@ void main() async {
       ),
       GoRoute(
         path: '/',
-        // В приложении водителя роль не выбирается: оно только для владельцев
+        // В приложении водителя — 'owner', в клиентском приложении — 'client'.
+        // Никакого экрана выбора роли («Rolingizni tanlang»): клиентское
+        // приложение строго для клиентов («Mijoz»).
         builder: (context, state) =>
-            AppFlavor.isDriver ? const LoginPage(role: 'owner') : const RoleSelectPage(),
+            AppFlavor.isDriver ? const LoginPage(role: 'owner') : const LoginPage(role: 'client'),
       ),
       GoRoute(
         path: '/driverHome',
@@ -77,16 +77,15 @@ void main() async {
       GoRoute(
         path: '/register',
         builder: (context, state) {
-          final role = state.extra as String? ?? 'client';
+          final role = state.extra as String? ?? (AppFlavor.isDriver ? 'owner' : 'client');
           return RegisterPage(role: role);
         },
       ),
       GoRoute(
         path: '/login',
-        // extra — boshida tanlangan rol. U kirishga ta'sir qilmaydi, faqat
-        // ro'yxatdan o'tishga uzatiladi: rol tanlash ekrani shu yerdan
-        // o'tadi, va usiz tanlov yo'qolardi.
-        builder: (context, state) => LoginPage(role: state.extra as String?),
+        builder: (context, state) => LoginPage(
+          role: state.extra as String? ?? (AppFlavor.isDriver ? 'owner' : 'client'),
+        ),
       ),
       GoRoute(
         path: '/clientHome',
@@ -132,13 +131,6 @@ void main() async {
         builder: (context, state) {
           final equipment = state.extra as EquipmentModel;
           return EquipmentDetailPage(equipment: equipment);
-        },
-      ),
-      GoRoute(
-        path: '/rent-equipment',
-        builder: (context, state) {
-          final equipment = state.extra as EquipmentModel;
-          return RentEquipmentPage(equipment: equipment);
         },
       ),
       GoRoute(
@@ -243,10 +235,10 @@ class _MyAppState extends State<MyApp> {
         // Toast ko'rsatish
         Future.delayed(const Duration(milliseconds: 500), () {
           if (!mounted) return;
-          final context = widget.router.routerDelegate.navigatorKey.currentContext;
-          if (context != null) {
+          final navContext = widget.router.routerDelegate.navigatorKey.currentContext;
+          if (navContext != null && navContext.mounted) {
             toastification.show(
-              context: context,
+              context: navContext,
               type: ToastificationType.success,
               style: ToastificationStyle.flatColored,
               title: Text('messages.payment_processing'.tr()),

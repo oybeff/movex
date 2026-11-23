@@ -4,18 +4,16 @@ import 'package:movex_go/features/owner_home/presentation/pages/owner_home_page.
 import 'package:movex_go/features/owner_home/presentation/pages/add_equipment_page.dart';
 import 'package:movex_go/features/owner_home/presentation/pages/edit_equipment_page.dart';
 import 'package:movex_go/features/owner_home/presentation/pages/equipment_detail_page.dart';
-import 'package:movex_go/features/client_home/presentation/pages/rent_equipment_page.dart';
 import 'package:movex_go/core/models/equipment_model.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
-import '../../features/auth/presentation/pages/role_select_page.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => const RoleSelectPage(),
+      builder: (context, state) => const LoginPage(role: 'client'),
     ),
     GoRoute(
       path: '/register',
@@ -26,7 +24,7 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/login',
-      builder: (context, state) => const LoginPage(),
+      builder: (context, state) => const LoginPage(role: 'client'),
     ),
     GoRoute(
       path: '/owner',
@@ -52,13 +50,6 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final equipment = state.extra as EquipmentModel;
         return EquipmentDetailPage(equipment: equipment);
-      },
-    ),
-    GoRoute(
-      path: '/rent-equipment',
-      builder: (context, state) {
-        final equipment = state.extra as EquipmentModel;
-        return RentEquipmentPage(equipment: equipment);
       },
     ),
   ],

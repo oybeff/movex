@@ -1,9 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/models/listing_model.dart';
 import '../../../../core/services/listing_service.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../widgets/listing_card.dart';
 
@@ -126,9 +126,9 @@ class MyListingsViewState extends State<MyListingsView> {
   Widget build(BuildContext context) {
     return _isLoading
         ? const Center(
-            child: CircularProgressIndicator(color: AppColors.primaryGreen))
+            child: CircularProgressIndicator(color: AppPalette.brand))
         : RefreshIndicator(
-            color: AppColors.primaryGreen,
+            color: AppPalette.brand,
             onRefresh: _load,
             child: _items.isEmpty
                 ? _empty()
@@ -203,13 +203,13 @@ class MyListingsViewState extends State<MyListingsView> {
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.primaryGreen.withValues(alpha: 0.12),
+              color: AppPalette.brand.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               children: [
                 const Icon(Icons.local_offer_outlined,
-                    size: 16, color: AppColors.primaryGreen),
+                    size: 16, color: AppPalette.brand),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -217,7 +217,7 @@ class MyListingsViewState extends State<MyListingsView> {
                         .tr(namedArgs: {'count': '${listing.offersCount}'}),
                     style: const TextStyle(
                         fontSize: 12,
-                        color: AppColors.primaryGreen,
+                        color: AppPalette.brand,
                         fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -233,7 +233,7 @@ class MyListingsViewState extends State<MyListingsView> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppColors.primaryGreen),
+                          strokeWidth: 2, color: AppPalette.brand),
                     ),
                   )
                 ]
@@ -281,8 +281,8 @@ class MyListingsViewState extends State<MyListingsView> {
             onPressed: () => _act(listing, _service.finish, 'listings.finished',
                 confirmKey: 'listings.finish_confirm'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGreen,
-              foregroundColor: Colors.white,
+              backgroundColor: AppPalette.brand,
+              foregroundColor: AppPalette.textOnBrand,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
@@ -302,7 +302,7 @@ class MyListingsViewState extends State<MyListingsView> {
           onPressed: () => _act(listing, _service.reject, 'listings.rejected',
               confirmKey: 'listings.reject_confirm'),
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.black,
+            foregroundColor: AppPalette.textPrimary,
             side: const BorderSide(color: Colors.black26),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -320,8 +320,8 @@ class MyListingsViewState extends State<MyListingsView> {
                   ? null
                   : {'amount': NumberFormatter.formatCurrency(listing.budget!)}),
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryGreen,
-            foregroundColor: Colors.white,
+            backgroundColor: AppPalette.brand,
+            foregroundColor: AppPalette.textOnBrand,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -338,8 +338,8 @@ class MyListingsViewState extends State<MyListingsView> {
           onPressed: () => _act(listing, _service.finish, 'listings.finished',
               confirmKey: 'listings.finish_confirm'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryGreen,
-            foregroundColor: Colors.white,
+            backgroundColor: AppPalette.brand,
+            foregroundColor: AppPalette.textOnBrand,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -356,7 +356,7 @@ class MyListingsViewState extends State<MyListingsView> {
           onPressed: () => _act(listing, _service.cancel, 'listings.cancelled',
               confirmKey: 'listings.cancel_confirm'),
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.error,
+            foregroundColor: AppPalette.textDanger,
             side: const BorderSide(color: Colors.black26),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -369,8 +369,8 @@ class MyListingsViewState extends State<MyListingsView> {
           ElevatedButton(
             onPressed: () => _showOffers(listing),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGreen,
-              foregroundColor: Colors.white,
+              backgroundColor: AppPalette.brand,
+              foregroundColor: AppPalette.textOnBrand,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
@@ -403,7 +403,7 @@ class MyListingsViewState extends State<MyListingsView> {
 
     final chosen = await showModalBottomSheet<int>(
       context: context,
-      backgroundColor: AppColors.white,
+      backgroundColor: AppPalette.surface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -473,8 +473,8 @@ class MyListingsViewState extends State<MyListingsView> {
                           onPressed: () =>
                               Navigator.pop(sheetContext, offer.id),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryGreen,
-                            foregroundColor: Colors.white,
+                            backgroundColor: AppPalette.brand,
+                            foregroundColor: AppPalette.textOnBrand,
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10)),
                           ),
