@@ -1691,7 +1691,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
                     ]),
                   ),
                   const SizedBox(width: 8),
-                  const HIcon(Icons.local_shipping_outlined, color: AppPalette.iconBrand, size: 48),
+                  const TruckPhoto(width: 96, height: 56),
                 ]),
               ),
             ),

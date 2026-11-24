@@ -69,6 +69,8 @@ class DeliveryVehicleRow(Base):
         return [b for b in (self.body_types or "").split(",") if b]
     is_enabled = Column(Boolean, nullable=False, default=True)
     sort_order = Column(Integer, nullable=False, default=0)
+    #: Картинка модели из админки; NULL — общая картинка грузовика.
+    icon_url = Column(String(255), nullable=True)
 
     __table_args__ = (
         CheckConstraint("capacity_kg > 0", name="check_delivery_vehicle_capacity"),

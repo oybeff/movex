@@ -173,6 +173,7 @@ def quote(db: Session, from_lat: float, from_lon: float, to_lat: float, to_lon: 
             "code": v.code,
             "name": v.name,
             "brand": v.brand or v.name,
+            "icon_url": v.icon_url,
             "size_class": v.size_class,
             "capacity_kg": v.capacity_kg,
             "volume_m3": v.volume_m3,
@@ -498,6 +499,7 @@ def read(db: Session, o: FreightOrder, viewer: User) -> dict:
     v = db.query(DeliveryVehicleRow).filter(DeliveryVehicleRow.code == o.vehicle_code).first()
     out = {c.name: getattr(o, c.name) for c in FreightOrder.__table__.columns}
     out["vehicle_name"] = v.name if v else o.vehicle_code
+    out["vehicle_icon_url"] = v.icon_url if v else None
     out["capacity_kg"] = v.capacity_kg if v else None
     if o.driver_id:
         d = db.query(User).filter(User.id == o.driver_id).first()

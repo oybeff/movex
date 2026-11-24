@@ -151,6 +151,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+    } elseif ($form === 'vehicle_icon') {
+        $code = (string)($_POST['code'] ?? '');
+        $f = $_FILES['icon'] ?? null;
+        if (!$f || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            $error = 'Rasm tanlanmagan';
+        } else {
+            $res = internalApiUpload(
+                '/equipment/internal/vehicles/' . rawurlencode($code) . '/icon',
+                $f['tmp_name'], (string)$f['name'], (string)($f['type'] ?: 'image/png')
+            );
+            $message = $res['ok'] ? 'Mashina rasmi yuklandi.' : null;
+            if (!$res['ok']) $error = 'Rasm yuklanmadi: ' . $res['error'];
+        }
+
     } elseif ($form === 'vehicle_save' || $form === 'vehicle_add') {
         $code = strtolower(trim((string)($_POST['code'] ?? '')));
         $name = trim((string)($_POST['name'] ?? ''));
@@ -392,11 +406,22 @@ function money($v) {
             </p>
             <table>
                 <thead>
-                    <tr><th>Kod</th><th>Nomi</th><th>Sig'im, kg</th><th>Kuzov, m³</th><th>Podacha, so'm</th><th>1 km, so'm</th><th>Rejim</th><th>1 soat / kamida</th><th>Marka / sinf / kuzov (U×E×B, m) / kuzov turlari</th><th>Tartib</th><th>Holati</th><th></th></tr>
+                    <tr><th>Rasm</th><th>Kod</th><th>Nomi</th><th>Sig'im, kg</th><th>Kuzov, m³</th><th>Podacha, so'm</th><th>1 km, so'm</th><th>Rejim</th><th>1 soat / kamida</th><th>Marka / sinf / kuzov (U×E×B, m) / kuzov turlari</th><th>Tartib</th><th>Holati</th><th></th></tr>
                 </thead>
                 <tbody>
                 <?php foreach ($vehicles as $v): $fid = 've_' . $v['code']; ?>
                     <tr style="<?= $v['is_enabled'] ? '' : 'opacity:.55' ?>">
+                        <td>
+                            <?php if (!empty($v['icon_url'])): ?>
+                                <img src="<?= htmlspecialchars($v['icon_url']) ?>" alt="" style="width:56px;height:40px;object-fit:contain;background:#EAF2FB;border-radius:8px;display:block">
+                            <?php endif; ?>
+                            <form method="POST" action="" enctype="multipart/form-data">
+                                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                                <input type="hidden" name="form" value="vehicle_icon">
+                                <input type="hidden" name="code" value="<?= htmlspecialchars($v['code']) ?>">
+                                <input type="file" name="icon" accept="image/png,image/jpeg,image/webp" style="width:110px" onchange="this.form.submit()">
+                            </form>
+                        </td>
                         <td><code><?= htmlspecialchars($v['code']) ?></code></td>
                         <td><input form="<?= $fid ?>" name="name" value="<?= htmlspecialchars($v['name']) ?>" style="width:140px"></td>
                         <td><input form="<?= $fid ?>" name="capacity_kg" value="<?= (int)$v['capacity_kg'] ?>" style="width:90px"></td>

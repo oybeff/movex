@@ -17,6 +17,7 @@
 
     API=http://127.0.0.1:8010 venv/Scripts/python tests/verify_freight.py
 """
+import base64
 import os
 import sys
 import threading
@@ -158,6 +159,23 @@ try:
         "loader_mode": "week"})
     check("неизвестный режим грузчика — 422", r.status_code == 422, f"{r.status_code}")
     check("свободные водители считаются (Y2)", isinstance(g.get("free_drivers"), int))
+
+    # Картинка модели из админки (catalog.php → Rasm), 24.11.2026
+    from app.core.config import settings as _st
+    png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==")
+    old_icon = sql("SELECT icon_url FROM delivery_vehicles WHERE code='gazel'")[0][0]
+    r = requests.post(f"{API}/equipment/internal/vehicles/gazel/icon", files={"file": ("g.png", png, "image/png")})
+    check("загрузка картинки без секрета — отказ", r.status_code in (401, 403, 404), f"{r.status_code}")
+    r = requests.post(f"{API}/equipment/internal/vehicles/gazel/icon",
+                      headers={"X-Admin-Secret": _st.ADMIN_INTERNAL_SECRET},
+                      files={"file": ("g.png", png, "image/png")})
+    check("админ загрузил картинку Gazel", r.status_code == 200 and r.json().get("icon_url", "").startswith("/static/"),
+          f"{r.status_code} {r.text[:120]}")
+    qi = requests.get(f"{API}/freight/quote", headers=client, params={
+        "from_lat": 41.30, "from_lon": 69.24, "to_lat": 41.35, "to_lon": 69.30}).json()
+    gi = next(v for v in qi["vehicles"] if v["code"] == "gazel")
+    check("картинка модели в котировке", gi.get("icon_url") == (r.json().get("icon_url") if r.status_code == 200 else 1))
+    sql("UPDATE delivery_vehicles SET icon_url=:u WHERE code='gazel'", u=old_icon)
 
     head("2. ПРОВЕРКИ ПРИ СОЗДАНИИ")
     set_money(client_id, 1_000_000)

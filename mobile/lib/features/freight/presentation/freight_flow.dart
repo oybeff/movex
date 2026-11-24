@@ -8,6 +8,7 @@ import '../../../core/utils/number_formatter.dart';
 import '../../../core/widgets/h_icon.dart';
 import '../../taxi/data/taxi_geo.dart';
 import '../../taxi/presentation/pages/address_pick_page.dart';
+import '../../taxi/presentation/widgets/taxi_ui.dart';
 import '../data/freight_api.dart';
 import 'freight_orders_page.dart';
 
@@ -213,7 +214,7 @@ class _TruckCard extends StatelessWidget {
                 width: 64,
                 height: 56,
                 decoration: BoxDecoration(color: AppPalette.page, borderRadius: BorderRadius.circular(AppRadius.md)),
-                child: const HIcon(Icons.local_shipping_outlined, color: AppPalette.iconBrand, size: 30),
+                child: TruckPhoto(iconUrl: v.iconUrl, width: 60, height: 48, background: AppPalette.page),
               ),
               const SizedBox(width: 12),
               Expanded(

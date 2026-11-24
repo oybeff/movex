@@ -155,6 +155,28 @@ def upload_catalog_icon(
     return {"icon_url": url}
 
 
+@router.post("/internal/vehicles/{code}/icon")
+def upload_vehicle_icon(
+    code: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _admin=Depends(require_internal_admin),
+):
+    """Картинка грузовика (Labo, Porter…) из админки. Старый файл удаляется."""
+    from app.models.catalog import DeliveryVehicleRow
+
+    row = db.query(DeliveryVehicleRow).filter(DeliveryVehicleRow.code == code).first()
+    if row is None:
+        raise HTTPException(404, "Mashina topilmadi")
+    url = media.save_upload(file, "catalog")
+    old = row.icon_url
+    row.icon_url = url
+    db.commit()
+    if old and media.is_own_media(old):
+        media.delete_by_url(old)
+    return {"icon_url": url}
+
+
 @router.get("/{equipment_id}", response_model=EquipmentRead)
 def get_equipment(
     equipment_id: int,

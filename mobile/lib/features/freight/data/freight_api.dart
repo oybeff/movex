@@ -13,6 +13,8 @@ class FreightVehicle {
 
   String get code => j['code'] as String;
   String get name => (j['name'] ?? code) as String;
+  /// Картинка модели из админки; null — общий грузовик.
+  String? get iconUrl => j['icon_url'] as String?;
   int get capacityKg => (j['capacity_kg'] ?? 0) as int;
   double get tonnes => capacityKg / 1000;
   bool get bodyChoice => j['has_body_choice'] == true;

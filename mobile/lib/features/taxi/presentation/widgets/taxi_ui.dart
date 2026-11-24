@@ -61,8 +61,9 @@ class EquipmentPhoto extends StatelessWidget {
   /// остальное почти не меняется.
   final Color background;
 
-  /// front_loader.png — фото «Front end loader 4» с Wikimedia Commons
-  /// (CC0, автор Wikideas1), фон вырезан. В Figma экспорт закрыт.
+  /// Все фото — из Figma «Mijoz ilovasi» (раздел «Katalog», 24.11.2026):
+  /// front_loader, roller и concrete_mixer пришли оттуда, жёлтое CC0-фото
+  /// погрузчика заменено.
   static const _photos = {
     'excavator',
     'front_loader',
@@ -72,6 +73,8 @@ class EquipmentPhoto extends StatelessWidget {
     'concrete_pump',
     'dump_truck',
     'aerial_platform',
+    'roller',
+    'concrete_mixer',
   };
 
   Widget _local() {
@@ -129,6 +132,47 @@ class EquipmentPhoto extends StatelessWidget {
       color: background,
       colorBlendMode: BlendMode.multiply,
     );
+  }
+}
+
+/// Грузовик «Yuk tashish». Своя картинка модели из админки (catalog.php →
+/// Rasm) главнее; нет её — общий тентованный грузовик из Figma.
+class TruckPhoto extends StatelessWidget {
+  const TruckPhoto({
+    super.key,
+    this.iconUrl,
+    this.width = 70,
+    this.height = 52,
+    this.background = AppPalette.brandSubtle,
+  });
+
+  final String? iconUrl;
+  final double width;
+  final double height;
+  final Color background;
+
+  Widget _asset() => Image.asset(
+        'assets/equipment_photos/freight_truck.png',
+        width: width,
+        height: height,
+        fit: BoxFit.contain,
+        color: background,
+        colorBlendMode: BlendMode.multiply,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final u = iconUrl;
+    if (u != null && u.isNotEmpty) {
+      return Image.network(
+        AppConfig.mediaUrl(u),
+        width: width,
+        height: height,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => _asset(),
+      );
+    }
+    return _asset();
   }
 }
 
@@ -339,7 +383,7 @@ class TypeTile extends StatelessWidget {
                     : (type == 'materials'
                         ? SvgPicture.asset('assets/material_types/brick.svg', width: 38, height: 38, fit: BoxFit.contain)
                         : (type == 'freight'
-                            ? SvgPicture.asset('assets/equipment_types/dump_truck.svg', width: 42, height: 42, fit: BoxFit.contain)
+                            ? const TruckPhoto()
                             : EquipmentPhoto(type))),
               ),
               const SizedBox(height: AppSpacing.sm),
