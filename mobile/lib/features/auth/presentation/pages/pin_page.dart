@@ -10,6 +10,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_ui.dart';
 import 'otp_verification_page.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// PIN ekrani. Uch vazifani bajaradi, shuning uchun rejim bilan.
 enum PinMode {
@@ -316,7 +317,7 @@ class _PinPageState extends State<PinPage> {
   Widget _errorLine(String message) => Row(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
-      const Icon(
+      const HIcon(
         Icons.error_outline_rounded,
         size: 14,
         color: AppPalette.textDanger,
@@ -451,7 +452,7 @@ class _PinPageState extends State<PinPage> {
     return _tapTarget(
       onTap: onTap,
       label: label,
-      child: Icon(icon, size: 28, color: AppPalette.iconPrimary),
+      child: HIcon(icon, size: 28, color: AppPalette.iconPrimary),
     );
   }
 

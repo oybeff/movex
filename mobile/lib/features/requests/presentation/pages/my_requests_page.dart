@@ -8,6 +8,7 @@ import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import 'create_request_page.dart';
 import 'request_detail_page.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Mijozning zayavkalari.
 class MyRequestsPage extends StatefulWidget {
@@ -79,7 +80,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         onPressed: _create,
         backgroundColor: AppColors.primaryGreen,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
+        icon: const HIcon(Icons.add),
         label: Text('requests.find_equipment'.tr()),
       ),
       body: _isLoading
@@ -104,7 +105,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     return ListView(
       children: [
         const SizedBox(height: 120),
-        Icon(Icons.assignment_outlined, size: 64, color: Colors.grey[400]),
+        HIcon(Icons.assignment_outlined, size: 64, color: Colors.grey[400]),
         const SizedBox(height: 16),
         Center(
           child: Text('requests.empty'.tr(),
@@ -159,7 +160,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(Icons.place_outlined,
+                    HIcon(Icons.place_outlined,
                         size: 15, color: Colors.grey[600]),
                     const SizedBox(width: 4),
                     Expanded(
@@ -176,7 +177,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
               Row(
                 children: [
                   if (request.budget != null) ...[
-                    Icon(Icons.payments_outlined,
+                    HIcon(Icons.payments_outlined,
                         size: 15, color: Colors.grey[600]),
                     const SizedBox(width: 4),
                     Text(

@@ -6,6 +6,7 @@ import '../../../../core/services/balance_service.dart';
 import '../../../../core/models/payment_model.dart';
 import '../../../../core/utils/number_formatter.dart';
 import 'payout_page.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class PaymentsPage extends StatefulWidget {
   const PaymentsPage({super.key});
@@ -103,7 +104,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
           // Pul yechish: ilgari egasi pulini olib chiqa olmasdi
           IconButton(
             tooltip: 'payout.title'.tr(),
-            icon: const Icon(Icons.account_balance_outlined),
+            icon: const HIcon(Icons.account_balance_outlined),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const PayoutPage()),

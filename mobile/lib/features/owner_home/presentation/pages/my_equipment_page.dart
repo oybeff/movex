@@ -12,6 +12,7 @@ import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../driver/presentation/driver_equipment_step.dart';
 import '../../../driver/presentation/driver_ui.dart';
 import '../../../materials/presentation/pages/my_materials_page.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class MyEquipmentPage extends StatefulWidget {
   const MyEquipmentPage({super.key});
@@ -228,7 +229,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                 color: selected ? color.withValues(alpha: 0.15) : AppPalette.surface,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 20),
+              child: HIcon(icon, color: color, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -242,7 +243,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
               ),
             ),
             if (selected)
-              Icon(Icons.check_rounded, color: color, size: 22),
+              HIcon(Icons.check_rounded, color: color, size: 22),
           ],
         ),
       ),
@@ -275,7 +276,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.flash_on_rounded, color: AppPalette.brand, size: 24),
+                    const HIcon(Icons.flash_on_rounded, color: AppPalette.brand, size: 24),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -287,7 +288,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right_rounded, color: AppPalette.brand),
+                    const HIcon(Icons.chevron_right_rounded, color: AppPalette.brand),
                   ],
                 ),
               ),
@@ -304,7 +305,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.description_outlined, color: AppPalette.textPrimary, size: 24),
+                    const HIcon(Icons.description_outlined, color: AppPalette.textPrimary, size: 24),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -316,7 +317,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right_rounded, color: AppPalette.textSecondary),
+                    const HIcon(Icons.chevron_right_rounded, color: AppPalette.textSecondary),
                   ],
                 ),
               ),
@@ -358,14 +359,14 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
               context,
               MaterialPageRoute(builder: (_) => const MyMaterialsPage()),
             ),
-            icon: const Icon(Icons.category_outlined, size: 16),
+            icon: const HIcon(Icons.category_outlined, size: 16),
             label: Text(
               'materials.title'.tr(),
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded, color: AppPalette.brand, size: 26),
+            icon: const HIcon(Icons.add_circle_outline_rounded, color: AppPalette.brand, size: 26),
             tooltip: 'equipment.add'.tr(),
             onPressed: _showAddEquipmentModal,
           ),
@@ -384,7 +385,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                   decoration: InputDecoration(
                     hintText: 'equipment.search'.tr(),
                     hintStyle: const TextStyle(color: AppPalette.textSecondary, fontSize: 14),
-                    prefixIcon: const Icon(Icons.search_rounded, color: AppPalette.iconSecondary),
+                    prefixIcon: const HIcon(Icons.search_rounded, color: AppPalette.iconSecondary),
                     filled: true,
                     fillColor: AppPalette.page,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -425,7 +426,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.construction_rounded, size: 64, color: AppPalette.iconSecondary),
+                            const HIcon(Icons.construction_rounded, size: 64, color: AppPalette.iconSecondary),
                             const SizedBox(height: 12),
                             Text(
                               'equipment.not_found'.tr(),
@@ -434,7 +435,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                             const SizedBox(height: 16),
                             FilledButton.icon(
                               onPressed: _showAddEquipmentModal,
-                              icon: const Icon(Icons.add),
+                              icon: const HIcon(Icons.add),
                               label: Text('equipment.add'.tr()),
                               style: FilledButton.styleFrom(backgroundColor: AppPalette.brand),
                             ),
@@ -570,7 +571,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
               ),
             ),
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded, color: AppPalette.iconSecondary, size: 20),
+              icon: const HIcon(Icons.more_vert_rounded, color: AppPalette.iconSecondary, size: 20),
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               color: AppPalette.surface,
@@ -589,7 +590,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                   value: 'change_status',
                   child: Row(
                     children: [
-                      const Icon(Icons.swap_horiz_rounded, color: AppPalette.brand, size: 18),
+                      const HIcon(Icons.swap_horiz_rounded, color: AppPalette.brand, size: 18),
                       const SizedBox(width: 8),
                       Text('messages.change_equipment_status'.tr()),
                     ],
@@ -599,7 +600,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                   value: 'edit',
                   child: Row(
                     children: [
-                      const Icon(Icons.edit_outlined, color: AppPalette.textPrimary, size: 18),
+                      const HIcon(Icons.edit_outlined, color: AppPalette.textPrimary, size: 18),
                       const SizedBox(width: 8),
                       Text('common.edit'.tr()),
                     ],
@@ -609,7 +610,7 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
                   value: 'delete',
                   child: Row(
                     children: [
-                      const Icon(Icons.delete_outline_rounded, color: AppPalette.textDanger, size: 18),
+                      const HIcon(Icons.delete_outline_rounded, color: AppPalette.textDanger, size: 18),
                       const SizedBox(width: 8),
                       Text('common.delete'.tr(), style: const TextStyle(color: AppPalette.textDanger)),
                     ],

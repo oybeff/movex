@@ -15,6 +15,7 @@ import '../../../../core/utils/number_formatter.dart';
 import 'franchise_manage_page.dart';
 import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../balance/presentation/pages/balance_topup_page.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class DashboardPage extends StatefulWidget {
   final Function(int)? onNavigate;
@@ -165,7 +166,7 @@ class _DashboardPageState extends State<DashboardPage> {
         actions: [
           const NotificationBell(),
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const HIcon(Icons.settings),
             onPressed: () => context.push('/settings'),
             tooltip: 'settings.title'.tr(),
           )
@@ -192,7 +193,7 @@ class _DashboardPageState extends State<DashboardPage> {
             //     children: [
             //       Row(
             //         children: [
-            //           const Icon(Icons.location_city, color: primaryGreen, size: 32),
+            //           const HIcon(Icons.location_city, color: primaryGreen, size: 32),
             //           const SizedBox(width: 12),
             //           Expanded(
             //             child: Text(
@@ -249,7 +250,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                   child: Row(
                     children: [
-                      Icon(stat['icon'] as IconData, color: Colors.black87, size: 28),
+                      HIcon(stat['icon'] as IconData, color: Colors.black87, size: 28),
                       const SizedBox(width: 6),
                       Text(
                         stat['title'] as String,
@@ -331,7 +332,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Text('owner.orders_chart'.tr(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 TextButton.icon(
                   onPressed: () => context.push('/order-statistics'),
-                  icon: const Icon(Icons.bar_chart, size: 18),
+                  icon: const HIcon(Icons.bar_chart, size: 18),
                   label: Text('messages.details'.tr()),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.primaryGreen,
@@ -529,7 +530,7 @@ class _ActionCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.white, size: 28),
+            HIcon(icon, color: Colors.white, size: 28),
             const SizedBox(height: 8),
             Text(
               title,

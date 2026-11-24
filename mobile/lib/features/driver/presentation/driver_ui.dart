@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/equipment_types.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../taxi/presentation/widgets/taxi_ui.dart' show formatSum;
+import '../../../core/widgets/h_icon.dart';
 
 /// Общие кирпичи экранов MoveX GO Driver — по Figma «Texnika egasi ilovasi
 /// (Owner)»: белые карточки r16 на сером фоне, синяя кнопка 52, плашки-чипы.
@@ -178,7 +179,7 @@ class DAction extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: Column(
               children: [
-                Icon(icon, size: 20, color: fg),
+                HIcon(icon, size: 20, color: fg),
                 const SizedBox(height: 4),
                 Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: fg)),
               ],

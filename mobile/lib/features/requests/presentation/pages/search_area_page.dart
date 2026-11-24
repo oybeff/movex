@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/services/equipment_request_service.dart';
 import '../../../driver/presentation/driver_ui.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Qidiruv va xabarnoma radiusi.
 ///
@@ -222,7 +223,7 @@ class _SearchAreaPageState extends State<SearchAreaPage> {
           const SizedBox(height: 10),
           Row(
             children: [
-              Icon(
+              HIcon(
                 hasPoint ? Icons.place_rounded : Icons.place_outlined,
                 size: 20,
                 color: hasPoint ? AppPalette.brand : AppPalette.iconSecondary,
@@ -251,7 +252,7 @@ class _SearchAreaPageState extends State<SearchAreaPage> {
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.brand),
                   )
-                : const Icon(Icons.my_location_rounded, size: 18),
+                : const HIcon(Icons.my_location_rounded, size: 18),
             label: Text('area.use_my_location'.tr()),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppPalette.brand,

@@ -12,6 +12,7 @@ import '../../../../core/services/material_service.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/material_type_icon.dart';
 import '../../../taxi/data/taxi_geo.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Material buyurtmasi: miqdor → og'irlik → mashina → yetkazish → jami.
 ///
@@ -384,7 +385,7 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
         children: [
           Row(
             children: [
-              const Icon(Icons.local_shipping_outlined,
+              const HIcon(Icons.local_shipping_outlined,
                   size: 20, color: AppColors.primaryGreen),
               const SizedBox(width: 8),
               Expanded(
@@ -457,7 +458,7 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
         children: [
           Row(
             children: [
-              const Icon(Icons.receipt_long_outlined, size: 20, color: AppColors.primaryGreen),
+              const HIcon(Icons.receipt_long_outlined, size: 20, color: AppColors.primaryGreen),
               const SizedBox(width: 8),
               Text(
                 'materials.total'.tr(),

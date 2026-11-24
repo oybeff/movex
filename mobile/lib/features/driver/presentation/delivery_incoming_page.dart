@@ -10,6 +10,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../requests/presentation/pages/incoming_order_page.dart' show SwipeToAccept;
 import '../data/delivery_api.dart';
 import 'driver_ui.dart';
+import '../../../core/widgets/h_icon.dart';
 
 /// Входящий заказ на доставку стройматериала — как входящий заказ техники:
 /// 15 секунд, принять свайпом (случайно не нажмёшь), отказаться кнопкой.
@@ -143,7 +144,7 @@ class _DeliveryIncomingPageState extends State<DeliveryIncomingPage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: AppPalette.brand),
+        HIcon(icon, color: AppPalette.brand),
         const SizedBox(width: 10),
         Expanded(
           child: Column(

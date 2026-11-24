@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/services/user_service.dart';
 import '../../../../core/models/user_model.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class ClientProfileDetailPage extends StatefulWidget {
   const ClientProfileDetailPage({super.key});
@@ -101,7 +102,7 @@ class _ClientProfileDetailPageState extends State<ClientProfileDetailPage> {
                 controller: fullNameController,
                 decoration: InputDecoration(
                   labelText: 'profile.full_name'.tr(),
-                  prefixIcon: const Icon(Icons.person_rounded, color: AppColors.primaryGreen),
+                  prefixIcon: const HIcon(Icons.person_rounded, color: AppColors.primaryGreen),
                   filled: true,
                   fillColor: Colors.grey[100],
                   border: OutlineInputBorder(
@@ -122,7 +123,7 @@ class _ClientProfileDetailPageState extends State<ClientProfileDetailPage> {
                 enabled: false,
                 decoration: InputDecoration(
                   labelText: 'profile.phone'.tr(),
-                  prefixIcon: const Icon(Icons.phone_rounded, color: AppColors.primaryGreen),
+                  prefixIcon: const HIcon(Icons.phone_rounded, color: AppColors.primaryGreen),
                   filled: true,
                   fillColor: Colors.grey[100],
                   border: OutlineInputBorder(
@@ -208,7 +209,7 @@ class _ClientProfileDetailPageState extends State<ClientProfileDetailPage> {
           backgroundColor: Colors.white,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.black),
+            icon: const HIcon(Icons.arrow_back_ios_rounded, color: AppColors.black),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
@@ -222,7 +223,7 @@ class _ClientProfileDetailPageState extends State<ClientProfileDetailPage> {
           actions: [
             if (!_isLoading && _user != null)
               IconButton(
-                icon: const Icon(Icons.edit, color: AppColors.primaryGreen),
+                icon: const HIcon(Icons.edit, color: AppColors.primaryGreen),
                 onPressed: _showEditProfileBottomSheet,
               ),
           ],
@@ -234,7 +235,7 @@ class _ClientProfileDetailPageState extends State<ClientProfileDetailPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+                        const HIcon(Icons.error_outline, size: 64, color: Colors.grey),
                         const SizedBox(height: 16),
                         Text(
                           'profile.update_error'.tr(),
@@ -354,7 +355,7 @@ class _InfoTile extends StatelessWidget {
               color: AppColors.primaryGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: AppColors.primaryGreen, size: 24),
+            child: HIcon(icon, color: AppColors.primaryGreen, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(

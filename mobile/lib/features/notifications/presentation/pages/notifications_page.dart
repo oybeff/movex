@@ -7,6 +7,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/models/notification_model.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Xabarnomalar ro'yxati.
 ///
@@ -230,7 +231,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         const SizedBox(height: 140),
-        Icon(icon, size: 64, color: Colors.grey[400]),
+        HIcon(icon, size: 64, color: Colors.grey[400]),
         const SizedBox(height: 16),
         Text(
           text,
@@ -263,14 +264,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 24),
         color: AppColors.grey,
-        child: Icon(isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+        child: HIcon(isPinned ? Icons.push_pin_outlined : Icons.push_pin,
             color: AppColors.white),
       ),
       secondaryBackground: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
         color: AppColors.error,
-        child: const Icon(Icons.delete_outline, color: AppColors.white),
+        child: const HIcon(Icons.delete_outline, color: AppColors.white),
       ),
       confirmDismiss: (direction) async {
         // Mahkamlash satrni o'chirmaydi, shuning uchun har doim false:
@@ -307,7 +308,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
           title: Row(
             children: [
               if (isPinned) ...[
-                const Icon(Icons.push_pin, size: 14, color: AppColors.grey),
+                const HIcon(Icons.push_pin, size: 14, color: AppColors.grey),
                 const SizedBox(width: 4),
               ],
               Expanded(

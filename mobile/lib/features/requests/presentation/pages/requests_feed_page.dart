@@ -12,6 +12,7 @@ import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import 'incoming_order_page.dart';
 import 'search_area_page.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Egaga: yaqin atrofdagi ochiq zayavkalar.
 ///
@@ -155,7 +156,7 @@ class _RequestsFeedPageState extends State<RequestsFeedPage> {
         actions: [
           IconButton(
             tooltip: 'area.title'.tr(),
-            icon: const Icon(Icons.tune),
+            icon: const HIcon(Icons.tune),
             onPressed: _openArea,
           ),
         ],
@@ -192,7 +193,7 @@ class _RequestsFeedPageState extends State<RequestsFeedPage> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.radar, size: 18, color: AppColors.secondaryGreen),
+          const HIcon(Icons.radar, size: 18, color: AppColors.secondaryGreen),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -219,7 +220,7 @@ class _RequestsFeedPageState extends State<RequestsFeedPage> {
     return ListView(
       children: [
         const SizedBox(height: 100),
-        Icon(Icons.radar, size: 64, color: Colors.grey[400]),
+        HIcon(Icons.radar, size: 64, color: Colors.grey[400]),
         const SizedBox(height: 16),
         Center(
           child: Text('requests.feed_empty'.tr(),
@@ -239,7 +240,7 @@ class _RequestsFeedPageState extends State<RequestsFeedPage> {
         Center(
           child: OutlinedButton.icon(
             onPressed: _openArea,
-            icon: const Icon(Icons.tune, size: 18),
+            icon: const HIcon(Icons.tune, size: 18),
             label: Text('area.title'.tr()),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.primaryGreen,
@@ -328,7 +329,7 @@ class _RequestsFeedPageState extends State<RequestsFeedPage> {
             const SizedBox(height: 10),
             Row(
               children: [
-                Icon(Icons.place_outlined, size: 15, color: Colors.grey[600]),
+                HIcon(Icons.place_outlined, size: 15, color: Colors.grey[600]),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(request.deliveryAddress!,
@@ -343,7 +344,7 @@ class _RequestsFeedPageState extends State<RequestsFeedPage> {
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.payments_outlined,
+                HIcon(Icons.payments_outlined,
                     size: 15, color: Colors.grey[600]),
                 const SizedBox(width: 4),
                 Text(
@@ -368,7 +369,7 @@ class _RequestsFeedPageState extends State<RequestsFeedPage> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _buildRoute(request),
-                  icon: const Icon(Icons.directions, size: 18),
+                  icon: const HIcon(Icons.directions, size: 18),
                   label: Text('orders.build_route'.tr(),
                       style: const TextStyle(fontSize: 13)),
                   style: OutlinedButton.styleFrom(

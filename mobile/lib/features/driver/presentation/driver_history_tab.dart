@@ -6,6 +6,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../data/driver_api.dart';
 import 'driver_order_page.dart';
 import 'driver_ui.dart';
+import '../../../core/widgets/h_icon.dart';
 
 /// «Buyurtmalar» — макет 02 O1/O2: «Faol», «Rejalashtirilgan», «Tarix»;
 /// тап — живой заказ открывает исполнение, завершённый — чек (O3).
@@ -197,7 +198,7 @@ class _OrderCard extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(color: DChip.blueBg, borderRadius: BorderRadius.circular(8)),
-                    child: const Icon(Icons.construction_rounded, size: 20, color: AppPalette.brand),
+                    child: const HIcon(Icons.construction_rounded, size: 20, color: AppPalette.brand),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -233,7 +234,7 @@ class _OrderCard extends StatelessWidget {
                   ),
                   Text(o.cash ? 'driver.pay_cash'.tr() : 'driver.pay_online'.tr(),
                       style: const TextStyle(fontSize: 12, color: AppPalette.textSecondary)),
-                  const Icon(Icons.chevron_right_rounded, size: 18, color: AppPalette.textSecondary),
+                  const HIcon(Icons.chevron_right_rounded, size: 18, color: AppPalette.textSecondary),
                 ],
               ),
             ],

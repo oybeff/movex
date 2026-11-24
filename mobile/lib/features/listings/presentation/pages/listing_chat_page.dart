@@ -9,6 +9,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/models/listing_model.dart';
 import '../../../../core/services/listing_service.dart';
 import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// E'lon bo'yicha mijoz va haydovchi o'rtasidagi ilova ichidagi chat.
 class ListingChatPage extends StatefulWidget {
@@ -137,7 +138,7 @@ class _ListingChatPageState extends State<ListingChatPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new,
+          icon: const HIcon(Icons.arrow_back_ios_new,
               size: 20, color: AppPalette.textPrimary),
           onPressed: () => Navigator.maybePop(context),
         ),
@@ -166,13 +167,13 @@ class _ListingChatPageState extends State<ListingChatPage> {
         actions: [
           if (widget.listing.hasTelegram)
             IconButton(
-              icon: const Icon(Icons.send_rounded, color: Color(0xFF0088CC), size: 20),
+              icon: const HIcon(Icons.send_rounded, color: Color(0xFF0088CC), size: 20),
               tooltip: 'Telegram',
               onPressed: () => _openTelegram(widget.listing.contactTelegram!),
             ),
           if (widget.listing.hasPhone)
             IconButton(
-              icon: const Icon(Icons.phone_outlined,
+              icon: const HIcon(Icons.phone_outlined,
                   color: AppColors.primaryGreen, size: 20),
               tooltip: 'Telefon',
               onPressed: () => _callPhone(widget.listing.contactPhone!),
@@ -188,7 +189,7 @@ class _ListingChatPageState extends State<ListingChatPage> {
             color: AppPalette.brandSubtle.withValues(alpha: 0.5),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, size: 16, color: AppPalette.brand),
+                const HIcon(Icons.info_outline, size: 16, color: AppPalette.brand),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -358,7 +359,7 @@ class _ListingChatPageState extends State<ListingChatPage> {
                               ),
                             ),
                           )
-                        : const Icon(
+                        : const HIcon(
                             Icons.send_rounded,
                             color: AppPalette.textOnBrand,
                             size: 20,

@@ -108,7 +108,8 @@ def profile_dict(db: Session, user: User) -> dict:
         if v is not None:
             vehicle = {
                 "code": v.code, "name": v.name, "capacity_kg": v.capacity_kg,
-                "has_body_choice": bool(v.has_body_choice),
+                "has_body_choice": len(v.body_list) > 1,
+                "body_types": v.body_list,
                 "base_fee": v.base_fee, "price_per_km": v.price_per_km,
             }
     return {
@@ -153,7 +154,13 @@ def save_profile(db: Session, user: User, data) -> dict:
     p.plate = (data.plate or "").strip().upper() or None
     p.price_per_km = data.price_per_km
     p.base_fee = data.base_fee
-    p.body_type = data.body_type if vehicle.has_body_choice else None
+    # Кузов нужен для «Yuk tashish» (клиент выбирает тип кузова). Для
+    # стройматериалов он не важен, поэтому не обязателен: без кузова
+    # водителю не придут перевозки, где клиент кузов выбрал.
+    bodies = vehicle.body_list
+    if data.body_type is not None and bodies and data.body_type not in bodies:
+        raise HTTPException(400, "Bu mashinada bunday kuzov yo'q")
+    p.body_type = data.body_type if data.body_type is not None else (bodies[0] if len(bodies) == 1 else None)
 
     db.query(DeliveryDriverCategory).filter(DeliveryDriverCategory.user_id == user.id).delete()
     for c in data.categories:

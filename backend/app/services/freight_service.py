@@ -23,7 +23,7 @@
 Завершает КЛИЕНТ (как «Yetkazildi»): иначе водитель забирал бы деньги, не
 доехав.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import ROUND_CEILING, Decimal
 from typing import List, Optional
 
@@ -80,32 +80,104 @@ def _km(a_lat, a_lon, b_lat, b_lon) -> Decimal:
     return pricing_service.distance_km(a_lat, a_lon, b_lat, b_lon).quantize(Decimal("0.01"))
 
 
+BODY_TYPES = ("tent", "open", "van", "isothermal", "fridge", "tank", "manipulator")
+
+
+def loader_fee(db: Session) -> Decimal:
+    """Грузчик (Y4 «Yuklovchi kerak») — фиксированная сумма из админки."""
+    from app.models.app_settings import AppSettings
+
+    row = db.query(AppSettings).filter(AppSettings.key == "freight_loader_fee").first()
+    try:
+        return Decimal(str(row.value)) if row and row.value not in (None, "") else Decimal("0")
+    except Exception:
+        return Decimal("0")
+
+
+def fit_problem(v: DeliveryVehicleRow, weight_kg: Optional[Decimal], l=None, w=None, h=None) -> Optional[str]:
+    """
+    Y7 «Bu mashinaga sig'maydi»: груз тяжелее или длиннее кузова. Длину и
+    ширину можно развернуть, высоту — нет. None — помещается.
+    """
+    if weight_kg is not None and weight_kg > v.capacity_kg:
+        return f"{v.name} {v.capacity_kg / 1000:g} t ko'taradi. Yukingiz {float(weight_kg):g} kg"
+    if None in (l, w) or v.body_length_m is None or v.body_width_m is None:
+        return None
+    a, b = sorted([_dec(l), _dec(w)], reverse=True)
+    bl, bw = sorted([_dec(v.body_length_m), _dec(v.body_width_m)], reverse=True)
+    if a > bl or b > bw:
+        return (f"{v.name} kuzovi {float(v.body_length_m):g}×{float(v.body_width_m):g} m. "
+                f"Yukingiz {float(a):g}×{float(b):g} m — xavfsiz tashib bo'lmaydi")
+    if h is not None and v.body_height_m is not None and _dec(h) > _dec(v.body_height_m):
+        return f"{v.name} kuzovi balandligi {float(v.body_height_m):g} m. Yukingiz {float(_dec(h)):g} m"
+    return None
+
+
+def _free_drivers(db: Session, v: DeliveryVehicleRow, body: Optional[str],
+                  lat: float, lon: float, radius: Decimal) -> tuple:
+    """Y2 «14 ta bo'sh · 1.8 km»: сколько водителей онлайн и ближайший."""
+    q = db.query(DeliveryDriverProfile).filter(
+        DeliveryDriverProfile.vehicle_code == v.code, DeliveryDriverProfile.is_online.is_(True))
+    if body:
+        q = q.filter(DeliveryDriverProfile.body_type == body)
+    count, nearest = 0, None
+    for p in q.all():
+        if p.latitude is None or p.longitude is None:
+            continue
+        d = pricing_service.distance_km(float(p.latitude), float(p.longitude), lat, lon)
+        if d <= radius:
+            count += 1
+            nearest = d if nearest is None else min(nearest, d)
+    return count, (nearest.quantize(Decimal("0.1")) if nearest is not None else None)
+
+
 def quote(db: Session, from_lat: float, from_lon: float, to_lat: float, to_lon: float,
-          tonnes: Optional[Decimal], hours: Optional[int]) -> dict:
-    """Все машины с ценой на этот маршрут и подсказка по весу груза."""
+          tonnes: Optional[Decimal], hours: Optional[int], body: Optional[str] = None,
+          weight_kg: Optional[Decimal] = None, length=None, width=None, height=None,
+          needs_loader: bool = False) -> dict:
+    """Все машины с ценой на этот маршрут, свободные водители и «влезет ли»."""
     km = _km(from_lat, from_lon, to_lat, to_lon)
+    if weight_kg is None and tonnes is not None:
+        weight_kg = tonnes * 1000
+    loader = loader_fee(db) if needs_loader else Decimal("0")
+    radius = delivery_service.radius_km(db)
     items = []
     for v in _vehicles(db):
         price, h = price_for(v, km, hours)
+        min_price, _ = price_for(v, Decimal("0"), None)
+        free, nearest = _free_drivers(db, v, body if body in v.body_list else None, from_lat, from_lon, radius)
+        problem = fit_problem(v, weight_kg, length, width, height)
         items.append({
             "code": v.code,
             "name": v.name,
+            "brand": v.brand or v.name,
+            "size_class": v.size_class,
             "capacity_kg": v.capacity_kg,
             "volume_m3": v.volume_m3,
-            "has_body_choice": bool(v.has_body_choice),
+            "body_length_m": v.body_length_m,
+            "body_width_m": v.body_width_m,
+            "body_height_m": v.body_height_m,
+            "body_types": v.body_list,
+            "has_body_choice": len(v.body_list) > 1,
             "price_mode": v.price_mode,
+            "price_per_km": v.price_per_km,
+            "base_fee": v.base_fee,
             "hours": h,
             "min_hours": v.min_hours,
-            "price": price,
+            "min_price": min_price,
+            "price": (price + loader) if price is not None else None,
+            "free_drivers": free,
+            "nearest_km": nearest,
+            "fits": problem is None,
+            "fit_problem": problem,
         })
     suggested = None
-    if tonnes is not None and tonnes > 0:
-        need = tonnes * 1000
-        for it in items:
-            if it["price"] is not None and it["capacity_kg"] >= need:
+    for it in items:
+        if it["price"] is not None and it["fits"] and (weight_kg is None or it["capacity_kg"] >= weight_kg):
+            if weight_kg is not None or length is not None:
                 suggested = it["code"]
                 break
-    return {"distance_km": km, "vehicles": items, "suggested": suggested}
+    return {"distance_km": km, "loader_fee": loader_fee(db), "vehicles": items, "suggested": suggested}
 
 
 def create(db: Session, client: User, data) -> FreightOrder:
@@ -118,17 +190,28 @@ def create(db: Session, client: User, data) -> FreightOrder:
     if v is None:
         raise HTTPException(400, "Bunday mashina ro'yxatda yo'q")
     body = data.body_type
-    if v.has_body_choice:
-        if body not in ("tent", "open"):
-            raise HTTPException(400, "Kuzovni tanlang: tentli yoki tentsiz")
+    bodies = v.body_list
+    if len(bodies) > 1:
+        if body not in bodies:
+            raise HTTPException(400, "Kuzov turini tanlang")
     else:
-        body = None
-    if data.cargo_tonnes is not None and _dec(data.cargo_tonnes) * 1000 > v.capacity_kg:
-        raise HTTPException(400, f"{v.name} {v.capacity_kg / 1000:g} tonnagacha ko'taradi — kattaroq mashina tanlang")
+        body = bodies[0] if bodies else None
+    weight = _dec(data.cargo_tonnes) * 1000 if data.cargo_tonnes is not None else None
+    problem = fit_problem(v, weight, data.cargo_length_m, data.cargo_width_m, data.cargo_height_m)
+    if problem:
+        raise HTTPException(400, problem + " — kattaroq mashina tanlang")
     km = _km(data.from_latitude, data.from_longitude, data.to_latitude, data.to_longitude)
     price, hours = price_for(v, km, data.hours)
     if price is None or price <= 0:
         raise HTTPException(400, "Bu mashina uchun narx hali qo'yilmagan")
+    loader = loader_fee(db) if data.needs_loader else Decimal("0")
+    price = price + loader
+    scheduled = data.scheduled_at
+    if scheduled is not None:
+        if scheduled.tzinfo is None:
+            scheduled = scheduled.replace(tzinfo=timezone.utc)
+        if scheduled < _now() - timedelta(minutes=5):
+            raise HTTPException(400, "Vaqt o'tib ketgan — boshqa vaqt tanlang")
 
     payment = data.payment_method or "balance"
     frozen = Decimal("0")
@@ -144,6 +227,9 @@ def create(db: Session, client: User, data) -> FreightOrder:
     order = FreightOrder(
         client_id=client.id, vehicle_code=v.code, body_type=body,
         cargo_tonnes=data.cargo_tonnes, cargo_note=(data.cargo_note or None),
+        cargo_type=data.cargo_type, cargo_length_m=data.cargo_length_m, cargo_width_m=data.cargo_width_m,
+        cargo_height_m=data.cargo_height_m, cargo_volume_m3=data.cargo_volume_m3,
+        needs_loader=bool(data.needs_loader), loader_fee=loader, scheduled_at=scheduled,
         from_address=data.from_address, from_latitude=data.from_latitude, from_longitude=data.from_longitude,
         to_address=data.to_address, to_latitude=data.to_latitude, to_longitude=data.to_longitude,
         distance_km=km, price_mode=v.price_mode, hours=hours, price=price,
@@ -175,6 +261,9 @@ def _card(db: Session, order: FreightOrder, to_pickup: Decimal) -> dict:
     return {
         "id": order.id, "kind": "freight", "vehicle_code": order.vehicle_code, "body_type": order.body_type,
         "cargo_tonnes": order.cargo_tonnes, "cargo_note": order.cargo_note,
+        "cargo_type": order.cargo_type, "cargo_length_m": order.cargo_length_m,
+        "cargo_width_m": order.cargo_width_m, "cargo_height_m": order.cargo_height_m,
+        "needs_loader": order.needs_loader, "scheduled_at": order.scheduled_at,
         "from_address": order.from_address, "to_address": order.to_address,
         "distance_km": order.distance_km, "to_pickup_km": to_pickup.quantize(Decimal("0.1")),
         "price_mode": order.price_mode, "hours": order.hours,

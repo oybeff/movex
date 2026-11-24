@@ -163,7 +163,16 @@ class DeliveryVehicleModel {
   /// Tentli / tentsiz — у бортовых (Labo, Porter, Gazel, Isuzu…).
   final bool hasBodyChoice;
 
-  const DeliveryVehicleModel({required this.code, required this.capacityKg, this.name, this.hasBodyChoice = false});
+  /// Кузова этой модели: tent, open, van, isothermal, fridge, tank, manipulator.
+  final List<String> bodyTypes;
+
+  const DeliveryVehicleModel({
+    required this.code,
+    required this.capacityKg,
+    this.name,
+    this.hasBodyChoice = false,
+    this.bodyTypes = const [],
+  });
 
   double get capacityTonnes => capacityKg / 1000;
 
@@ -173,6 +182,7 @@ class DeliveryVehicleModel {
         capacityKg: json['capacity_kg'] as int,
         name: json['name'] as String?,
         hasBodyChoice: json['has_body_choice'] == true,
+        bodyTypes: [for (final b in (json['body_types'] as List? ?? const [])) b as String],
       );
 }
 

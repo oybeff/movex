@@ -13,6 +13,7 @@ import '../../../core/widgets/map_or_placeholder.dart';
 import '../../requests/presentation/pages/incoming_order_page.dart' show SwipeToAccept;
 import '../data/driver_api.dart';
 import 'driver_ui.dart';
+import '../../../core/widgets/h_icon.dart';
 
 /// Входящий заказ водителя — макет 01: H3 (сейчас, 15 секунд на ответ,
 /// свайп), H5 (запланированный — кнопками), H4 (причина отказа).
@@ -99,7 +100,7 @@ class _DriverIncomingPageState extends State<DriverIncomingPage> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(color: DChip.redBg, borderRadius: BorderRadius.circular(24)),
-                child: const Icon(Icons.account_balance_wallet_outlined, color: AppPalette.textDanger),
+                child: const HIcon(Icons.account_balance_wallet_outlined, color: AppPalette.textDanger),
               ),
             ),
             const SizedBox(height: 12),
@@ -263,7 +264,7 @@ class _DriverIncomingPageState extends State<DriverIncomingPage> {
                         Text('driver.client_rating'.tr(),
                             style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary)),
                         const SizedBox(width: 6),
-                        const Icon(Icons.star_rounded, size: 16, color: Color(0xFFF5B400)),
+                        const HIcon(Icons.star_rounded, size: 16, color: Color(0xFFF5B400)),
                         Text(o.clientRating!.toStringAsFixed(1),
                             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                       ]),
@@ -280,7 +281,7 @@ class _DriverIncomingPageState extends State<DriverIncomingPage> {
                         decoration: BoxDecoration(color: DChip.blueBg, borderRadius: BorderRadius.circular(12)),
                         child: Row(
                           children: [
-                            const Icon(Icons.event_available_rounded, size: 18, color: AppPalette.brand),
+                            const HIcon(Icons.event_available_rounded, size: 18, color: AppPalette.brand),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text('driver.remind_hour'.tr(),
@@ -384,7 +385,7 @@ class _DeclineSheetState extends State<_DeclineSheet> {
                     ),
                     child: Row(
                       children: [
-                        Icon(_picked == r ? Icons.radio_button_checked : Icons.radio_button_off,
+                        HIcon(_picked == r ? Icons.radio_button_checked : Icons.radio_button_off,
                             color: _picked == r ? AppPalette.brand : AppPalette.textPlaceholder, size: 22),
                         const SizedBox(width: 10),
                         Text('driver.reason_$r'.tr(), style: const TextStyle(fontSize: 15)),

@@ -16,6 +16,7 @@ import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/services/permission_service.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class EditEquipmentPage extends StatefulWidget {
   final int equipmentId;
@@ -540,7 +541,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                             width: double.infinity,
                             child: OutlinedButton.icon(
                               onPressed: _showLocationPicker,
-                              icon: const Icon(Icons.map),
+                              icon: const HIcon(Icons.map),
                               label: Text('equipment.select_on_map'.tr()),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -617,7 +618,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                         initialValue: _status,
                         dropdownColor: Colors.white,
                         decoration: _inputDecoration('equipment.status'.tr()),
-                        icon: const Icon(Icons.arrow_drop_down, color: AppColors.primaryGreen),
+                        icon: const HIcon(Icons.arrow_drop_down, color: AppColors.primaryGreen),
                         elevation: 8,
                         borderRadius: BorderRadius.circular(12),
                         style: const TextStyle(
@@ -630,7 +631,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                             value: 'available',
                             child: Row(
                               children: [
-                                const Icon(Icons.check_circle, size: 20, color: Colors.green),
+                                const HIcon(Icons.check_circle, size: 20, color: Colors.green),
                                 const SizedBox(width: 12),
                                 Text('equipment.status_available'.tr()),
                               ],
@@ -640,7 +641,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                             value: 'busy',
                             child: Row(
                               children: [
-                                const Icon(Icons.work, size: 20, color: Colors.orange),
+                                const HIcon(Icons.work, size: 20, color: Colors.orange),
                                 const SizedBox(width: 12),
                                 Text('equipment.status_busy'.tr()),
                               ],
@@ -650,7 +651,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                             value: 'repair',
                             child: Row(
                               children: [
-                                const Icon(Icons.build, size: 20, color: Colors.red),
+                                const HIcon(Icons.build, size: 20, color: Colors.red),
                                 const SizedBox(width: 12),
                                 Text('equipment.status_repair'.tr()),
                               ],
@@ -801,7 +802,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                         width: 88,
                         height: 88,
                         color: AppColors.lightGrey,
-                        child: const Icon(Icons.broken_image_outlined,
+                        child: const HIcon(Icons.broken_image_outlined,
                             color: Colors.grey),
                       ),
                     ),
@@ -817,7 +818,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                           color: Colors.black54,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(Icons.close,
+                        child: const HIcon(Icons.close,
                             size: 14, color: Colors.white),
                       ),
                     ),
@@ -848,7 +849,7 @@ class _EditEquipmentPageState extends State<EditEquipmentPage> {
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.add_a_photo_outlined,
+                        const HIcon(Icons.add_a_photo_outlined,
                             color: Colors.grey),
                         const SizedBox(height: 4),
                         Text('equipment.add_photo'.tr(),
@@ -1092,7 +1093,7 @@ class _LocationPickerBottomSheetState extends State<_LocationPickerBottomSheet> 
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: const HIcon(Icons.close),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
@@ -1132,7 +1133,7 @@ class _LocationPickerBottomSheetState extends State<_LocationPickerBottomSheet> 
 
                         // Markazda qotib turgan marker
                         Center(
-                          child: Icon(
+                          child: HIcon(
                             Icons.location_on,
                             size: 48,
                             color: Colors.red,
@@ -1208,7 +1209,7 @@ class _LocationPickerBottomSheetState extends State<_LocationPickerBottomSheet> 
                                   ],
                                 ),
                                 child: IconButton(
-                                  icon: const Icon(Icons.add, size: 24),
+                                  icon: const HIcon(Icons.add, size: 24),
                                   onPressed: _zoomIn,
                                   color: AppColors.primaryGreen,
                                   padding: const EdgeInsets.all(12),
@@ -1229,7 +1230,7 @@ class _LocationPickerBottomSheetState extends State<_LocationPickerBottomSheet> 
                                   ],
                                 ),
                                 child: IconButton(
-                                  icon: const Icon(Icons.remove, size: 24),
+                                  icon: const HIcon(Icons.remove, size: 24),
                                   onPressed: _zoomOut,
                                   color: AppColors.primaryGreen,
                                   padding: const EdgeInsets.all(12),
@@ -1251,7 +1252,7 @@ class _LocationPickerBottomSheetState extends State<_LocationPickerBottomSheet> 
                                     ],
                                   ),
                                   child: IconButton(
-                                    icon: const Icon(Icons.my_location, size: 24),
+                                    icon: const HIcon(Icons.my_location, size: 24),
                                     onPressed: _goToMyLocation,
                                     color: AppColors.primaryGreen,
                                     padding: const EdgeInsets.all(12),

@@ -9,6 +9,7 @@ import '../../../../core/models/material_model.dart';
 import '../../../../core/services/material_service.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/material_type_icon.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Sotuvchining materiallari: qo'shish, ko'rish, o'chirish.
 ///
@@ -120,12 +121,12 @@ class _MyMaterialsPageState extends State<MyMaterialsPage> {
         actions: [
           IconButton(
             tooltip: 'material_orders.title_seller'.tr(),
-            icon: const Icon(Icons.receipt_long_outlined),
+            icon: const HIcon(Icons.receipt_long_outlined),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const MaterialOrdersPage(asSeller: true)),
             ),
           ),
-          IconButton(onPressed: _add, icon: const Icon(Icons.add)),
+          IconButton(onPressed: _add, icon: const HIcon(Icons.add)),
         ],
       ),
       body: _isLoading
@@ -233,7 +234,7 @@ class _MyMaterialsPageState extends State<MyMaterialsPage> {
             alignment: Alignment.centerRight,
             child: TextButton.icon(
               onPressed: () => _delete(product),
-              icon: const Icon(Icons.delete_outline, size: 18),
+              icon: const HIcon(Icons.delete_outline, size: 18),
               label: Text('common.delete'.tr()),
               style: TextButton.styleFrom(foregroundColor: AppColors.error),
             ),

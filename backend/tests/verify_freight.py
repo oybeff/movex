@@ -125,6 +125,23 @@ try:
     check("3 часа — 600 000", D(next(v for v in q3["vehicles"] if v["code"] == "kamaz")["price"]) == 600000)
     check("у Gazel есть выбор кузова", g["has_body_choice"] is True)
 
+    head("1b. ШАГИ Y1–Y8: МАРКА, КУЗОВА, «SIG'MAYDI», ГРУЗЧИК")
+    check("у машин марка и класс (Y1)", g.get("brand") and g.get("size_class") in ("small", "medium", "large", "trailer"),
+          str({k: g.get(k) for k in ("brand", "size_class")}))
+    check("у Gazel несколько кузовов (Y3)", len(g.get("body_types") or []) > 1, str(g.get("body_types")))
+    qd = requests.get(f"{API}/freight/quote", headers=client, params={
+        "from_lat": 41.30, "from_lon": 69.24, "to_lat": 41.35, "to_lon": 69.30,
+        "weight_kg": 800, "length": 3.6, "width": 1.2, "height": 1.0}).json()
+    gd = next(v for v in qd["vehicles"] if v["code"] == "gazel")
+    check("груз 3,6 м в Gazel (3,0 м) — «sig'maydi» (Y7)", gd["fits"] is False and gd["fit_problem"], str(gd.get("fit_problem")))
+    fd = next(v for v in qd["vehicles"] if v["code"] == "fura")
+    check("в Fura влезает", fd["fits"] is True)
+    ql = requests.get(f"{API}/freight/quote", headers=client, params={
+        "from_lat": 41.30, "from_lon": 69.24, "to_lat": 41.35, "to_lon": 69.30, "loader": "true"}).json()
+    gl = next(v for v in ql["vehicles"] if v["code"] == "gazel")
+    check("грузчик добавляется к цене", D(gl["price"]) - D(g["price"]) == D(ql["loader_fee"]), f"{gl['price']} {g['price']}")
+    check("свободные водители считаются (Y2)", isinstance(g.get("free_drivers"), int))
+
     head("2. ПРОВЕРКИ ПРИ СОЗДАНИИ")
     set_money(client_id, 1_000_000)
     r = requests.post(f"{API}/freight/orders", headers=client, json={**A, "vehicle_code": "gazel"})
@@ -132,6 +149,15 @@ try:
     r = requests.post(f"{API}/freight/orders", headers=client,
                       json={**A, "vehicle_code": "gazel", "body_type": "tent", "cargo_tonnes": 5})
     check("5 т в Gazel — 400", r.status_code == 400, f"{r.status_code}")
+    r = requests.post(f"{API}/freight/orders", headers=client,
+                      json={**A, "vehicle_code": "gazel", "body_type": "tent", "cargo_length_m": 3.6, "cargo_width_m": 1.2})
+    check("длинный груз в Gazel — 400", r.status_code == 400, f"{r.status_code}")
+    r = requests.post(f"{API}/freight/orders", headers=client,
+                      json={**A, "vehicle_code": "gazel", "body_type": "manipulator"})
+    check("кузова, которого нет у модели, — 400", r.status_code == 400, f"{r.status_code}")
+    r = requests.post(f"{API}/freight/orders", headers=client,
+                      json={**A, "vehicle_code": "gazel", "body_type": "tent", "scheduled_at": "2020-01-01T10:00:00Z"})
+    check("время в прошлом — 400", r.status_code == 400, f"{r.status_code}")
     r = requests.post(f"{API}/freight/orders", headers=client,
                       json={**A, "vehicle_code": "gazel", "body_type": "tent", "cargo_tonnes": 1.5,
                             "price": 1, "cargo_note": "Mebel"})

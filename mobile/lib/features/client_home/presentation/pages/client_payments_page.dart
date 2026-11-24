@@ -5,6 +5,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/services/balance_service.dart';
 import '../../../../core/models/balance_model.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class ClientPaymentsPage extends StatefulWidget {
   const ClientPaymentsPage({super.key});
@@ -162,7 +163,7 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
           backgroundColor: Colors.white,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.black),
+            icon: const HIcon(Icons.arrow_back_ios_rounded, color: AppColors.black),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
@@ -255,7 +256,7 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
                             padding: const EdgeInsets.all(48),
                             child: Column(
                               children: [
-                                Icon(
+                                HIcon(
                                   Icons.receipt_long_rounded,
                                   size: 64,
                                   color: Colors.grey.shade300,
@@ -335,7 +336,7 @@ class _BalanceCard extends StatelessWidget {
               color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: HIcon(icon, color: color, size: 20),
           ),
           const SizedBox(height: 12),
           Text(
@@ -451,7 +452,7 @@ class _TransactionCard extends StatelessWidget {
                         color: typeColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(
+                      child: HIcon(
                         typeIcon,
                         color: typeColor,
                         size: 20,
@@ -541,7 +542,7 @@ class _TransactionCard extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(
+                  HIcon(
                     Icons.credit_card_rounded,
                     size: 16,
                     color: Colors.grey.shade600,

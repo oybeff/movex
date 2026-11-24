@@ -25,6 +25,7 @@ import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../../core/widgets/delete_account_button.dart';
 import '../../../../core/services/pin_service.dart';
 import '../../../settings/presentation/pages/privacy_page.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class ClientProfilePage extends StatefulWidget {
   const ClientProfilePage({super.key});
@@ -194,7 +195,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                   ),
                 ],
               ),
-              Icon(
+              HIcon(
                 Icons.account_balance_wallet_rounded,
                 color: Colors.white.withValues(alpha: 0.6),
                 size: 28,
@@ -218,7 +219,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                     children: [
                       Row(
                         children: [
-                          Icon(
+                          HIcon(
                             Icons.check_circle_rounded,
                             color: Colors.white.withValues(alpha: 0.7),
                             size: 14,
@@ -260,7 +261,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                     children: [
                       Row(
                         children: [
-                          Icon(
+                          HIcon(
                             Icons.lock_rounded,
                             color: Colors.white.withValues(alpha: 0.7),
                             size: 14,
@@ -598,7 +599,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                 controller: fullNameController,
                 decoration: InputDecoration(
                   labelText: 'profile.full_name'.tr(),
-                  prefixIcon: const Icon(Icons.person_rounded, color: AppColors.primaryGreen),
+                  prefixIcon: const HIcon(Icons.person_rounded, color: AppColors.primaryGreen),
                   filled: true,
                   fillColor: Colors.grey[100],
                   border: OutlineInputBorder(
@@ -619,7 +620,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                 enabled: false,
                 decoration: InputDecoration(
                   labelText: 'profile.phone'.tr(),
-                  prefixIcon: const Icon(Icons.phone_rounded, color: AppColors.primaryGreen),
+                  prefixIcon: const HIcon(Icons.phone_rounded, color: AppColors.primaryGreen),
                   filled: true,
                   fillColor: Colors.grey[100],
                   border: OutlineInputBorder(
@@ -713,7 +714,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+                        const HIcon(Icons.error_outline, size: 64, color: Colors.grey),
                         const SizedBox(height: 16),
                         Text(
                           'profile.update_error'.tr(),
@@ -1065,7 +1066,7 @@ class _SettingsTile extends StatelessWidget {
           color: AppColors.primaryGreen.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(
+        child: HIcon(
           icon,
           color: AppColors.primaryGreen,
           size: 22,
@@ -1092,7 +1093,7 @@ class _SettingsTile extends StatelessWidget {
             )
           : null,
       trailing: showArrow
-          ? const Icon(
+          ? const HIcon(
               Icons.arrow_forward_ios_rounded,
               size: 16,
               color: AppColors.grey,
@@ -1151,7 +1152,7 @@ class _ContactMethodTile extends StatelessWidget {
                 color: AppColors.primaryGreen.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
+              child: HIcon(
                 _getIconForType(method.type),
                 color: AppColors.primaryGreen,
                 size: 22,
@@ -1181,7 +1182,7 @@ class _ContactMethodTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
+            HIcon(
               Icons.arrow_forward_ios_rounded,
               size: 16,
               color: Colors.grey.shade400,
@@ -1215,7 +1216,7 @@ class _LogoutButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            HIcon(
               Icons.logout_rounded,
               color: Colors.red.shade600,
               size: 22,
@@ -1284,7 +1285,7 @@ class _LanguageOption extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              const Icon(
+              const HIcon(
                 Icons.check_circle_rounded,
                 color: AppColors.primaryGreen,
                 size: 24,

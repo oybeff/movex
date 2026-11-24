@@ -5,6 +5,7 @@ import '../../../../core/services/franchise_service.dart';
 import '../../../../core/models/franchise_model.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Franchayzing ekrani.
 ///
@@ -65,7 +66,7 @@ class _FranchiseManagePageState extends State<FranchiseManagePage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.construction_outlined,
+              HIcon(Icons.construction_outlined,
                   size: 64, color: Colors.grey[400]),
               const SizedBox(height: 16),
               Text(
@@ -134,7 +135,7 @@ class _FranchiseManagePageState extends State<FranchiseManagePage> {
           centerTitle: true,
           backgroundColor: Colors.blueAccent,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const HIcon(Icons.arrow_back),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -149,7 +150,7 @@ class _FranchiseManagePageState extends State<FranchiseManagePage> {
           centerTitle: true,
           backgroundColor: Colors.blueAccent,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const HIcon(Icons.arrow_back),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -157,7 +158,7 @@ class _FranchiseManagePageState extends State<FranchiseManagePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.store_mall_directory, size: 80, color: Colors.grey),
+              const HIcon(Icons.store_mall_directory, size: 80, color: Colors.grey),
               const SizedBox(height: 20),
               Text(
                 'franchise.no_franchise'.tr(),
@@ -180,12 +181,12 @@ class _FranchiseManagePageState extends State<FranchiseManagePage> {
         centerTitle: true,
         backgroundColor: Colors.blueAccent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const HIcon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const HIcon(Icons.refresh),
             onPressed: _loadFranchise,
           ),
         ],
@@ -203,19 +204,19 @@ class _FranchiseManagePageState extends State<FranchiseManagePage> {
         },
         items: [
           BottomNavigationBarItem(
-            icon: const Icon(Icons.agriculture),
+            icon: const HIcon(Icons.agriculture),
             label: 'franchise.equipment'.tr(),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.assignment),
+            icon: const HIcon(Icons.assignment),
             label: 'franchise.orders'.tr(),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.attach_money),
+            icon: const HIcon(Icons.attach_money),
             label: 'franchise.income'.tr(),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.analytics),
+            icon: const HIcon(Icons.analytics),
             label: 'franchise.stats'.tr(),
           ),
         ],
@@ -274,7 +275,7 @@ class _FranchiseEquipmentPageState extends State<FranchiseEquipmentPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.agriculture, size: 80, color: Colors.grey),
+            const HIcon(Icons.agriculture, size: 80, color: Colors.grey),
             const SizedBox(height: 20),
             Text(
               'franchise.no_equipment'.tr(),
@@ -308,7 +309,7 @@ class _FranchiseEquipmentPageState extends State<FranchiseEquipmentPage> {
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
-              leading: Icon(Icons.agriculture, color: statusColor, size: 32),
+              leading: HIcon(Icons.agriculture, color: statusColor, size: 32),
               title: Text(
                 '${EquipmentTypes.label(equipment.type)} ${equipment.model}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
@@ -322,7 +323,7 @@ class _FranchiseEquipmentPageState extends State<FranchiseEquipmentPage> {
                 ],
               ),
               trailing: IconButton(
-                icon: const Icon(Icons.arrow_forward_ios),
+                icon: const HIcon(Icons.arrow_forward_ios),
                 onPressed: () {
                   // Texnika tafsilotlariga o'tish
                 },
@@ -389,7 +390,7 @@ class _FranchiseOrdersPageState extends State<FranchiseOrdersPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.assignment, size: 80, color: Colors.grey),
+            const HIcon(Icons.assignment, size: 80, color: Colors.grey),
             const SizedBox(height: 20),
             Text(
               'franchise.no_orders'.tr(),
@@ -426,7 +427,7 @@ class _FranchiseOrdersPageState extends State<FranchiseOrdersPage> {
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
-              leading: Icon(Icons.assignment, color: statusColor, size: 32),
+              leading: HIcon(Icons.assignment, color: statusColor, size: 32),
               title: Text(
                 "${'orders.order_number'.tr()} #${order.id}",
                 style: const TextStyle(fontWeight: FontWeight.bold),
@@ -441,7 +442,7 @@ class _FranchiseOrdersPageState extends State<FranchiseOrdersPage> {
                 ],
               ),
               trailing: IconButton(
-                icon: const Icon(Icons.arrow_forward_ios),
+                icon: const HIcon(Icons.arrow_forward_ios),
                 onPressed: () {
                   // Buyurtma tafsilotlariga o'tish
                 },
@@ -584,7 +585,7 @@ class _FranchiseIncomePageState extends State<FranchiseIncomePage> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
-                      leading: const Icon(Icons.payment, color: Colors.green),
+                      leading: const HIcon(Icons.payment, color: Colors.green),
                       title: Text('${'messages.payment_hash'.tr()}${payment.id}'),
                       subtitle: Text(
                         payment.paidAt != null
@@ -622,7 +623,7 @@ class _FranchiseIncomePageState extends State<FranchiseIncomePage> {
                 color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: color, size: 32),
+              child: HIcon(icon, color: color, size: 32),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -704,7 +705,7 @@ class _FranchiseStatsPageState extends State<FranchiseStatsPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.analytics, size: 80, color: Colors.grey),
+            const HIcon(Icons.analytics, size: 80, color: Colors.grey),
             const SizedBox(height: 20),
             Text(
               'franchise.no_stats'.tr(),
@@ -733,7 +734,7 @@ class _FranchiseStatsPageState extends State<FranchiseStatsPage> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.store_mall_directory, size: 32, color: Colors.blue),
+                        const HIcon(Icons.store_mall_directory, size: 32, color: Colors.blue),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -874,7 +875,7 @@ class _FranchiseStatsPageState extends State<FranchiseStatsPage> {
                 color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: color, size: 32),
+              child: HIcon(icon, color: color, size: 32),
             ),
             const SizedBox(width: 16),
             Expanded(

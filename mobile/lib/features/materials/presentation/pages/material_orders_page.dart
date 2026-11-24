@@ -8,6 +8,7 @@ import '../../../../core/models/material_model.dart';
 import '../../../../core/services/material_service.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Заказы стройматериалов: у клиента — свои покупки, у продавца
 /// ([asSeller]) — пришедшие заказы.
@@ -197,7 +198,7 @@ class _MaterialOrdersPageState extends State<MaterialOrdersPage> {
             const Divider(height: 20),
             Row(
               children: [
-                const Icon(Icons.local_shipping_outlined, color: AppPalette.brand),
+                const HIcon(Icons.local_shipping_outlined, color: AppPalette.brand),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -208,7 +209,7 @@ class _MaterialOrdersPageState extends State<MaterialOrdersPage> {
                 if (o.driverPhone != null && !closed)
                   IconButton(
                     tooltip: 'material_orders.call_driver'.tr(),
-                    icon: const Icon(Icons.call_outlined, color: AppPalette.brand),
+                    icon: const HIcon(Icons.call_outlined, color: AppPalette.brand),
                     onPressed: () => _call(o.driverPhone!),
                   ),
               ],

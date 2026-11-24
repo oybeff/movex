@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../constants/app_colors.dart';
 import '../services/notification_service.dart';
+import 'h_icon.dart';
 
 /// Sarlavhadagi qo'ng'iroq — o'qilmagan xabarnomalar soni bilan.
 ///
@@ -47,7 +48,7 @@ class _NotificationBellState extends State<NotificationBell> {
       icon: Stack(
         clipBehavior: Clip.none,
         children: [
-          const Icon(Icons.notifications_none),
+          const HIcon(Icons.notifications_none),
           if (_unread > 0)
             Positioned(
               right: -4,

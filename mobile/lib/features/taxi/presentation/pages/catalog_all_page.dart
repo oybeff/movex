@@ -7,6 +7,7 @@ import '../../../../core/services/equipment_catalog.dart';
 import '../../../../core/services/material_service.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../widgets/taxi_ui.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// K2 · «Barcha kategoriyalar» — открывается с плитки «Boshqalar».
 ///
@@ -129,12 +130,12 @@ class _CatalogAllPageState extends State<CatalogAllPage> {
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
                   hintText: 'catalog.search_hint'.tr(),
-                  prefixIcon: const Icon(Icons.search, color: AppPalette.iconSecondary),
+                  prefixIcon: const HIcon(Icons.search, color: AppPalette.iconSecondary),
                   suffixIcon: _search.text.isEmpty
                       ? null
                       : IconButton(
                           tooltip: 'common.clear'.tr(),
-                          icon: const Icon(Icons.close, color: AppPalette.iconSecondary),
+                          icon: const HIcon(Icons.close, color: AppPalette.iconSecondary),
                           onPressed: _search.clear,
                         ),
                   filled: true,
@@ -269,7 +270,7 @@ class _CatalogAllPageState extends State<CatalogAllPage> {
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               alignment: Alignment.center,
-              child: const Icon(Icons.local_shipping_outlined, color: AppPalette.iconBrand),
+              child: const HIcon(Icons.local_shipping_outlined, color: AppPalette.iconBrand),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -283,7 +284,7 @@ class _CatalogAllPageState extends State<CatalogAllPage> {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppPalette.iconPrimary),
+            const HIcon(Icons.chevron_right, color: AppPalette.iconPrimary),
           ],
         ),
       ),
@@ -326,7 +327,7 @@ class _CatalogAllPageState extends State<CatalogAllPage> {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppPalette.iconPrimary),
+              const HIcon(Icons.chevron_right, color: AppPalette.iconPrimary),
             ],
           ),
         ),
@@ -355,7 +356,7 @@ class _RoundIconButton extends StatelessWidget {
           child: SizedBox(
             width: AppSpacing.iconButton,
             height: AppSpacing.iconButton,
-            child: Icon(icon, color: AppPalette.iconPrimary),
+            child: HIcon(icon, color: AppPalette.iconPrimary),
           ),
         ),
       ),

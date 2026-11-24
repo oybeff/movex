@@ -9,6 +9,7 @@ import 'create_listing_page.dart';
 import 'listings_feed_view.dart';
 import 'my_listings_view.dart';
 import 'saved_listings_view.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// E'lonlar bo'limi — ikkala rol uchun BIR XIL ekran.
 ///
@@ -89,7 +90,7 @@ class _ListingsPageState extends State<ListingsPage>
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(Icons.inventory_2_outlined, color: AppPalette.iconBrand),
+                  child: const HIcon(Icons.inventory_2_outlined, color: AppPalette.iconBrand),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
@@ -104,7 +105,7 @@ class _ListingsPageState extends State<ListingsPage>
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: AppPalette.iconBrand),
+                const HIcon(Icons.chevron_right, color: AppPalette.iconBrand),
               ],
             ),
           ),
@@ -174,7 +175,7 @@ class _ListingsPageState extends State<ListingsPage>
           onPressed: _create,
           backgroundColor: AppPalette.brand,
           foregroundColor: AppPalette.textOnBrand,
-          icon: const Icon(Icons.add),
+          icon: const HIcon(Icons.add),
           label: Text('listings.create'.tr()),
         ),
       ),

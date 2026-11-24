@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/widgets/app_logo.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Шапка экранов входа. Макет: клиентский файл, «Auth/Header» — 56 px,
 /// слева логотип (горизонтальный, 28 px) или кнопка «назад», справа
@@ -58,7 +59,7 @@ class _BackButton extends StatelessWidget {
           height: AppSpacing.iconButton,
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Icon(
+            child: HIcon(
               Icons.arrow_back_ios_new_rounded,
               size: 20,
               color: AppPalette.iconPrimary,

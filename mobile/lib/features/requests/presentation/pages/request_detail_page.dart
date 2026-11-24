@@ -6,6 +6,7 @@ import '../../../../core/models/equipment_request_model.dart';
 import '../../../../core/services/equipment_request_service.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Zayavka va unga kelgan takliflar. Mijoz shu yerdan bittasini tanlaydi.
 ///
@@ -157,7 +158,7 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
           if (request != null && request.isOpen)
             IconButton(
               tooltip: 'requests.cancel'.tr(),
-              icon: const Icon(Icons.close, color: AppColors.error),
+              icon: const HIcon(Icons.close, color: AppColors.error),
               onPressed: _isBusy ? null : _cancel,
             ),
         ],
@@ -254,7 +255,7 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: Colors.grey[600]),
+        HIcon(icon, size: 18, color: Colors.grey[600]),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -281,7 +282,7 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
       ),
       child: Column(
         children: [
-          Icon(Icons.hourglass_empty, size: 40, color: Colors.grey[400]),
+          HIcon(Icons.hourglass_empty, size: 40, color: Colors.grey[400]),
           const SizedBox(height: 12),
           Text('requests.no_offers'.tr(),
               style: const TextStyle(
@@ -334,7 +335,7 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
                 ),
               ),
               if (isAccepted)
-                const Icon(Icons.check_circle,
+                const HIcon(Icons.check_circle,
                     color: AppColors.primaryGreen, size: 22),
             ],
           ),

@@ -9,6 +9,7 @@ import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/services/listing_service.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// E'lon joylash (Create Listing) ekrani.
 ///
@@ -182,7 +183,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new,
+          icon: const HIcon(Icons.arrow_back_ios_new,
               size: 20, color: AppPalette.textPrimary),
           onPressed: () => Navigator.maybePop(context),
         ),
@@ -327,7 +328,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today_outlined,
+                      const HIcon(Icons.calendar_today_outlined,
                           size: 20, color: AppPalette.brand),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
@@ -351,7 +352,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
                           }),
                           child: const Padding(
                             padding: EdgeInsets.all(4),
-                            child: Icon(Icons.close,
+                            child: HIcon(Icons.close,
                                 size: 18, color: AppPalette.textSecondary),
                           ),
                         ),
@@ -386,7 +387,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
                         color: _allowChat ? AppPalette.brand : Colors.grey[300],
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.chat_outlined,
+                      child: const HIcon(Icons.chat_outlined,
                           color: Colors.white, size: 18),
                     ),
                     const SizedBox(width: 12),
@@ -450,7 +451,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
                 padding: const EdgeInsets.only(top: 8, left: 4),
                 child: Row(
                   children: [
-                    const Icon(Icons.lock_outline,
+                    const HIcon(Icons.lock_outline,
                         size: 14, color: AppPalette.textSecondary),
                     const SizedBox(width: 6),
                     Expanded(
@@ -479,7 +480,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline,
+                  const HIcon(Icons.error_outline,
                       color: AppPalette.textDanger, size: 20),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
@@ -562,7 +563,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
               shape: BoxShape.circle,
               boxShadow: AppShadows.xs,
             ),
-            child: const Icon(
+            child: const HIcon(
               Icons.handyman_outlined,
               color: AppPalette.brand,
               size: 22,
@@ -673,7 +674,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
         vertical: isMultiline ? AppSpacing.md : AppSpacing.lg,
       ),
       prefixIcon: prefixIcon != null
-          ? Icon(prefixIcon, size: 20, color: AppPalette.iconSecondary)
+          ? HIcon(prefixIcon, size: 20, color: AppPalette.iconSecondary)
           : null,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -712,7 +713,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
                         width: 92,
                         height: 92,
                         color: AppPalette.page,
-                        child: const Icon(
+                        child: const HIcon(
                           Icons.broken_image_outlined,
                           color: AppPalette.textPlaceholder,
                         ),
@@ -730,7 +731,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
                           color: AppPalette.inverse.withValues(alpha: 0.65),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: const HIcon(
                           Icons.close,
                           size: 14,
                           color: AppPalette.surface,
@@ -769,7 +770,7 @@ class _CreateListingPageState extends State<CreateListingPage> {
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
+                        const HIcon(
                           Icons.add_a_photo_outlined,
                           size: 24,
                           color: AppPalette.brand,

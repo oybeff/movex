@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../constants/app_colors.dart';
+import 'h_icon.dart';
 
 /// Xarita — telefonda, brauzerda esa tushuntirish.
 ///
@@ -42,7 +43,7 @@ class MapOrPlaceholder extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.map_outlined, size: 52, color: Colors.grey[500]),
+          HIcon(Icons.map_outlined, size: 52, color: Colors.grey[500]),
           const SizedBox(height: 14),
           Text(
             'messages.map_web_unavailable'.tr(),

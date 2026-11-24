@@ -215,7 +215,7 @@ class DeliveryProfileIn(BaseModel):
     price_per_km: Optional[Decimal] = Field(default=None, ge=0, le=Decimal("1000000"))
     base_fee: Optional[Decimal] = Field(default=None, ge=0, le=Decimal("100000000"))
     #: tent | open — кузов для «Yuk tashish»; у машин без выбора — пусто
-    body_type: Optional[str] = Field(default=None, pattern="^(tent|open)$")
+    body_type: Optional[str] = Field(default=None, pattern="^(tent|open|van|isothermal|fridge|tank|manipulator)$")
     categories: List[DeliveryCategoryIn] = Field(default_factory=list, max_length=30)
 
 
@@ -231,6 +231,7 @@ class DeliveryVehicleRead(BaseModel):
     name: Optional[str] = None
     volume_m3: Optional[Decimal] = None
     has_body_choice: bool = False
+    body_types: List[str] = Field(default_factory=list)
 
 
 class MaterialModerate(BaseModel):

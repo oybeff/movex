@@ -11,6 +11,7 @@ import '../../../../core/models/balance_model.dart';
 import '../../../../core/models/user_model.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class ClientBalancePage extends StatefulWidget {
   const ClientBalancePage({super.key});
@@ -274,7 +275,7 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
           backgroundColor: Colors.white,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.black),
+            icon: const HIcon(Icons.arrow_back_ios_rounded, color: AppColors.black),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
@@ -533,7 +534,7 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
             readOnly: true,
             decoration: InputDecoration(
               hintText: '+998 90 123 45 67',
-              prefixIcon: const Icon(Icons.phone, color: AppColors.primaryGreen),
+              prefixIcon: const HIcon(Icons.phone, color: AppColors.primaryGreen),
               filled: true,
               fillColor: Colors.grey[100],
               border: OutlineInputBorder(
@@ -634,7 +635,7 @@ class _ClientBalancePageState extends State<ClientBalancePage> with SingleTicker
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            HIcon(
               Icons.history_rounded,
               size: 64,
               color: Colors.grey.shade300,
@@ -713,7 +714,7 @@ class _PaymentMethodCard extends StatelessWidget {
                     : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
+              child: HIcon(
                 icon,
                 color: isSelected ? AppColors.primaryGreen : Colors.grey.shade600,
                 size: 24,
@@ -731,7 +732,7 @@ class _PaymentMethodCard extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              const Icon(
+              const HIcon(
                 Icons.check_circle_rounded,
                 color: AppColors.primaryGreen,
                 size: 24,
@@ -851,7 +852,7 @@ class _TransactionCard extends StatelessWidget {
                     color: _getTypeColor(transaction.type).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
+                  child: HIcon(
                     _getTypeIcon(transaction.type),
                     color: _getTypeColor(transaction.type),
                     size: 20,
@@ -928,7 +929,7 @@ class _TransactionCard extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(
+                  HIcon(
                     Icons.credit_card_rounded,
                     size: 14,
                     color: Colors.grey.shade600,

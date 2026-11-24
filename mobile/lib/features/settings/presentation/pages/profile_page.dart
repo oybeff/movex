@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/services/user_service.dart';
 import '../../../../core/models/user_model.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -104,7 +105,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  prefixIcon: const Icon(Icons.person),
+                  prefixIcon: const HIcon(Icons.person),
                 ),
               ),
               const SizedBox(height: 16),
@@ -118,7 +119,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  prefixIcon: const Icon(Icons.phone),
+                  prefixIcon: const HIcon(Icons.phone),
                 ),
                 keyboardType: TextInputType.phone,
               ),
@@ -206,7 +207,7 @@ class _ProfilePageState extends State<ProfilePage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.black),
+          icon: const HIcon(Icons.arrow_back_ios_rounded, color: AppColors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -220,7 +221,7 @@ class _ProfilePageState extends State<ProfilePage> {
         actions: [
           if (!_isLoading && _user != null)
             IconButton(
-              icon: const Icon(Icons.edit, color: AppColors.primaryGreen),
+              icon: const HIcon(Icons.edit, color: AppColors.primaryGreen),
               onPressed: _showEditProfileBottomSheet,
             ),
         ],
@@ -232,7 +233,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+                      const HIcon(Icons.error_outline, size: 64, color: Colors.grey),
                       const SizedBox(height: 16),
                       Text(
                         'profile.update_error'.tr(),
@@ -348,7 +349,7 @@ class _InfoTile extends StatelessWidget {
               color: AppColors.primaryGreen.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
+            child: HIcon(
               icon,
               color: AppColors.primaryGreen,
               size: 22,

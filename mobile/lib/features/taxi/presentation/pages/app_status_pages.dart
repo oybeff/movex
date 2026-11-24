@@ -9,6 +9,7 @@ import '../../../../core/theme/app_tokens.dart';
 import '../../data/app_status.dart';
 import '../widgets/taxi_ui.dart';
 import 'help_page.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Пустое состояние экрана: «ореол» 140 с кругом 112 и иконкой, заголовок,
 /// текст (U2, U3, U5, U6).
@@ -91,7 +92,7 @@ class UpdatePage extends StatelessWidget {
                   Expanded(
                     child: Center(
                       child: HaloState(
-                        icon: const Icon(Icons.refresh_rounded, size: 36, color: AppPalette.textPrimary),
+                        icon: const HIcon(Icons.refresh_rounded, size: 36, color: AppPalette.textPrimary),
                         title: 'taxi.update_title'.tr(),
                         body: 'taxi.update_body'.tr(),
                         extra: Container(

@@ -8,6 +8,7 @@ import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/services/equipment_request_service.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Zayavka berish: mijoz ANIQ mashinani emas, TURNI so'raydi.
 ///
@@ -137,7 +138,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     leading: EquipmentTypeIcon(code, size: 32),
                     title: Text(EquipmentTypes.label(code)),
                     trailing: _type == code
-                        ? const Icon(Icons.check_circle,
+                        ? const HIcon(Icons.check_circle,
                             color: AppColors.primaryGreen)
                         : null,
                     onTap: () => Navigator.pop(context, code),
@@ -246,7 +247,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon,
+                HIcon(icon,
                     color: selected ? AppColors.primaryGreen : AppColors.grey),
                 const SizedBox(height: 6),
                 Text(title,
@@ -329,7 +330,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                           ),
                         ),
                       ),
-                      const Icon(Icons.chevron_right, color: AppColors.grey),
+                      const HIcon(Icons.chevron_right, color: AppColors.grey),
                     ],
                   ),
                 ),
@@ -345,7 +346,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today,
+                      const HIcon(Icons.calendar_today,
                           size: 18, color: AppColors.grey),
                       const SizedBox(width: 10),
                       Expanded(
@@ -379,7 +380,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Row(
                       children: [
-                        const Icon(Icons.schedule,
+                        const HIcon(Icons.schedule,
                             size: 18, color: AppColors.grey),
                         const SizedBox(width: 10),
                         Text(
@@ -408,7 +409,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(
+                      HIcon(
                         _lat == null ? Icons.place_outlined : Icons.place,
                         size: 18,
                         color: _lat == null
@@ -437,7 +438,7 @@ class _CreateRequestPageState extends State<CreateRequestPage> {
                         )
                       else
                         IconButton(
-                          icon: const Icon(Icons.my_location, size: 20),
+                          icon: const HIcon(Icons.my_location, size: 20),
                           color: AppColors.primaryGreen,
                           onPressed: _detectLocation,
                         ),

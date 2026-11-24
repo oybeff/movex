@@ -22,7 +22,8 @@ import 'address_pick_page.dart';
 import '../../data/app_status.dart';
 import '../../../../core/services/equipment_catalog.dart';
 import 'catalog_all_page.dart';
-import '../../../freight/presentation/freight_page.dart';
+import '../../../../core/widgets/h_icon.dart';
+import '../../../freight/presentation/freight_flow.dart';
 import '../../../../core/services/permission_service.dart';
 import 'package:dio/dio.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -336,11 +337,13 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     }
     // «Yuk tashish» — перевозка груза клиента А→Б на грузовике (24.11.2026),
     // а не самосвал по часам, как было.
-    if (type == 'freight' || type.startsWith('truck:')) {
-      final code = type.startsWith('truck:') ? type.substring(6) : null;
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => FreightPage(from: _from, vehicleCode: code)),
-      );
+    // Шаги Y1–Y8 макета: марка → модель → кузов → груз → маршрут → цена.
+    if (type == 'freight') {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => FreightBrandPage(from: _from)));
+      return;
+    }
+    if (type.startsWith('truck:')) {
+      openFreightWithVehicle(context, _from, type.substring(6));
       return;
     }
     setState(() {
@@ -1557,21 +1560,24 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     if (picked != null && mounted) _pickType(picked);
   }
 
-  // 3 · Texnika va xizmat turini tanlash (TT 2-qism):
-  // 1. Ekskavator, 2. Buldozer, 3. Avtokran, 4. Samosval,
-  // 5. Frontal yuklagich, 6. Yuk tashish, 7. Qurilish materiallari, 8. Boshqalar
+  // 3 · K1 «Bosh ekran — texnika turlari» (Figma, 24.11.2026): поиск,
+  // 8 плиток, баннер «Yuk tashish», «Barcha N kategoriya», «Ko'p
+  // so'raladi». Плитка «Qurilish materiallari» — пока раздел включён в
+  // админке, иначе на её месте «Beton nasos», как в макете.
   Widget _typePanel() {
     final types = _orderedTypes;
+    final materials = _status?.materialsEnabled ?? true;
     final tiles = <Widget>[
       TypeTile(type: 'excavator', onTap: _busy ? () {} : () => _pickType('excavator')),
       TypeTile(type: 'bulldozer', onTap: _busy ? () {} : () => _pickType('bulldozer')),
       TypeTile(type: 'truck_crane', onTap: _busy ? () {} : () => _pickType('truck_crane')),
       TypeTile(type: 'dump_truck', onTap: _busy ? () {} : () => _pickType('dump_truck')),
       TypeTile(type: 'front_loader', onTap: _busy ? () {} : () => _pickType('front_loader')),
-      TypeTile(type: 'freight', onTap: _busy ? () {} : () => _pickType('freight')),
-      // Раздел выключает админ (catalog.php) — тогда плитки нет совсем.
-      if (_status?.materialsEnabled ?? true)
-        TypeTile(type: 'materials', onTap: () => _pickType('materials')),
+      TypeTile(type: 'manipulator', onTap: _busy ? () {} : () => _pickType('manipulator')),
+      if (materials)
+        TypeTile(type: 'materials', onTap: () => _pickType('materials'))
+      else
+        TypeTile(type: 'concrete_pump', onTap: _busy ? () {} : () => _pickType('concrete_pump')),
       TypeTile(type: 'more', label: 'taxi.more_types'.tr(), onTap: _moreTypes),
     ];
     final rows = <Widget>[];
@@ -1581,20 +1587,52 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
         chunk.add(const SizedBox(width: 76));
       }
       if (rows.isNotEmpty) rows.add(const SizedBox(height: 14));
-      // По верху: плитка с подписью в две строки («Frontal yuklagich») выше
-      // соседних, и по центру ряд «плясал».
       rows.add(Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: chunk,
       ));
     }
+    final total = EquipmentCatalog.types.isEmpty ? null : EquipmentCatalog.types.length;
+    // «Ko'p so'raladi» — частые запросы: подпись как в макете, ведёт в
+    // настоящий поток (тип техники или грузовик).
+    const popular = [
+      ('JCB 3CX', 'backhoe_loader'),
+      ('CAT 320', 'excavator'),
+      ('25 t avtokran', 'truck_crane'),
+      ('KamAZ samosval', 'dump_truck'),
+      ('Hyundai Porter', 'truck:porter'),
+      ('Gazel', 'truck:gazel'),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SheetTitle('taxi.which_equipment'.tr()),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         _routeLine(),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+          child: Material(
+            color: AppPalette.page,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              onTap: _moreTypes,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                child: Row(children: [
+                  const HIcon(Icons.search, color: AppPalette.iconSecondary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text('taxi.search_brand'.tr(),
+                        style: AppTypography.bodyM.copyWith(color: AppPalette.textPlaceholder)),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ),
         const SizedBox(height: 14),
         if (types.isEmpty)
           Padding(
@@ -1606,11 +1644,72 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
             child: Column(children: rows),
           ),
+        const SizedBox(height: 14),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+          child: Material(
+            color: AppPalette.brandSubtle,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              onTap: () => _pickType('freight'),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+                child: Row(children: [
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('taxi.freight'.tr(), style: AppTypography.h3),
+                      const SizedBox(height: 2),
+                      Text('taxi.freight_banner'.tr(),
+                          style: AppTypography.captionS.copyWith(color: AppPalette.textSecondary)),
+                    ]),
+                  ),
+                  const SizedBox(width: 8),
+                  const HIcon(Icons.local_shipping_outlined, color: AppPalette.iconBrand, size: 48),
+                ]),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+          child: InkWell(
+            onTap: _moreTypes,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(children: [
+                Text(total == null ? 'taxi.all_categories'.tr() : 'taxi.all_categories_n'.tr(args: ['$total']),
+                    style: AppTypography.bodyMMedium.copyWith(color: AppPalette.textBrand)),
+                const SizedBox(width: 4),
+                const HIcon(Icons.chevron_right, color: AppPalette.iconBrand, size: 20),
+              ]),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.gutter, 8, AppSpacing.gutter, 6),
+          child: Text('taxi.popular'.tr(), style: AppTypography.h3),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+          child: Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final (label, target) in popular)
+              ActionChip(
+                label: Text(label),
+                onPressed: _busy ? null : () => _pickType(target),
+                backgroundColor: AppPalette.page,
+                side: BorderSide.none,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              ),
+          ]),
+        ),
         if (_busy)
           const Padding(
             padding: EdgeInsets.only(top: AppSpacing.md),
             child: Center(child: CircularProgressIndicator(color: AppPalette.brand)),
           ),
+        const SizedBox(height: 8),
       ],
     );
   }

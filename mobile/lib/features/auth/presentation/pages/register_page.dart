@@ -7,6 +7,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/phone_input_field.dart';
 import '../../../../core/utils/error_handler.dart';
 import '/features/auth/data/repositories/auth_repository.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class RegisterPage extends StatefulWidget {
   final String role;
@@ -124,7 +125,7 @@ class _RegisterPageState extends State<RegisterPage> {
         ],
       ),
       padding: const EdgeInsets.all(24),
-      child: const Icon(Icons.person_add, size: 80, color: AppColors.white),
+      child: const HIcon(Icons.person_add, size: 80, color: AppColors.white),
     );
   }
 

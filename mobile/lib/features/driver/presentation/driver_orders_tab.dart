@@ -30,6 +30,7 @@ import 'driver_incoming_page.dart';
 import 'driver_order_page.dart';
 import 'driver_ui.dart';
 import 'driver_verification_page.dart';
+import '../../../core/widgets/h_icon.dart';
 
 /// «Asosiy» приложения водителя — макет 01: H1 «Siz oflaynsiz»,
 /// H2 «Buyurtmalar kutilmoqda», живой заказ — карточкой «Faol buyurtma».
@@ -194,13 +195,13 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
               Text('driver.what_you_have'.tr(), style: AppTypography.h2),
               const SizedBox(height: 12),
               ListTile(
-                leading: const Icon(Icons.construction_rounded, color: AppPalette.brand),
+                leading: const HIcon(Icons.construction_rounded, color: AppPalette.brand),
                 title: Text('driver.have_equipment'.tr()),
                 subtitle: Text('driver.have_equipment_hint'.tr()),
                 onTap: () => Navigator.of(ctx).pop('equipment'),
               ),
               ListTile(
-                leading: const Icon(Icons.local_shipping_outlined, color: AppPalette.brand),
+                leading: const HIcon(Icons.local_shipping_outlined, color: AppPalette.brand),
                 title: Text('driver.have_truck'.tr()),
                 subtitle: Text('driver.have_truck_hint'.tr()),
                 onTap: () => Navigator.of(ctx).pop('truck'),
@@ -466,7 +467,7 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(color: DChip.warn, borderRadius: BorderRadius.circular(24)),
-                child: const Icon(Icons.schedule_rounded, color: AppPalette.textPrimary),
+                child: const HIcon(Icons.schedule_rounded, color: AppPalette.textPrimary),
               ),
             ),
             const SizedBox(height: 12),
@@ -631,7 +632,7 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   child: Row(
                     children: [
-                      const Icon(Icons.sync_problem_rounded, color: Colors.white, size: 20),
+                      const HIcon(Icons.sync_problem_rounded, color: Colors.white, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -764,7 +765,7 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(color: DChip.blueBg, borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.construction_rounded, color: AppPalette.brand),
+                    child: const HIcon(Icons.construction_rounded, color: AppPalette.brand),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -789,7 +790,7 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right_rounded, color: AppPalette.textSecondary),
+                  const HIcon(Icons.chevron_right_rounded, color: AppPalette.textSecondary),
                 ],
               ),
             ),
@@ -836,7 +837,7 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(color: DChip.blueBg, borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.local_shipping_outlined, color: AppPalette.brand),
+                child: const HIcon(Icons.local_shipping_outlined, color: AppPalette.brand),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -856,7 +857,7 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: AppPalette.textSecondary),
+              const HIcon(Icons.chevron_right_rounded, color: AppPalette.textSecondary),
             ],
           ),
         ),
@@ -881,7 +882,7 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
       decoration: BoxDecoration(color: red ? DChip.redBg : DChip.blueBg, borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
-          Icon(red ? Icons.error_outline_rounded : Icons.verified_user_outlined,
+          HIcon(red ? Icons.error_outline_rounded : Icons.verified_user_outlined,
               color: red ? AppPalette.textDanger : AppPalette.brand),
           const SizedBox(width: 10),
           Expanded(
@@ -939,7 +940,7 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    const Icon(Icons.bolt_rounded, color: AppPalette.brand, size: 20),
+                    const HIcon(Icons.bolt_rounded, color: AppPalette.brand, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text('${orderTitle(i.equipmentType, i.tariff)} · ${i.deliveryAddress ?? ''}',
@@ -1045,7 +1046,7 @@ class _Round extends StatelessWidget {
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onTap,
-          child: SizedBox(width: 40, height: 40, child: Icon(icon, size: 22, color: AppPalette.iconPrimary)),
+          child: SizedBox(width: 40, height: 40, child: HIcon(icon, size: 22, color: AppPalette.iconPrimary)),
         ),
       );
 }
@@ -1084,7 +1085,7 @@ class _LocationOffPage extends StatelessWidget {
                     width: 88,
                     height: 88,
                     decoration: const BoxDecoration(color: DChip.blueBg, shape: BoxShape.circle),
-                    child: const Icon(Icons.location_off_outlined, size: 40, color: AppPalette.brand),
+                    child: const HIcon(Icons.location_off_outlined, size: 40, color: AppPalette.brand),
                   ),
                 ),
                 const SizedBox(height: 20),

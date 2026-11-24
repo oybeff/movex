@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import '../widgets/h_icon.dart';
 
 /// Extract error message from DioException or other exceptions
 String getErrorMessage(dynamic error) {
@@ -52,7 +53,7 @@ void showErrorDialog(BuildContext context, dynamic error) {
     builder: (context) => AlertDialog(
       title: Row(
         children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 28),
+          const HIcon(Icons.error_outline, color: Colors.red, size: 28),
           const SizedBox(width: 10),
           Text('errors.error'.tr()),
         ],
@@ -75,7 +76,7 @@ void showSuccessDialog(BuildContext context, String message) {
     builder: (context) => AlertDialog(
       title: Row(
         children: [
-          const Icon(Icons.check_circle_outline, color: Colors.green, size: 28),
+          const HIcon(Icons.check_circle_outline, color: Colors.green, size: 28),
           const SizedBox(width: 10),
           Text('messages.success'.tr()),
         ],

@@ -22,6 +22,7 @@ import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
@@ -705,7 +706,7 @@ class _OrdersPageState extends State<OrdersPage> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.power_rounded, size: 64, color: Colors.grey[400]),
+                              HIcon(Icons.power_rounded, size: 64, color: Colors.grey[400]),
                               const SizedBox(height: 16),
                               Text(
                                 'orders.no_orders'.tr(),
@@ -789,7 +790,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(
+                                      HIcon(
                                         _getStatusIcon(order.status),
                                         size: 18,
                                         color: statusColor,
@@ -851,7 +852,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                                 const SizedBox(height: 4),
                                                 Row(
                                                   children: [
-                                                    Icon(Icons.person_outline, size: 14, color: Colors.grey[600]),
+                                                    HIcon(Icons.person_outline, size: 14, color: Colors.grey[600]),
                                                     const SizedBox(width: 4),
                                                     Text(
                                                       // Ism _userCache'da bor — ilgari u yuklanardi,
@@ -870,7 +871,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                             ),
                                           ),
                                           PopupMenuButton<String>(
-                                            icon: Icon(Icons.more_vert, color: Colors.grey[600]),
+                                            icon: HIcon(Icons.more_vert, color: Colors.grey[600]),
                                             shape: RoundedRectangleBorder(
                                               borderRadius: BorderRadius.circular(12),
                                             ),
@@ -902,7 +903,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                                     value: 'confirm',
                                                     child: Row(
                                                       children: [
-                                                        const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                                                        const HIcon(Icons.check_circle, color: Colors.green, size: 20),
                                                         const SizedBox(width: 8),
                                                         Text('orders.confirm'.tr()),
                                                       ],
@@ -914,7 +915,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                                     value: 'reject',
                                                     child: Row(
                                                       children: [
-                                                        const Icon(Icons.cancel, color: Colors.red, size: 20),
+                                                        const HIcon(Icons.cancel, color: Colors.red, size: 20),
                                                         const SizedBox(width: 8),
                                                         Text('orders.reject'.tr()),
                                                       ],
@@ -929,7 +930,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                                     value: 'complete',
                                                     child: Row(
                                                       children: [
-                                                        const Icon(Icons.done_all, color: Colors.blue, size: 20),
+                                                        const HIcon(Icons.done_all, color: Colors.blue, size: 20),
                                                         const SizedBox(width: 8),
                                                         Text('orders.complete'.tr()),
                                                       ],
@@ -990,7 +991,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                               child: Row(
                                                 mainAxisAlignment: MainAxisAlignment.end,
                                                 children: [
-                                                  Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                                                  HIcon(Icons.location_on, size: 16, color: Colors.grey[600]),
                                                   const SizedBox(width: 4),
                                                   Flexible(
                                                     child: Text(
@@ -1070,7 +1071,7 @@ class _OrdersPageState extends State<OrdersPage> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: const HIcon(Icons.close),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -1210,7 +1211,7 @@ class _OrdersPageState extends State<OrdersPage> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.location_on, size: 20, color: Colors.grey[700]),
+                            HIcon(Icons.location_on, size: 20, color: Colors.grey[700]),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -1254,7 +1255,7 @@ class _OrdersPageState extends State<OrdersPage> {
                           )),
                           // Marker in center
                           Center(
-                            child: Icon(
+                            child: HIcon(
                               Icons.location_on,
                               size: 48,
                               color: Colors.red,
@@ -1284,7 +1285,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.directions,
+                                      const HIcon(Icons.directions,
                                           size: 18, color: AppColors.primaryGreen),
                                       const SizedBox(width: 4),
                                       Text(
@@ -1316,7 +1317,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.map, size: 18, color: AppColors.primaryGreen),
+                                      HIcon(Icons.map, size: 18, color: AppColors.primaryGreen),
                                       const SizedBox(width: 4),
                                       Text(
                                         'orders.open_in_map'.tr(),
@@ -1344,7 +1345,7 @@ class _OrdersPageState extends State<OrdersPage> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () => _callClient(order),
-                            icon: const Icon(Icons.phone),
+                            icon: const HIcon(Icons.phone),
                             label: Text('orders.call_client'.tr()),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1357,7 +1358,7 @@ class _OrdersPageState extends State<OrdersPage> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () => _openChat(order),
-                            icon: const Icon(Icons.chat_bubble_outline),
+                            icon: const HIcon(Icons.chat_bubble_outline),
                             label: Text('chat.open_chat'.tr()),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1381,7 +1382,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                 Navigator.pop(context);
                                 _rejectOrder(order);
                               },
-                              icon: const Icon(Icons.cancel),
+                              icon: const HIcon(Icons.cancel),
                               label: Text('orders.reject_order'.tr()),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.red,
@@ -1397,7 +1398,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                 Navigator.pop(context);
                                 _confirmOrder(order);
                               },
-                              icon: const Icon(Icons.check_circle),
+                              icon: const HIcon(Icons.check_circle),
                               label: Text('orders.accept_order'.tr()),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primaryGreen,
@@ -1429,7 +1430,7 @@ class _OrdersPageState extends State<OrdersPage> {
                             Navigator.pop(context);
                             _completeOrder(order);
                           },
-                          icon: const Icon(Icons.done_all),
+                          icon: const HIcon(Icons.done_all),
                           label: Text('orders.complete_order'.tr()),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryGreen,

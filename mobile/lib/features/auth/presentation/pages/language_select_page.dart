@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class LanguageSelectPage extends StatefulWidget {
   const LanguageSelectPage({super.key});
@@ -99,7 +100,7 @@ class _LanguageSelectPageState extends State<LanguageSelectPage>
                         color: AppColors.primaryGreen.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: const HIcon(
                         Icons.language_rounded,
                         size: 60,
                         color: AppColors.primaryGreen,
@@ -278,7 +279,7 @@ class _LanguageCard extends StatelessWidget {
                   color: AppColors.primaryGreen,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: const HIcon(
                   Icons.check_rounded,
                   color: Colors.white,
                   size: 20,

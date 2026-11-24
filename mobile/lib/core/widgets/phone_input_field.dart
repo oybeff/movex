@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../constants/app_colors.dart';
+import 'h_icon.dart';
 
 /// Phone input field with +998 prefix for Uzbekistan
 /// Format: +998 901234567
@@ -122,7 +123,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
       decoration: widget.decoration ??
           InputDecoration(
         hintText: widget.hintText ?? '+998 901234567',
-        prefixIcon: Icon(
+        prefixIcon: HIcon(
           widget.prefixIcon ?? Icons.phone,
           color: AppColors.primaryGreen,
         ),

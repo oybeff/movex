@@ -124,7 +124,8 @@ def vehicle_list(db: Session = Depends(get_db)):
     return [
         DeliveryVehicleRead(code=v.code, capacity_kg=v.capacity_kg,
                             name=v.name, volume_m3=v.volume_m3,
-                            has_body_choice=v.has_body_choice)
+                            has_body_choice=v.has_body_choice,
+                            body_types=v.body_types)
         for v in delivery_vehicles.load(db)
     ]
 

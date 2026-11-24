@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/services/auth_service.dart';
@@ -5,6 +6,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../data/driver_card_model.dart';
 import 'driver_add_card_page.dart';
 import 'driver_ui.dart';
+import '../../../core/widgets/h_icon.dart';
 
 /// Макет 04 C6 & C7: «Kartalarim» va karta sozlamalari / o'chirish.
 class DriverCardsPage extends StatefulWidget {
@@ -89,7 +91,7 @@ class _DriverCardsPageState extends State<DriverCardsPage> {
             if (!card.isDefault) ...[
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.star_outline_rounded, color: AppPalette.brand),
+                leading: const HIcon(Icons.star_outline_rounded, color: AppPalette.brand),
                 title: const Text("Asosiy karta qilish", style: TextStyle(fontWeight: FontWeight.w600)),
                 onTap: () async {
                   Navigator.pop(ctx);
@@ -103,7 +105,7 @@ class _DriverCardsPageState extends State<DriverCardsPage> {
             ],
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.delete_outline_rounded, color: AppPalette.textDanger),
+              leading: const HIcon(Icons.delete_outline_rounded, color: AppPalette.textDanger),
               title: const Text("Kartani o'chirish", style: TextStyle(color: AppPalette.textDanger, fontWeight: FontWeight.w600)),
               onTap: () async {
                 Navigator.pop(ctx);
@@ -113,11 +115,11 @@ class _DriverCardsPageState extends State<DriverCardsPage> {
                     title: const Text("Kartani o'chirish"),
                     content: Text("${card.shortMasked} kartasini ro'yxatdan o'chirmoqchimisiz?"),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(dCtx, false), child: const Text("Bekor qilish")),
+                      TextButton(onPressed: () => Navigator.pop(dCtx, false), child: Text('common.cancel'.tr())),
                       TextButton(
                         onPressed: () => Navigator.pop(dCtx, true),
                         style: TextButton.styleFrom(foregroundColor: AppPalette.textDanger),
-                        child: const Text("O'chirish"),
+                        child: Text('driver.card_delete'.tr()),
                       ),
                     ],
                   ),
@@ -142,7 +144,7 @@ class _DriverCardsPageState extends State<DriverCardsPage> {
         backgroundColor: AppPalette.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppPalette.textPrimary),
+          icon: const HIcon(Icons.arrow_back, color: AppPalette.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text("Kartalarim", style: AppTypography.h3),
@@ -160,12 +162,12 @@ class _DriverCardsPageState extends State<DriverCardsPage> {
                         width: 72,
                         height: 72,
                         decoration: const BoxDecoration(color: AppPalette.brandSubtle, shape: BoxShape.circle),
-                        child: const Icon(Icons.credit_card_off_outlined, size: 36, color: AppPalette.brand),
+                        child: const HIcon(Icons.credit_card_off_outlined, size: 36, color: AppPalette.brand),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Center(
-                      child: Text("Hozircha kartalar yo'q", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    Center(
+                      child: Text('driver.cards_empty'.tr(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                     ),
                     const SizedBox(height: 8),
                     const Center(
@@ -227,7 +229,7 @@ class _DriverCardsPageState extends State<DriverCardsPage> {
                                       padding: EdgeInsets.only(right: 8),
                                       child: DChip("Asosiy", bg: Color(0xFFDCFCE7), fg: Color(0xFF16A34A)),
                                     ),
-                                  const Icon(Icons.more_vert, color: AppPalette.textSecondary),
+                                  const HIcon(Icons.more_vert, color: AppPalette.textSecondary),
                                 ],
                               ),
                             ),

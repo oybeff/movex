@@ -11,6 +11,7 @@ import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import '../../../../core/widgets/bottom_nav_space.dart';
 import '../widgets/listing_card.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Taxta: begonalarning ochiq e'lonlari.
 ///
@@ -353,7 +354,7 @@ class ListingsFeedViewState extends State<ListingsFeedView> {
     final route = listing.latitude != null && listing.longitude != null
         ? OutlinedButton.icon(
             onPressed: () => _buildRoute(listing),
-            icon: const Icon(Icons.directions, size: 18),
+            icon: const HIcon(Icons.directions, size: 18),
             label: Text('orders.build_route'.tr(),
                 style: const TextStyle(fontSize: 13)),
             style: OutlinedButton.styleFrom(
@@ -429,7 +430,7 @@ class ListingsFeedViewState extends State<ListingsFeedView> {
         if (listing.hasPhone)
           OutlinedButton.icon(
             onPressed: () => _call(listing.contactPhone!),
-            icon: const Icon(Icons.phone, size: 18),
+            icon: const HIcon(Icons.phone, size: 18),
             label: Text('common.call'.tr(),
                 style: const TextStyle(fontSize: 13)),
             style: OutlinedButton.styleFrom(
@@ -461,7 +462,7 @@ class ListingsFeedViewState extends State<ListingsFeedView> {
     return ListView(
       children: [
         const SizedBox(height: 100),
-        Icon(Icons.campaign_outlined, size: 64, color: Colors.grey[400]),
+        HIcon(Icons.campaign_outlined, size: 64, color: Colors.grey[400]),
         const SizedBox(height: 16),
         Center(
           child: Text('listings.feed_empty'.tr(),

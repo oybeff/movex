@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Общие куски экранов входа из второго макета (клиентский файл,
 /// страница «00 Kirish»). Вынесены, чтобы телефон, код и PIN выглядели
@@ -44,7 +45,7 @@ class AuthFieldError extends StatelessWidget {
           children: [
             const Padding(
               padding: EdgeInsets.only(top: 1),
-              child: Icon(
+              child: HIcon(
                 Icons.error_outline_rounded,
                 size: 14,
                 color: AppPalette.textDanger,

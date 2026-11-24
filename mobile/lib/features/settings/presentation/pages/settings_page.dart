@@ -22,6 +22,7 @@ import '../../../requests/presentation/pages/search_area_page.dart';
 import 'profile_page.dart';
 import 'terms_page.dart';
 import 'privacy_page.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -380,7 +381,7 @@ class _SettingsPageState extends State<SettingsPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.password_rounded),
+              leading: const HIcon(Icons.password_rounded),
               title: Text('pin.change'.tr()),
               onTap: () async {
                 Navigator.pop(sheetContext);
@@ -389,7 +390,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             if (_biometricAvailable)
               SwitchListTile(
-                secondary: const Icon(Icons.fingerprint_rounded),
+                secondary: const HIcon(Icons.fingerprint_rounded),
                 title: Text('pin.biometric_title'.tr()),
                 subtitle: Text('pin.biometric_desc'.tr()),
                 value: _biometricOn,
@@ -485,7 +486,7 @@ class _SettingsPageState extends State<SettingsPage> {
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.black),
+            icon: const HIcon(Icons.arrow_back_ios_rounded, color: AppColors.black),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -496,7 +497,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+                        const HIcon(Icons.error_outline, size: 64, color: Colors.grey),
                         const SizedBox(height: 16),
                         Text(
                           'profile.update_error'.tr(),
@@ -879,7 +880,7 @@ class _SettingsTile extends StatelessWidget {
           color: AppColors.primaryGreen.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(
+        child: HIcon(
           icon,
           color: AppColors.primaryGreen,
           size: 22,
@@ -906,7 +907,7 @@ class _SettingsTile extends StatelessWidget {
             )
           : null,
       trailing: showArrow
-          ? const Icon(
+          ? const HIcon(
               Icons.arrow_forward_ios_rounded,
               size: 16,
               color: AppColors.grey,
@@ -965,7 +966,7 @@ class _ContactMethodTile extends StatelessWidget {
                 color: AppColors.primaryGreen.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
+              child: HIcon(
                 _getIconForType(method.type),
                 color: AppColors.primaryGreen,
                 size: 22,
@@ -995,7 +996,7 @@ class _ContactMethodTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
+            HIcon(
               Icons.arrow_forward_ios_rounded,
               size: 16,
               color: Colors.grey.shade400,
@@ -1029,7 +1030,7 @@ class _LogoutButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            HIcon(
               Icons.logout_rounded,
               color: Colors.red.shade600,
               size: 22,
@@ -1098,7 +1099,7 @@ class _LanguageOption extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              const Icon(
+              const HIcon(
                 Icons.check_circle_rounded,
                 color: AppColors.primaryGreen,
                 size: 24,

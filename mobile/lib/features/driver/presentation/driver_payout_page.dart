@@ -11,6 +11,7 @@ import '../data/driver_card_model.dart';
 import 'driver_add_card_page.dart';
 import 'driver_cards_page.dart';
 import 'driver_ui.dart';
+import '../../../core/widgets/h_icon.dart';
 
 /// Макет 04: «Pul yechish» (P2, C1, C5, P4).
 class DriverPayoutPage extends StatefulWidget {
@@ -130,7 +131,7 @@ class _DriverPayoutPageState extends State<DriverPayoutPage> {
       return;
     }
     if (amt < 50000) {
-      setState(() => _error = "Eng kam yechish summasi: 50 000 so'm");
+      setState(() => _error = 'driver.payout_min'.tr());
       return;
     }
     if (amt > _available) {
@@ -176,13 +177,13 @@ class _DriverPayoutPageState extends State<DriverPayoutPage> {
         backgroundColor: AppPalette.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppPalette.textPrimary),
+          icon: const HIcon(Icons.arrow_back, color: AppPalette.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text("Pul yechish", style: AppTypography.h3),
         actions: [
           IconButton(
-            icon: const Icon(Icons.credit_card, color: AppPalette.brand),
+            icon: const HIcon(Icons.credit_card, color: AppPalette.brand),
             tooltip: "Kartalarim",
             onPressed: () async {
               await Navigator.of(context).push(
@@ -228,7 +229,7 @@ class _DriverPayoutPageState extends State<DriverPayoutPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("Summa", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        Text('driver.payout_sum'.tr(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _amountCtrl,
@@ -242,7 +243,7 @@ class _DriverPayoutPageState extends State<DriverPayoutPage> {
                           decoration: InputDecoration(
                             hintText: "0",
                             hintStyle: const TextStyle(color: AppPalette.borderDefault),
-                            suffixText: "so'm",
+                            suffixText: 'common.currency'.tr(),
                             suffixStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppPalette.textSecondary),
                             filled: true,
                             fillColor: AppPalette.page,
@@ -274,7 +275,7 @@ class _DriverPayoutPageState extends State<DriverPayoutPage> {
                     DCard(
                       child: Column(
                         children: [
-                          DRow("Komissiya", money(_commission)),
+                          DRow('driver.commission'.tr(), money(_commission)),
                           DRow("Tushadigan mablag'", money(_netPayout), bold: true),
                           const DRow("Muddat", "1–5 daqiqa"),
                         ],
@@ -338,7 +339,7 @@ class _DriverPayoutPageState extends State<DriverPayoutPage> {
                 color: AppPalette.brandSubtle,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.credit_card_outlined, size: 28, color: AppPalette.brand),
+              child: const HIcon(Icons.credit_card_outlined, size: 28, color: AppPalette.brand),
             ),
             const SizedBox(height: 12),
             const Text(
@@ -476,7 +477,7 @@ class _DriverPayoutPageState extends State<DriverPayoutPage> {
                   color: Color(0xFFDCFCE7),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_circle_rounded, size: 58, color: Color(0xFF16A34A)),
+                child: const HIcon(Icons.check_circle_rounded, size: 58, color: Color(0xFF16A34A)),
               ),
             ),
             const SizedBox(height: 20),
@@ -495,7 +496,7 @@ class _DriverPayoutPageState extends State<DriverPayoutPage> {
             DCard(
               child: Column(
                 children: [
-                  DRow("Sana", now),
+                  DRow('driver.payout_date'.tr(), now),
                   DRow("Tranzaksiya", "#TR${req.id}"),
                   DRow("Yechilgan summa", money(req.payoutAmount), bold: true),
                   DRow("Karta", cardName),
@@ -512,13 +513,13 @@ class _DriverPayoutPageState extends State<DriverPayoutPage> {
                   ClipboardData(
                     text: "MoveX GO to'lov cheki\n"
                         "Tranzaksiya: #TR${req.id}\n"
-                        "Summa: ${money(req.payoutAmount)}\n"
-                        "Karta: $cardName\n"
-                        "Sana: $now",
+                        "${'driver.payout_sum'.tr()}: ${money(req.payoutAmount)}\n"
+                        "${'driver.card'.tr()}: $cardName\n"
+                        "${'driver.payout_date'.tr()}: $now",
                   ),
                 );
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Chek ma'lumotlaridan nusxa olindi")),
+                  SnackBar(content: Text('driver.receipt_copied'.tr())),
                 );
               },
             ),

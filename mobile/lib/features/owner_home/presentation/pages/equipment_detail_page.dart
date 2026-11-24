@@ -10,6 +10,7 @@ import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
 import '../../../driver/presentation/driver_ui.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class EquipmentDetailPage extends StatefulWidget {
   final EquipmentModel equipment;
@@ -56,7 +57,7 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 18, color: AppPalette.brand),
+            HIcon(icon, size: 18, color: AppPalette.brand),
             const SizedBox(width: 10),
           ],
           Expanded(
@@ -258,7 +259,7 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                   ),
                 ),
                 child: Center(
-                  child: Icon(
+                  child: HIcon(
                     Icons.construction_rounded,
                     size: 72,
                     color: Colors.white.withValues(alpha: 0.25),
@@ -396,7 +397,7 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                                 },
                               )),
                               Center(
-                                child: Icon(
+                                child: HIcon(
                                   Icons.location_on,
                                   size: 44,
                                   color: AppPalette.textDanger,
@@ -424,7 +425,7 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(Icons.map_rounded, size: 18, color: AppPalette.brand),
+                                          const HIcon(Icons.map_rounded, size: 18, color: AppPalette.brand),
                                           const SizedBox(width: 6),
                                           Text(
                                             'orders.open_in_map'.tr(),

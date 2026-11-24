@@ -11,9 +11,13 @@ import '../../freight/data/freight_api.dart';
 import '../../requests/presentation/pages/incoming_order_page.dart' show SwipeToAccept;
 import 'driver_ui.dart';
 
-String _cargo(double? tonnes, String? body, String? note) => [
+String _cargo(double? tonnes, String? body, String? note, {String? type, bool loader = false, DateTime? when}) => [
+      if (type != null) 'freight.cargo_$type'.tr(),
       if (tonnes != null) '$tonnes t',
       if (body != null) 'freight.body_$body'.tr(),
+      if (loader) 'freight.loader'.tr(),
+      if (when != null) '${when.day.toString().padLeft(2, '0')}.${when.month.toString().padLeft(2, '0')} '
+          '${when.hour.toString().padLeft(2, '0')}:${when.minute.toString().padLeft(2, '0')}',
       if (note != null && note.isNotEmpty) note,
     ].join(' · ');
 
@@ -77,7 +81,7 @@ class _FreightIncomingPageState extends State<FreightIncomingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cargo = _cargo(o.tonnes, o.bodyType, o.note);
+    final cargo = _cargo(o.tonnes, o.bodyType, o.note, type: o.cargoType, loader: o.needsLoader, when: o.scheduledAt);
     return Scaffold(
       backgroundColor: AppPalette.page,
       body: SafeArea(
@@ -207,7 +211,9 @@ class _FreightDriverOrderPageState extends State<FreightDriverOrderPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text([o.vehicleName, _cargo(o.tonnes, o.bodyType, o.note)].where((x) => x.isNotEmpty).join(' · '),
+                  Text([o.vehicleName, _cargo(o.tonnes, o.bodyType, o.note, type: o.cargoType, loader: o.needsLoader, when: o.scheduledAt)]
+                          .where((x) => x.isNotEmpty)
+                          .join(' · '),
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   Text(toA ? 'driver.freight_go_a'.tr() : 'driver.freight_go_b'.tr(),

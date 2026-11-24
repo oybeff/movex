@@ -22,6 +22,7 @@ import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class ClientHistoryPage extends StatefulWidget {
   const ClientHistoryPage({super.key});
@@ -479,7 +480,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.receipt_long, size: 64, color: Colors.grey[400]),
+                              HIcon(Icons.receipt_long, size: 64, color: Colors.grey[400]),
                               const SizedBox(height: 16),
                               Text(
                                 'orders.not_found'.tr(),
@@ -728,7 +729,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: const HIcon(Icons.close),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -868,7 +869,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.location_on, size: 20, color: Colors.grey[700]),
+                            HIcon(Icons.location_on, size: 20, color: Colors.grey[700]),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -942,7 +943,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.map, size: 18, color: AppColors.primaryGreen),
+                                    HIcon(Icons.map, size: 18, color: AppColors.primaryGreen),
                                     const SizedBox(width: 4),
                                     Text(
                                       'orders.open_in_map'.tr(),
@@ -969,7 +970,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () => _callOwner(equipment),
-                            icon: const Icon(Icons.phone),
+                            icon: const HIcon(Icons.phone),
                             label: Text('messages.call_owner'.tr()),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -982,7 +983,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () => _openChat(order),
-                            icon: const Icon(Icons.chat_bubble_outline),
+                            icon: const HIcon(Icons.chat_bubble_outline),
                             label: Text('chat.open_chat'.tr()),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1005,7 +1006,7 @@ class _ClientHistoryPageState extends State<ClientHistoryPage> {
                             Navigator.pop(context);
                             _cancelOrder(order);
                           },
-                          icon: const Icon(Icons.cancel),
+                          icon: const HIcon(Icons.cancel),
                           label: Text('orders.cancel_order'.tr()),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,

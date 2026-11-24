@@ -8,6 +8,7 @@ import '../../../../core/models/listing_model.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/equipment_type_icon.dart';
 import '../pages/listing_chat_page.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// E'lon kartochkasi — mijozning ro'yxatida ham, ega taxtasida ham bir xil.
 ///
@@ -100,7 +101,7 @@ class ListingCard extends StatelessWidget {
                         width: 120,
                         height: 90,
                         color: AppColors.lightGrey,
-                        child: const Icon(Icons.broken_image_outlined,
+                        child: const HIcon(Icons.broken_image_outlined,
                             color: Colors.grey),
                       ),
                     ),
@@ -214,7 +215,7 @@ class ListingCard extends StatelessWidget {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.chat_outlined, size: 16),
+                  icon: const HIcon(Icons.chat_outlined, size: 16),
                   label: Text('listings.contact_chat_btn'.tr()),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primaryGreen,
@@ -237,7 +238,7 @@ class ListingCard extends StatelessWidget {
                       await launchUrl(uri, mode: LaunchMode.externalApplication);
                     }
                   },
-                  icon: const Icon(Icons.send_rounded, size: 15, color: Color(0xFF0088CC)),
+                  icon: const HIcon(Icons.send_rounded, size: 15, color: Color(0xFF0088CC)),
                   label: Text('listings.contact_telegram_btn'.tr()),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF0088CC),
@@ -257,7 +258,7 @@ class ListingCard extends StatelessWidget {
                       await launchUrl(uri);
                     }
                   },
-                  icon: const Icon(Icons.phone_outlined, size: 15),
+                  icon: const HIcon(Icons.phone_outlined, size: 15),
                   label: Text(listing.contactPhone!),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryGreen,
@@ -326,7 +327,7 @@ class ListingCard extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: color),
+        HIcon(icon, size: 16, color: color),
         const SizedBox(width: 4),
         Text(
           '$count',
@@ -355,7 +356,7 @@ class ListingCard extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 19, color: color ?? Colors.grey[600]),
+            HIcon(icon, size: 19, color: color ?? Colors.grey[600]),
             const SizedBox(width: 4),
             Text(
               '$count',
@@ -376,7 +377,7 @@ class ListingCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 15, color: Colors.grey[600]),
+            HIcon(icon, size: 15, color: Colors.grey[600]),
             const SizedBox(width: 6),
             Expanded(
               child: Text(

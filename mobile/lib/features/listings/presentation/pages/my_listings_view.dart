@@ -7,6 +7,7 @@ import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../balance/presentation/pages/balance_topup_page.dart';
 import '../widgets/listing_card.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// O'z e'lonlari — muallif tomoni.
 ///
@@ -183,7 +184,7 @@ class MyListingsViewState extends State<MyListingsView> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.pan_tool_alt_outlined,
+                const HIcon(Icons.pan_tool_alt_outlined,
                     size: 16, color: Colors.orange),
                 const SizedBox(width: 8),
                 Expanded(
@@ -209,7 +210,7 @@ class MyListingsViewState extends State<MyListingsView> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.local_offer_outlined,
+                const HIcon(Icons.local_offer_outlined,
                     size: 16, color: AppPalette.brand),
                 const SizedBox(width: 8),
                 Expanded(
@@ -588,7 +589,7 @@ class MyListingsViewState extends State<MyListingsView> {
     return ListView(
       children: [
         const SizedBox(height: 100),
-        Icon(Icons.campaign_outlined, size: 64, color: Colors.grey[400]),
+        HIcon(Icons.campaign_outlined, size: 64, color: Colors.grey[400]),
         const SizedBox(height: 16),
         Center(
           child: Text('listings.my_empty'.tr(),

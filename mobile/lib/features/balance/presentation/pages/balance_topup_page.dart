@@ -12,6 +12,7 @@ import '../../../../core/models/user_model.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../../../../core/utils/number_formatter.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class BalanceTopUpPage extends StatefulWidget {
   final double? requiredAmount; // Kerakli summa (agar buyurtmadan kelgan bo'lsa)
@@ -301,7 +302,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: const HIcon(Icons.arrow_back, color: Colors.black),
             onPressed: () => context.pop(),
           ),
           title: Text(
@@ -478,7 +479,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
           readOnly: true, // Faqat o'qish uchun
           decoration: InputDecoration(
             hintText: '+998 90 123 45 67',
-            prefixIcon: const Icon(Icons.phone, color: AppColors.primaryGreen),
+            prefixIcon: const HIcon(Icons.phone, color: AppColors.primaryGreen),
             filled: true,
             fillColor: Colors.grey[100],
             border: OutlineInputBorder(
@@ -599,7 +600,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon,
+            HIcon(icon,
                 size: 18,
                 color: isSelected ? AppColors.primaryGreen : Colors.grey[600]),
             const SizedBox(width: 8),
@@ -651,7 +652,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
                 ),
                 child: Row(
                   children: [
-                    Icon(
+                    HIcon(
                       Icons.payment,
                       color: isSelected ? AppColors.primaryGreen : Colors.grey,
                     ),
@@ -666,7 +667,7 @@ class _BalanceTopUpPageState extends State<BalanceTopUpPage> with WidgetsBinding
                     ),
                     const Spacer(),
                     if (isSelected)
-                      const Icon(
+                      const HIcon(
                         Icons.check_circle,
                         color: AppColors.primaryGreen,
                       ),

@@ -10,6 +10,7 @@ import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/error_handler.dart';
 import '../../data/card_api.dart';
 import '../widgets/taxi_ui.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Добавить карту: K2/K3 — форма Multicard в WebView (номер карты и SMS-код
 /// вводятся у Multicard: своих полей карты у нас быть не может без PCI DSS),
@@ -264,7 +265,7 @@ class _CardAddedPageState extends State<CardAddedPage> {
                       width: 80,
                       height: 80,
                       decoration: const BoxDecoration(color: AppPalette.textSuccess, shape: BoxShape.circle),
-                      child: const Icon(Icons.check_rounded, color: Colors.white, size: 36),
+                      child: const HIcon(Icons.check_rounded, color: Colors.white, size: 36),
                     ),
                   ),
                 ),

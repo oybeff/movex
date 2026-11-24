@@ -36,6 +36,13 @@ $groups = [
 $message = null;
 $error = null;
 
+// «Yuk tashish» (Y1–Y8): sinf va kuzov turlari
+$sizeClasses = ['small' => 'Kichik', 'medium' => "O'rta", 'large' => 'Katta', 'trailer' => 'Fura va tirkama'];
+$bodyTypes = [
+    'tent' => 'Tentli', 'open' => 'Bortli', 'van' => 'Furgon', 'isothermal' => 'Izotermik',
+    'fridge' => 'Muzlatkichli', 'tank' => 'Sisterna', 'manipulator' => 'Manipulyator',
+];
+
 function settingOn(PDO $db, string $key): bool {
     $stmt = $db->prepare('SELECT value FROM app_settings WHERE key = ?');
     $stmt->execute([$key]);
@@ -55,7 +62,18 @@ function cleanInt(string $raw) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $form = $_POST['form'] ?? '';
 
-    if ($form === 'materials_toggle') {
+    if ($form === 'loader_fee') {
+        $fee = cleanInt((string)($_POST['fee'] ?? ''));
+        if ($fee === false || $fee === null) {
+            $error = "Yuklovchi narxi — 0 yoki musbat butun son";
+        } else {
+            $db->prepare("
+                INSERT INTO app_settings (key, value) VALUES ('freight_loader_fee', to_jsonb(?::text))
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+            ")->execute([(string)$fee]);
+            $message = 'Yuklovchi narxi saqlandi: ' . number_format($fee, 0, '.', ' ') . " so'm.";
+        }
+    } elseif ($form === 'materials_toggle') {
         $on = isset($_POST['enabled']) ? '1' : '0';
         $db->prepare("
             INSERT INTO app_settings (key, value) VALUES ('materials_enabled', to_jsonb(?::text))
@@ -140,7 +158,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mode = ($_POST['price_mode'] ?? 'km') === 'hour' ? 'hour' : 'km';
         $perHour = cleanInt((string)($_POST['price_per_hour'] ?? ''));
         $minHours = cleanInt((string)($_POST['min_hours'] ?? '1'));
-        $bodyChoice = isset($_POST['has_body_choice']) ? 'true' : 'false';
+        $brand = trim((string)($_POST['brand'] ?? ''));
+        $sizeClass = (string)($_POST['size_class'] ?? 'medium');
+        $dims = [];
+        foreach (['body_length_m', 'body_width_m', 'body_height_m'] as $dk) {
+            $raw = str_replace(',', '.', trim((string)($_POST[$dk] ?? '')));
+            $dims[$dk] = ($raw === '' || !is_numeric($raw) || (float)$raw <= 0) ? null : $raw;
+        }
+        $bodies = array_values(array_intersect(array_keys($bodyTypes), (array)($_POST['body_types'] ?? [])));
+        $bodiesCsv = implode(',', $bodies);
+        // Tanlov — kuzov turi bittadan ko'p bo'lsa
+        $bodyChoice = count($bodies) > 1 ? 'true' : 'false';
 
         if (!preg_match('/^[a-z][a-z0-9_]{1,19}$/', $code)) {
             $error = 'Kod — lotin kichik harflar, raqam va _ (20 belgigacha)';
@@ -152,6 +180,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Kuzov hajmi, m³ — musbat son yoki bo\'sh';
         } elseif ($base === false || $km === false || $sort === false || $perHour === false) {
             $error = 'Narxlar va tartib — butun son';
+        } elseif (!isset($sizeClasses[$sizeClass])) {
+            $error = "Noma'lum sinf";
+        } elseif (mb_strlen($brand) > 40) {
+            $error = 'Marka 40 belgigacha';
         } elseif (!$minHours || $minHours > 48) {
             $error = 'Eng kam soat 1 dan 48 gacha';
         } elseif ($mode === 'hour' && !$perHour) {
@@ -164,20 +196,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $db->prepare('
                     INSERT INTO delivery_vehicles (code, name, capacity_kg, volume_m3, base_fee, price_per_km, sort_order,
-                                                   price_mode, price_per_hour, min_hours, has_body_choice)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ' . $bodyChoice . ')
+                                                   price_mode, price_per_hour, min_hours, has_body_choice,
+                                                   brand, size_class, body_length_m, body_width_m, body_height_m, body_types)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ' . $bodyChoice . ', ?, ?, ?, ?, ?, ?)
                 ')->execute([$code, $name, $kg, $volRaw === '' ? null : $volRaw, (int)$base, $km, (int)$sort,
-                             $mode, $perHour, (int)$minHours]);
+                             $mode, $perHour, (int)$minHours, $brand ?: null, $sizeClass,
+                             $dims['body_length_m'], $dims['body_width_m'], $dims['body_height_m'], $bodiesCsv]);
                 $message = "«$name» qo'shildi.";
             }
         } else {
             $db->prepare('
                 UPDATE delivery_vehicles
                    SET name = ?, capacity_kg = ?, volume_m3 = ?, base_fee = ?, price_per_km = ?, sort_order = ?,
-                       price_mode = ?, price_per_hour = ?, min_hours = ?, has_body_choice = ' . $bodyChoice . '
+                       price_mode = ?, price_per_hour = ?, min_hours = ?, has_body_choice = ' . $bodyChoice . ',
+                       brand = ?, size_class = ?, body_length_m = ?, body_width_m = ?, body_height_m = ?, body_types = ?
                  WHERE code = ?
             ')->execute([$name, $kg, $volRaw === '' ? null : $volRaw, (int)$base, $km, (int)$sort,
-                         $mode, $perHour, (int)$minHours, $code]);
+                         $mode, $perHour, (int)$minHours, $brand ?: null, $sizeClass,
+                         $dims['body_length_m'], $dims['body_width_m'], $dims['body_height_m'], $bodiesCsv, $code]);
             $message = "«$name» saqlandi.";
         }
 
@@ -189,6 +225,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $materialsOn = settingOn($db, 'materials_enabled');
+$loaderStmt = $db->query("SELECT value FROM app_settings WHERE key = 'freight_loader_fee'");
+$loaderRaw = $loaderStmt ? $loaderStmt->fetchColumn() : false;
+$loaderFee = $loaderRaw === false ? 0 : (int)json_decode((string)$loaderRaw, true);
 $types = $db->query('
     SELECT c.*, EXISTS (SELECT 1 FROM tariffs t WHERE t.equipment_type = c.code AND t.is_active) AS has_tariff
       FROM equipment_catalog c
@@ -227,6 +266,20 @@ function money($v) {
                 Hozir: <strong><?= $materialsOn ? 'yoqilgan' : "o'chirilgan" ?></strong>.
                 O'chirilganda yangi material buyurtmasi qabul qilinmaydi, eski buyurtmalar o'z yo'lida davom etadi.
             </p>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header"><h3 class="card-title">Yuk tashish — yuklovchi</h3></div>
+        <div class="card-body">
+            <form method="POST" action="" style="display:flex;gap:12px;align-items:center">
+                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                <input type="hidden" name="form" value="loader_fee">
+                <label>Mijoz «Yuklovchi kerak» ni tanlasa narxga qo'shiladi, so'm
+                    <input name="fee" value="<?= $loaderFee ?>" style="width:120px">
+                </label>
+                <button type="submit" class="btn btn-primary btn-sm">Saqlash</button>
+            </form>
         </div>
     </div>
 
@@ -323,11 +376,11 @@ function money($v) {
                 Material buyurtmasida tizim yuk og'irligiga qarab bir reysga sig'adigan eng kichik mashinani tanlaydi.
                 Yetkazish = (podacha + km × narx) × reys. Km narxi bo'sh — sotuvchi tovarga yozgan km narxi olinadi.
                 <br>«Yuk tashish» (mijozning yuki A→B): <b>Km</b> rejimi — podacha + km × narx;
-                <b>Soatbay</b> — soat × soat narxi (eng kam soatdan kam emas). «Kuzov» belgilansa, mijoz tentli/tentsiz tanlaydi.
+                <b>Soatbay</b> — soat × soat narxi (eng kam soatdan kam emas). Kuzov turlari bittadan ko'p bo'lsa, mijoz kuzovni tanlaydi (Y3). Kuzov o'lchami — «sig'maydi» tekshiruvi uchun (Y7).
             </p>
             <table>
                 <thead>
-                    <tr><th>Kod</th><th>Nomi</th><th>Sig'im, kg</th><th>Kuzov, m³</th><th>Podacha, so'm</th><th>1 km, so'm</th><th>Rejim</th><th>1 soat / kamida</th><th>Tent</th><th>Tartib</th><th>Holati</th><th></th></tr>
+                    <tr><th>Kod</th><th>Nomi</th><th>Sig'im, kg</th><th>Kuzov, m³</th><th>Podacha, so'm</th><th>1 km, so'm</th><th>Rejim</th><th>1 soat / kamida</th><th>Marka / sinf / kuzov (U×E×B, m) / kuzov turlari</th><th>Tartib</th><th>Holati</th><th></th></tr>
                 </thead>
                 <tbody>
                 <?php foreach ($vehicles as $v): $fid = 've_' . $v['code']; ?>
@@ -348,7 +401,20 @@ function money($v) {
                             <input form="<?= $fid ?>" name="price_per_hour" value="<?= $v['price_per_hour'] !== null ? (int)$v['price_per_hour'] : '' ?>" placeholder="—" style="width:90px">
                             <input form="<?= $fid ?>" name="min_hours" value="<?= (int)$v['min_hours'] ?>" style="width:44px" title="eng kam soat">
                         </td>
-                        <td><input form="<?= $fid ?>" type="checkbox" name="has_body_choice" value="1" <?= $v['has_body_choice'] ? 'checked' : '' ?>></td>
+                        <td style="min-width:260px">
+                            <input form="<?= $fid ?>" name="brand" value="<?= htmlspecialchars((string)$v['brand']) ?>" placeholder="Hyundai" style="width:90px">
+                            <select form="<?= $fid ?>" name="size_class">
+                                <?php foreach ($sizeClasses as $sc => $scl): ?>
+                                    <option value="<?= $sc ?>" <?= $v['size_class'] === $sc ? 'selected' : '' ?>><?= htmlspecialchars($scl) ?></option>
+                                <?php endforeach; ?>
+                            </select><br>
+                            <?php foreach (['body_length_m', 'body_width_m', 'body_height_m'] as $dk): ?>
+                                <input form="<?= $fid ?>" name="<?= $dk ?>" value="<?= $v[$dk] !== null ? rtrim(rtrim((string)$v[$dk], '0'), '.') : '' ?>" style="width:46px;margin-top:4px">
+                            <?php endforeach; ?><br>
+                            <?php $vb = array_filter(explode(',', (string)$v['body_types'])); foreach ($bodyTypes as $bt => $btl): ?>
+                                <label style="font-size:12px;white-space:nowrap"><input form="<?= $fid ?>" type="checkbox" name="body_types[]" value="<?= $bt ?>" <?= in_array($bt, $vb, true) ? 'checked' : '' ?>> <?= htmlspecialchars($btl) ?></label>
+                            <?php endforeach; ?>
+                        </td>
                         <td><input form="<?= $fid ?>" name="sort_order" value="<?= (int)$v['sort_order'] ?>" style="width:60px"></td>
                         <td><?= $v['is_enabled'] ? 'Faol' : "O'chirilgan" ?></td>
                         <td style="display:flex;gap:6px">
@@ -383,7 +449,10 @@ function money($v) {
                 <label>Rejim<br><select name="price_mode"><option value="km">Km</option><option value="hour">Soatbay</option></select></label>
                 <label>1 soat<br><input name="price_per_hour" style="width:90px"></label>
                 <label>Kamida soat<br><input name="min_hours" value="1" style="width:60px"></label>
-                <label><input type="checkbox" name="has_body_choice" value="1"> Tentli/tentsiz</label>
+                <label>Marka<br><input name="brand" style="width:100px"></label>
+                <label>Sinf<br><select name="size_class"><?php foreach ($sizeClasses as $sc => $scl): ?><option value="<?= $sc ?>"><?= htmlspecialchars($scl) ?></option><?php endforeach; ?></select></label>
+                <label>Kuzov U×E×B, m<br><input name="body_length_m" style="width:46px"><input name="body_width_m" style="width:46px"><input name="body_height_m" style="width:46px"></label>
+                <label>Kuzov turlari<br><?php foreach ($bodyTypes as $bt => $btl): ?><label style="font-size:12px"><input type="checkbox" name="body_types[]" value="<?= $bt ?>"> <?= htmlspecialchars($btl) ?></label> <?php endforeach; ?></label>
                 <label>Tartib<br><input name="sort_order" value="0" style="width:60px"></label>
                 <button type="submit" class="btn btn-primary">Qo'shish</button>
             </form>

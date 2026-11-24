@@ -5,6 +5,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/models/listing_model.dart';
 import '../../../../core/services/listing_service.dart';
 import '../widgets/listing_card.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Saqlanganlar — xatcho'p bosilgan e'lonlar.
 ///
@@ -108,7 +109,7 @@ class SavedListingsViewState extends State<SavedListingsView> {
     return ListView(
       children: [
         const SizedBox(height: 100),
-        Icon(Icons.bookmark_border, size: 64, color: Colors.grey[400]),
+        HIcon(Icons.bookmark_border, size: 64, color: Colors.grey[400]),
         const SizedBox(height: 16),
         Center(
           child: Text(

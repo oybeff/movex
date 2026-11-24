@@ -11,6 +11,7 @@ import '../../../../core/widgets/map_or_placeholder.dart';
 import '../../data/taxi_geo.dart';
 import '../../data/taxi_service.dart';
 import '../widgets/taxi_ui.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// «2 · Qayerga — manzilni qidirish». Возвращает выбранную точку
 /// ([TaxiPlace]) через Navigator.pop.
@@ -216,7 +217,7 @@ class _AddressPickPageState extends State<AddressPickPage> {
                     padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                     child: Row(
                       children: [
-                        const Icon(Icons.location_on_outlined, color: AppPalette.iconBrand, size: 20),
+                        const HIcon(Icons.location_on_outlined, color: AppPalette.iconBrand, size: 20),
                         const SizedBox(width: AppSpacing.sm),
                         Text(
                           'taxi.pick_on_map'.tr(),
@@ -314,7 +315,7 @@ class _PlaceTile extends StatelessWidget {
               height: 40,
               decoration: const BoxDecoration(color: AppPalette.page, shape: BoxShape.circle),
               alignment: Alignment.center,
-              child: svg != null ? TaxiIcon(svg!, size: 20) : Icon(icon, size: 20, color: AppPalette.iconBrand),
+              child: svg != null ? TaxiIcon(svg!, size: 20) : HIcon(icon, size: 20, color: AppPalette.iconBrand),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(

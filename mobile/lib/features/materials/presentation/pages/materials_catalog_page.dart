@@ -10,6 +10,7 @@ import '../../../../core/services/material_service.dart';
 import '../../../../core/utils/number_formatter.dart';
 import 'material_order_page.dart';
 import '../../../../core/widgets/material_type_icon.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Qurilish materiallari katalogi: g'isht, sement, qum, gazoblok.
 ///
@@ -71,7 +72,7 @@ class _MaterialsCatalogPageState extends State<MaterialsCatalogPage> {
         actions: [
           IconButton(
             tooltip: 'material_orders.title'.tr(),
-            icon: const Icon(Icons.receipt_long_outlined),
+            icon: const HIcon(Icons.receipt_long_outlined),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const MaterialOrdersPage()),
             ),
@@ -223,7 +224,7 @@ class _MaterialsCatalogPageState extends State<MaterialsCatalogPage> {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      Icon(Icons.local_shipping_outlined, size: 14, color: Colors.blueGrey[700]),
+                      HIcon(Icons.local_shipping_outlined, size: 14, color: Colors.blueGrey[700]),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(

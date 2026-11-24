@@ -11,6 +11,7 @@ import '../../../core/widgets/map_or_placeholder.dart';
 import '../../taxi/presentation/pages/taxi_chat_page.dart';
 import '../data/driver_api.dart';
 import 'driver_ui.dart';
+import '../../../core/widgets/h_icon.dart';
 
 /// Исполнение заказа — макет 02 «Buyurtmani bajarish»:
 /// D1 в пути («Ketdik» → «Yetib keldim»), D2 ждём клиента, D3 идёт работа,
@@ -153,7 +154,7 @@ class _DriverOrderPageState extends State<DriverOrderPage> {
               child: CircleAvatar(
                 radius: 22,
                 backgroundColor: DChip.blueBg,
-                child: Icon(Icons.schedule_rounded, color: AppPalette.brand),
+                child: HIcon(Icons.schedule_rounded, color: AppPalette.brand),
               ),
             ),
             const SizedBox(height: 10),
@@ -223,7 +224,7 @@ class _DriverOrderPageState extends State<DriverOrderPage> {
                 child: CircleAvatar(
                   radius: 26,
                   backgroundColor: Color(0xFFFDF3D6),
-                  child: Icon(Icons.person_outline_rounded, color: AppPalette.textPrimary, size: 28),
+                  child: HIcon(Icons.person_outline_rounded, color: AppPalette.textPrimary, size: 28),
                 ),
               ),
               const SizedBox(height: 12),
@@ -309,7 +310,7 @@ class _DriverOrderPageState extends State<DriverOrderPage> {
                 IconButton(
                   visualDensity: VisualDensity.compact,
                   onPressed: () => setState(() => _stars = i),
-                  icon: Icon(
+                  icon: HIcon(
                     i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded,
                     size: 34,
                     color: i <= _stars ? const Color(0xFFF5B400) : AppPalette.textPlaceholder,
@@ -365,7 +366,7 @@ class _DriverOrderPageState extends State<DriverOrderPage> {
             child: CircleAvatar(
               backgroundColor: AppPalette.surface,
               child: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: AppPalette.textPrimary),
+                icon: const HIcon(Icons.arrow_back_rounded, color: AppPalette.textPrimary),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -568,7 +569,7 @@ class _DriverOrderPageState extends State<DriverOrderPage> {
         appBar: AppBar(
           backgroundColor: AppPalette.page,
           title: Text('driver.finish'.tr()),
-          leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => setState(() => _summary = false)),
+          leading: IconButton(icon: const HIcon(Icons.arrow_back_rounded), onPressed: () => setState(() => _summary = false)),
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),
@@ -593,7 +594,7 @@ class _DriverOrderPageState extends State<DriverOrderPage> {
                 color: const Color(0xFFFDF3D6),
                 child: Row(
                   children: [
-                    const Icon(Icons.payments_outlined),
+                    const HIcon(Icons.payments_outlined),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -641,7 +642,7 @@ class _DriverOrderPageState extends State<DriverOrderPage> {
                       child: CircleAvatar(
                         radius: 36,
                         backgroundColor: AppPalette.textSuccess,
-                        child: Icon(Icons.check_rounded, color: Colors.white, size: 44),
+                        child: HIcon(Icons.check_rounded, color: Colors.white, size: 44),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -714,7 +715,7 @@ class _DriverOrderPageState extends State<DriverOrderPage> {
                       child: CircleAvatar(
                         radius: 28,
                         backgroundColor: DChip.redBg,
-                        child: Icon(Icons.close_rounded, color: AppPalette.textDanger, size: 32),
+                        child: HIcon(Icons.close_rounded, color: AppPalette.textDanger, size: 32),
                       ),
                     ),
                     const SizedBox(height: 14),

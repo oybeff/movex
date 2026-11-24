@@ -9,6 +9,7 @@ import '../../../../core/models/order_statistics_model.dart';
 import '../../../../core/models/equipment_model.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/constants/equipment_types.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class OrderStatisticsPage extends StatefulWidget {
   const OrderStatisticsPage({super.key});
@@ -174,7 +175,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.bar_chart_rounded, size: 80, color: Colors.grey[300]),
+                                HIcon(Icons.bar_chart_rounded, size: 80, color: Colors.grey[300]),
                                 const SizedBox(height: 16),
                                 Text(
                                   'Ma\'lumot yo\'q',
@@ -235,7 +236,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: AppColors.primaryGreen),
+              icon: const HIcon(Icons.arrow_back, color: AppColors.primaryGreen),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -268,7 +269,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              icon: const Icon(Icons.filter_list_off, color: Colors.red),
+              icon: const HIcon(Icons.filter_list_off, color: Colors.red),
               onPressed: _clearFilters,
               tooltip: 'Filterlarni tozalash',
             ),
@@ -321,7 +322,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.filter_list, color: Colors.white, size: 20),
+                  child: const HIcon(Icons.filter_list, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -364,7 +365,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                             : Colors.grey[400],
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.calendar_today, color: Colors.white, size: 18),
+                      child: const HIcon(Icons.calendar_today, color: Colors.white, size: 18),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -400,7 +401,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.clear, size: 18, color: Colors.red),
+                          icon: const HIcon(Icons.clear, size: 18, color: Colors.red),
                           onPressed: () {
                             setState(() => _selectedDateRange = null);
                             _loadData();
@@ -442,7 +443,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                       color: _selectedStatus != null ? Colors.blue : Colors.grey[400],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.filter_alt, color: Colors.white, size: 18),
+                    child: const HIcon(Icons.filter_alt, color: Colors.white, size: 18),
                   ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -490,7 +491,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                       color: _selectedEquipmentId != null ? Colors.orange : Colors.grey[400],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.construction, color: Colors.white, size: 18),
+                    child: const HIcon(Icons.construction, color: Colors.white, size: 18),
                   ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -571,7 +572,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                 color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: Colors.white, size: 28),
+              child: HIcon(icon, color: Colors.white, size: 28),
             ),
             const SizedBox(height: 16),
             Text(
@@ -616,7 +617,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
         child: Center(
           child: Column(
             children: [
-              Icon(Icons.show_chart_rounded, size: 60, color: Colors.grey[300]),
+              HIcon(Icons.show_chart_rounded, size: 60, color: Colors.grey[300]),
               const SizedBox(height: 12),
               Text(
                 'statistics.no_data_by_date'.tr(),
@@ -655,7 +656,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.show_chart_rounded, color: Colors.white, size: 20),
+                  child: const HIcon(Icons.show_chart_rounded, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -900,7 +901,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.pie_chart_rounded, color: Colors.white, size: 20),
+                  child: const HIcon(Icons.pie_chart_rounded, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -952,7 +953,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                             gradient: LinearGradient(colors: colors),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(icon, color: Colors.white, size: 18),
+                          child: HIcon(icon, color: Colors.white, size: 18),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -1048,7 +1049,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.construction_rounded, color: Colors.white, size: 20),
+                  child: const HIcon(Icons.construction_rounded, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1109,7 +1110,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.construction, color: Colors.white, size: 24),
+                      child: const HIcon(Icons.construction, color: Colors.white, size: 24),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -1126,7 +1127,7 @@ class _OrderStatisticsPageState extends State<OrderStatisticsPage> {
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Icon(Icons.shopping_cart_rounded, size: 14, color: Colors.grey[600]),
+                              HIcon(Icons.shopping_cart_rounded, size: 14, color: Colors.grey[600]),
                               const SizedBox(width: 4),
                               Text(
                                 '${equipment.count} ta buyurtma',

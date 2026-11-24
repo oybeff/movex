@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../data/freight_api.dart';
+import '../../../core/widgets/h_icon.dart';
 
 /// Заказы «Yuk tashish» клиента: статус, кто везёт, отмена до погрузки,
 /// «Yakunlash» — после погрузки (тогда водитель получает деньги).
@@ -134,7 +135,7 @@ class _FreightOrdersPageState extends State<FreightOrdersPage> {
           if (o.driverName != null) ...[
             const Divider(height: 20),
             Row(children: [
-              const Icon(Icons.local_shipping_outlined, color: AppPalette.brand),
+              const HIcon(Icons.local_shipping_outlined, color: AppPalette.brand),
               const SizedBox(width: 8),
               Expanded(
                 child: Text([o.driverName, o.driverPlate].whereType<String>().join(' · '),
@@ -143,7 +144,7 @@ class _FreightOrdersPageState extends State<FreightOrdersPage> {
               if (o.driverPhone != null && o.active)
                 IconButton(
                   tooltip: 'freight.call_driver'.tr(),
-                  icon: const Icon(Icons.call_outlined, color: AppPalette.brand),
+                  icon: const HIcon(Icons.call_outlined, color: AppPalette.brand),
                   onPressed: () => launchUrl(Uri.parse('tel:+${o.driverPhone!.replaceAll(RegExp(r'[^0-9]'), '')}')),
                 ),
             ]),

@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +7,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../data/driver_card_model.dart';
 import 'driver_ui.dart';
+import '../../../core/widgets/h_icon.dart';
 
 /// Макет 04 C2, C3, C4: «Karta qo'shish», «SMS kodni tasdiqlash», «Karta qo'shildi».
 class DriverAddCardPage extends StatefulWidget {
@@ -124,7 +126,7 @@ class _DriverAddCardPageState extends State<DriverAddCardPage> {
     }
     final exp = _expiryCtrl.text.replaceAll(RegExp(r'\D'), '');
     if (exp.length != 4) {
-      setState(() => _error = "Amal qilish muddatini to'liq kiriting (OO/YY)");
+      setState(() => _error = 'driver.card_expiry_full'.tr());
       return;
     }
     final m = int.tryParse(exp.substring(0, 2)) ?? 0;
@@ -143,7 +145,7 @@ class _DriverAddCardPageState extends State<DriverAddCardPage> {
   Future<void> _onConfirmOtp() async {
     final otp = _otpCtrl.text.replaceAll(RegExp(r'\D'), '');
     if (otp.length != 6) {
-      setState(() => _error = "6 xonali SMS kodni kiriting");
+      setState(() => _error = 'driver.card_sms_6'.tr());
       return;
     }
 
@@ -189,7 +191,7 @@ class _DriverAddCardPageState extends State<DriverAddCardPage> {
         backgroundColor: AppPalette.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppPalette.textPrimary),
+          icon: const HIcon(Icons.arrow_back, color: AppPalette.textPrimary),
           onPressed: () {
             if (_step == _Step.otp) {
               setState(() => _step = _Step.input);
@@ -202,7 +204,7 @@ class _DriverAddCardPageState extends State<DriverAddCardPage> {
         ),
         title: Text(
           _step == _Step.otp
-              ? "SMS kodni tasdiqlash"
+              ? 'driver.card_sms_confirm'.tr()
               : (_step == _Step.success ? "Karta qo'shildi" : "Karta qo'shish"),
           style: AppTypography.h3,
         ),
@@ -242,7 +244,7 @@ class _DriverAddCardPageState extends State<DriverAddCardPage> {
                   color: const Color(0xFFFACC15).withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Icon(Icons.credit_card, size: 20, color: Colors.black54),
+                child: const HIcon(Icons.credit_card, size: 20, color: Colors.black54),
               ),
               Text(
                 _cardType == DriverCardType.humo
@@ -326,7 +328,7 @@ class _DriverAddCardPageState extends State<DriverAddCardPage> {
                 decoration: InputDecoration(
                   hintText: '8600 0000 0000 0000',
                   hintStyle: const TextStyle(color: AppPalette.textSecondary),
-                  prefixIcon: const Icon(Icons.credit_card_outlined, color: AppPalette.brand),
+                  prefixIcon: const HIcon(Icons.credit_card_outlined, color: AppPalette.brand),
                   filled: true,
                   fillColor: AppPalette.page,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -368,7 +370,7 @@ class _DriverAddCardPageState extends State<DriverAddCardPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Karta egasi', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        Text('driver.card_holder'.tr(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 6),
                         TextField(
                           controller: _holderCtrl,
@@ -398,14 +400,14 @@ class _DriverAddCardPageState extends State<DriverAddCardPage> {
             color: const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.shield_outlined, size: 20, color: AppPalette.brand),
-              SizedBox(width: 10),
+              const HIcon(Icons.shield_outlined, size: 20, color: AppPalette.brand),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  "Karta ma'lumotlari xavfsiz va shifrlangan holda saqlanadi",
-                  style: TextStyle(fontSize: 12, color: AppPalette.textSecondary),
+                  'driver.card_secure'.tr(),
+                  style: const TextStyle(fontSize: 12, color: AppPalette.textSecondary),
                 ),
               ),
             ],
@@ -434,18 +436,18 @@ class _DriverAddCardPageState extends State<DriverAddCardPage> {
               color: DChip.blueBg,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.mark_email_read_outlined, size: 36, color: AppPalette.brand),
+            child: const HIcon(Icons.mark_email_read_outlined, size: 36, color: AppPalette.brand),
           ),
         ),
         const SizedBox(height: 20),
-        const Text(
-          "SMS kodni kiriting",
+        Text(
+          'driver.card_sms_enter'.tr(),
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
         Text(
-          "Kartangizga bog'langan telefon raqamiga yuborilgan 6 xonali tasdiqlash kodini kiriting",
+          'driver.card_sms_hint'.tr(),
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 14, color: Colors.grey[600]),
         ),
@@ -501,7 +503,7 @@ class _DriverAddCardPageState extends State<DriverAddCardPage> {
               color: Color(0xFFDCFCE7),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.check_circle_rounded, size: 52, color: Color(0xFF16A34A)),
+            child: const HIcon(Icons.check_circle_rounded, size: 52, color: Color(0xFF16A34A)),
           ),
         ),
         const SizedBox(height: 20),

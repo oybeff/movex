@@ -7,6 +7,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../data/driver_api.dart';
 import 'driver_payout_page.dart';
 import 'driver_ui.dart';
+import '../../../core/widgets/h_icon.dart';
 
 /// «Daromad» — макет 04 P1: сколько можно вывести и кнопка «Pul yechish»,
 /// заработок за день / неделю / месяц со столбиками, последние транзакции.
@@ -267,7 +268,7 @@ class _DriverEarningsTabState extends State<DriverEarningsTab> {
           CircleAvatar(
             radius: 18,
             backgroundColor: out ? DChip.blueBg : AppPalette.successSubtle,
-            child: Icon(out ? Icons.north_east_rounded : Icons.south_west_rounded,
+            child: HIcon(out ? Icons.north_east_rounded : Icons.south_west_rounded,
                 size: 18, color: out ? AppPalette.brand : AppPalette.textSuccess),
           ),
           const SizedBox(width: 10),

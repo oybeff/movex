@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_tokens.dart';
+import 'h_icon.dart';
 
 /// Pastki menyu — Figma maketidagi ko'rinishda.
 ///
@@ -53,7 +54,7 @@ class AppBottomNav extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  HIcon(
                     active ? item.activeIcon : item.icon,
                     size: AppSpacing.icon,
                     color: active

@@ -6,6 +6,7 @@ import 'package:yandex_mapkit/yandex_mapkit.dart';
 import '../../../../core/models/equipment_request_model.dart';
 import '../../../../core/services/equipment_request_service.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// "Yangi buyurtma" — tez buyurtma egaga shu ekran bilan keladi.
 ///
@@ -119,7 +120,7 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
               child: Row(
                 children: [
                   _round(
-                    child: const Icon(Icons.arrow_back, size: 20),
+                    child: const HIcon(Icons.arrow_back, size: 20),
                     onTap: () => Navigator.of(context).pop(false),
                   ),
                   const SizedBox(width: 8),
@@ -259,7 +260,7 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
                   color: _green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.schedule, color: _green),
+                child: const HIcon(Icons.schedule, color: _green),
               ),
               const SizedBox(height: 6),
               Text('requests.quick_start'.tr(),
@@ -320,7 +321,7 @@ class _IncomingOrderPageState extends State<IncomingOrderPage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(o.paymentMethod == 'cash' ? Icons.payments_outlined : Icons.account_balance_wallet_outlined,
+            HIcon(o.paymentMethod == 'cash' ? Icons.payments_outlined : Icons.account_balance_wallet_outlined,
                 size: 16),
             const SizedBox(width: 6),
             // Раньше тут всегда было «заморожено на балансе», и у наличного
@@ -441,7 +442,7 @@ class _SwipeToAcceptState extends State<SwipeToAccept> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2.5, color: widget.color),
                         )
-                      : Icon(Icons.arrow_forward, color: widget.color),
+                      : HIcon(Icons.arrow_forward, color: widget.color),
                 ),
               ),
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/services/settings_service.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class PrivacyPage extends StatefulWidget {
   const PrivacyPage({super.key});
@@ -57,7 +58,7 @@ class _PrivacyPageState extends State<PrivacyPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.black),
+          icon: const HIcon(Icons.arrow_back_ios_rounded, color: AppColors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -76,7 +77,7 @@ class _PrivacyPageState extends State<PrivacyPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+                      const HIcon(Icons.error_outline, size: 64, color: Colors.grey),
                       const SizedBox(height: 16),
                       Text(
                         'contact.error'.tr(),

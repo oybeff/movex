@@ -23,6 +23,7 @@ import '../../../../core/utils/number_formatter.dart';
 import '../../../owner_home/presentation/pages/chat_page.dart' show ChatDetailPage;
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/widgets/map_or_placeholder.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 class ClientChatPage extends StatefulWidget {
   const ClientChatPage({super.key});
@@ -184,7 +185,7 @@ class _ClientChatPageState extends State<ClientChatPage> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[400]),
+                              HIcon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[400]),
                               const SizedBox(height: 16),
                               Text(
                                 'chat.no_chats'.tr(),
@@ -261,7 +262,7 @@ class _ClientChatPageState extends State<ClientChatPage> {
                                         child: Column(
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
-                                            const Icon(
+                                            const HIcon(
                                               Icons.receipt_long,
                                               color: Colors.white,
                                               size: 20,
@@ -516,7 +517,7 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
               ),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.receipt_long, color: Colors.white, size: 20),
+            child: const HIcon(Icons.receipt_long, color: Colors.white, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -543,7 +544,7 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
           ),
           TextButton.icon(
             onPressed: () => _showOrderDetails(),
-            icon: const Icon(Icons.visibility, size: 18),
+            icon: const HIcon(Icons.visibility, size: 18),
             label: Text('order.view_details'.tr()),
             style: TextButton.styleFrom(
               foregroundColor: AppColors.primaryGreen,
@@ -629,7 +630,7 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: const HIcon(Icons.close),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -769,7 +770,7 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.location_on, size: 20, color: Colors.grey[700]),
+                            HIcon(Icons.location_on, size: 20, color: Colors.grey[700]),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -815,7 +816,7 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
                           )),
                           // Marker in center
                           Center(
-                            child: Icon(
+                            child: HIcon(
                               Icons.location_on,
                               size: 48,
                               color: Colors.red,
@@ -844,7 +845,7 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.map, size: 18, color: AppColors.primaryGreen),
+                                      HIcon(Icons.map, size: 18, color: AppColors.primaryGreen),
                                       const SizedBox(width: 4),
                                       Text(
                                         'orders.open_in_map'.tr(),
@@ -1103,7 +1104,7 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
           elevation: 0,
           actions: [
             IconButton(
-              icon: const Icon(Icons.phone, color: Colors.blue),
+              icon: const HIcon(Icons.phone, color: Colors.blue),
               tooltip: 'orders.call_owner'.tr(),
               onPressed: () => _callOwner(),
             ),
@@ -1230,7 +1231,7 @@ class _ClientChatDetailPageState extends State<ClientChatDetailPage> {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Icon(Icons.send, color: Colors.white),
+                          : const HIcon(Icons.send, color: Colors.white),
                       onPressed: _isSending ? null : _sendMessage,
                     ),
                   ),

@@ -8,6 +8,7 @@ import '../../data/taxi_service.dart';
 import 'taxi_ui.dart';
 import '../../data/card_api.dart';
 import '../pages/card_bind_page.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Шторки потока «как такси»: время (6), навесное (5), оплата, отмена (E6),
 /// и финальная панель (10).
@@ -51,7 +52,7 @@ Widget _sheetHeader(BuildContext context, String title, {String? subtitle}) => P
               child: const SizedBox(
                 width: 36,
                 height: 36,
-                child: Icon(Icons.close_rounded, size: 20, color: AppPalette.iconBrand),
+                child: HIcon(Icons.close_rounded, size: 20, color: AppPalette.iconBrand),
               ),
             ),
           ),
@@ -390,7 +391,7 @@ class _StepButton extends StatelessWidget {
         child: SizedBox(
           width: 40,
           height: 40,
-          child: Icon(icon, color: onTap == null ? AppPalette.textDisabled : AppPalette.iconPrimary),
+          child: HIcon(icon, color: onTap == null ? AppPalette.textDisabled : AppPalette.iconPrimary),
         ),
       ),
     );
@@ -475,7 +476,7 @@ class _AttachmentSheetState extends State<_AttachmentSheet> {
                             ),
                             alignment: Alignment.center,
                             child: a.id == 0
-                                ? const Icon(Icons.add_circle_outline, size: 20, color: AppPalette.textPrimary)
+                                ? const HIcon(Icons.add_circle_outline, size: 20, color: AppPalette.textPrimary)
                                 : const TaxiIcon('bucket', size: 20),
                           ),
                           const SizedBox(width: AppSpacing.md),
@@ -495,7 +496,7 @@ class _AttachmentSheetState extends State<_AttachmentSheet> {
                               ],
                             ),
                           ),
-                          Icon(
+                          HIcon(
                             a.id == _id ? Icons.radio_button_checked : Icons.radio_button_unchecked,
                             color: a.id == _id ? AppPalette.brand : AppPalette.borderStrong,
                           ),
@@ -647,7 +648,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
         if (!widget.cardsOnly)
           _option(
             'balance',
-            const Icon(Icons.account_balance_wallet_outlined, color: AppPalette.iconPrimary),
+            const HIcon(Icons.account_balance_wallet_outlined, color: AppPalette.iconPrimary),
             'taxi.pay_balance'.tr(),
             'taxi.pay_balance_hint'.tr(),
           ),
@@ -1235,7 +1236,7 @@ class _DonePanelState extends State<DonePanel> {
             width: 56,
             height: 56,
             decoration: const BoxDecoration(color: AppPrimitives.green500, shape: BoxShape.circle),
-            child: const Icon(Icons.check_rounded, color: Colors.white, size: 32),
+            child: const HIcon(Icons.check_rounded, color: Colors.white, size: 32),
           ).animate().scale(begin: const Offset(.4, .4), duration: 600.ms, curve: Curves.elasticOut),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -1291,7 +1292,7 @@ class _DonePanelState extends State<DonePanel> {
             for (var i = 1; i <= 5; i++)
               IconButton(
                 onPressed: () => setState(() => _rating = i),
-                icon: Icon(
+                icon: HIcon(
                   i <= _rating ? Icons.star_rounded : Icons.star_outline_rounded,
                   size: 36,
                   color: i <= _rating ? AppPalette.accent : AppPalette.borderDefault,

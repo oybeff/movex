@@ -52,8 +52,21 @@ class DeliveryVehicleRow(Base):
     price_mode = Column(String(10), nullable=False, default="km")
     price_per_hour = Column(Numeric(12, 2), nullable=True)
     min_hours = Column(Integer, nullable=False, default=1)
-    #: Клиент выбирает кузов tentli / tentsiz (Labo, Porter, Gazel, Isuzu…)
+    #: Клиент выбирает кузов (Labo, Porter, Gazel, Isuzu…)
     has_body_choice = Column(Boolean, nullable=False, default=False)
+    # Шаги Y1–Y8 макета: марка и класс — для экрана марок (Y1), размеры
+    # кузова — для проверки «sig'maydi» (Y7), кузова модели — Y3.
+    brand = Column(String(40), nullable=True)
+    size_class = Column(String(10), nullable=False, default="medium")
+    body_length_m = Column(Numeric(5, 2), nullable=True)
+    body_width_m = Column(Numeric(5, 2), nullable=True)
+    body_height_m = Column(Numeric(5, 2), nullable=True)
+    #: «tent,open,van,…» — какие кузова бывают у этой модели
+    body_types = Column(String(120), nullable=False, default="")
+
+    @property
+    def body_list(self) -> list:
+        return [b for b in (self.body_types or "").split(",") if b]
     is_enabled = Column(Boolean, nullable=False, default=True)
     sort_order = Column(Integer, nullable=False, default=0)
 
@@ -127,6 +140,15 @@ class FreightOrder(Base):
     body_type = Column(String(10), nullable=True)
     cargo_tonnes = Column(Numeric(8, 2), nullable=True)
     cargo_note = Column(Text, nullable=True)
+    cargo_type = Column(String(20), nullable=True)
+    cargo_length_m = Column(Numeric(5, 2), nullable=True)
+    cargo_width_m = Column(Numeric(5, 2), nullable=True)
+    cargo_height_m = Column(Numeric(5, 2), nullable=True)
+    cargo_volume_m3 = Column(Numeric(7, 2), nullable=True)
+    needs_loader = Column(Boolean, nullable=False, default=False)
+    loader_fee = Column(Numeric(12, 2), nullable=False, default=0)
+    #: NULL — «Hozir»; иначе когда подать машину (Y5)
+    scheduled_at = Column(DateTime(timezone=True), nullable=True)
     from_address = Column(Text, nullable=True)
     from_latitude = Column(Numeric(10, 7), nullable=False)
     from_longitude = Column(Numeric(10, 7), nullable=False)

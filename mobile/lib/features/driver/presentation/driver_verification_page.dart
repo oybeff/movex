@@ -8,6 +8,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../core/utils/error_handler.dart';
 import '../data/driver_api.dart';
 import 'driver_ui.dart';
+import '../../../core/widgets/h_icon.dart';
 
 /// Документы водителя — макет 00: R5 «Hujjatlarni yuklang», R6/R7
 /// снимок и «Surat aniqmi?», R8 «Tekshiruvga tayyor», R9 «yuborildi»,
@@ -181,7 +182,7 @@ class _DriverVerificationPageState extends State<DriverVerificationPage> {
                 decoration: BoxDecoration(color: st == null ? AppPalette.page : bg, borderRadius: BorderRadius.circular(10)),
                 child: busy
                     ? const Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2))
-                    : Icon(st == 'approved' ? Icons.check_rounded : Icons.description_outlined,
+                    : HIcon(st == 'approved' ? Icons.check_rounded : Icons.description_outlined,
                         color: st == null ? AppPalette.textSecondary : fg),
               ),
               const SizedBox(width: 12),
@@ -215,7 +216,7 @@ class _DriverVerificationPageState extends State<DriverVerificationPage> {
         appBar: AppBar(
           backgroundColor: AppPalette.page,
           title: Text('driver.confirm'.tr()),
-          leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => setState(() => _confirm = false)),
+          leading: IconButton(icon: const HIcon(Icons.arrow_back_rounded), onPressed: () => setState(() => _confirm = false)),
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),
@@ -230,10 +231,10 @@ class _DriverVerificationPageState extends State<DriverVerificationPage> {
                 child: DCard(
                   child: Row(
                     children: [
-                      const Icon(Icons.description_outlined, color: AppPalette.brand),
+                      const HIcon(Icons.description_outlined, color: AppPalette.brand),
                       const SizedBox(width: 10),
                       Expanded(child: Text('driver.doc_$k'.tr(), style: const TextStyle(fontWeight: FontWeight.w500))),
-                      const Icon(Icons.check_circle_rounded, color: AppPalette.textSuccess),
+                      const HIcon(Icons.check_circle_rounded, color: AppPalette.textSuccess),
                     ],
                   ),
                 ),
@@ -294,7 +295,7 @@ class _DriverVerificationPageState extends State<DriverVerificationPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Spacer(),
-                Center(child: CircleAvatar(radius: 40, backgroundColor: bg, child: Icon(icon, size: 44, color: color))),
+                Center(child: CircleAvatar(radius: 40, backgroundColor: bg, child: HIcon(icon, size: 44, color: color))),
                 const SizedBox(height: 16),
                 Text(title, textAlign: TextAlign.center, style: AppTypography.h1),
                 const SizedBox(height: 6),
@@ -333,7 +334,7 @@ class _PhotoCheckPage extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Row(children: [
-                  const Icon(Icons.check_circle_rounded, size: 18, color: AppPalette.brand),
+                  const HIcon(Icons.check_circle_rounded, size: 18, color: AppPalette.brand),
                   const SizedBox(width: 8),
                   Text('driver.$k'.tr()),
                 ]),

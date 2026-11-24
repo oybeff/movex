@@ -19,6 +19,7 @@ import 'driver_payout_page.dart';
 import 'delivery_setup_page.dart';
 import 'driver_verification_page.dart';
 import 'driver_orders_tab.dart';
+import '../../../core/widgets/h_icon.dart';
 
 /// Главная MoveX GO Driver — нижнее меню макета: «Asosiy», «Buyurtmalar»,
 /// «Daromad», «Profil».
@@ -68,8 +69,8 @@ class _DriverHomePageState extends State<DriverHomePage> {
   }
 
   NavigationDestination _dest(IconData icon, IconData active, String label) => NavigationDestination(
-        icon: Icon(icon, color: AppPalette.textSecondary),
-        selectedIcon: Icon(active, color: AppPalette.brand),
+        icon: HIcon(icon, color: AppPalette.textSecondary),
+        selectedIcon: HIcon(active, color: AppPalette.brand),
         label: label,
       );
 }
@@ -168,7 +169,7 @@ class _DriverProfileTabState extends State<DriverProfileTab> {
             const SizedBox(height: 12),
             _group([
               _item(Icons.account_balance_wallet_outlined, 'driver.withdraw'.tr(), () => _push(const DriverPayoutPage())),
-              _item(Icons.credit_card_rounded, 'Kartalarim', () => _push(const DriverCardsPage())),
+              _item(Icons.credit_card_rounded, 'driver.my_cards'.tr(), () => _push(const DriverCardsPage())),
               _item(Icons.notifications_none_rounded, 'driver.notifications'.tr(), () => context.push('/notifications')),
               _item(Icons.language_rounded, 'driver.settings'.tr(), () => context.push('/settings')),
               _item(Icons.logout_rounded, 'driver.logout'.tr(), _logout, danger: true),
@@ -195,9 +196,9 @@ class _DriverProfileTabState extends State<DriverProfileTab> {
       );
 
   Widget _item(IconData icon, String title, VoidCallback onTap, {bool danger = false}) => ListTile(
-        leading: Icon(icon, color: danger ? AppPalette.textDanger : AppPalette.iconPrimary),
+        leading: HIcon(icon, color: danger ? AppPalette.textDanger : AppPalette.iconPrimary),
         title: Text(title, style: TextStyle(fontSize: 15, color: danger ? AppPalette.textDanger : AppPalette.textPrimary)),
-        trailing: danger ? null : const Icon(Icons.chevron_right_rounded, color: AppPalette.textSecondary),
+        trailing: danger ? null : const HIcon(Icons.chevron_right_rounded, color: AppPalette.textSecondary),
         onTap: onTap,
       );
 
@@ -226,7 +227,7 @@ class DriverWrongRolePage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.local_shipping_rounded, size: 72, color: AppPalette.brand),
+              const HIcon(Icons.local_shipping_rounded, size: 72, color: AppPalette.brand),
               const SizedBox(height: AppSpacing.lg),
               Text('driver.wrong_role_title'.tr(), textAlign: TextAlign.center, style: AppTypography.h2),
               const SizedBox(height: AppSpacing.sm),

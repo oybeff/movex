@@ -31,6 +31,7 @@ class DeliveryVehicle:
         self.base_fee = base_fee
         self.price_per_km = price_per_km
         self.has_body_choice = False
+        self.body_types: List[str] = []
 
 
 #: Zaxira ro'yxat: delivery_vehicles jadvali bo'sh yoki hali yo'q bo'lsa.
@@ -107,7 +108,8 @@ def load(db) -> List[DeliveryVehicle]:
             Decimal(r.base_fee or 0),
             Decimal(r.price_per_km) if r.price_per_km is not None else None,
         )
-        v.has_body_choice = bool(r.has_body_choice)
+        v.has_body_choice = len(r.body_list) > 1
+        v.body_types = r.body_list
         out.append(v)
     return out
 

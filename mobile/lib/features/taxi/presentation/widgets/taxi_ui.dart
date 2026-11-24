@@ -6,6 +6,7 @@ import '../../../../core/constants/app_config.dart';
 import '../../../../core/constants/equipment_types.dart';
 import '../../../../core/services/equipment_catalog.dart';
 import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/widgets/h_icon.dart';
 
 /// Куски экранов заказа «как такси». Размеры и цвета — из макета (клиентский
 /// файл, страница «01 Asosiy», компоненты Home/* и Oqim/*).
@@ -311,7 +312,10 @@ class TypeTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: label ?? EquipmentTypes.label(type),
+      label: label ??
+          (type == 'materials'
+              ? 'taxi.materials'.tr()
+              : (type == 'freight' ? 'taxi.freight'.tr() : EquipmentTypes.label(type))),
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
@@ -336,18 +340,22 @@ class TypeTile extends StatelessWidget {
                             : EquipmentPhoto(type))),
               ),
               const SizedBox(height: AppSpacing.sm),
-              Text(
-                label ??
+              Builder(builder: (_) {
+                final text = label ??
                     (type == 'materials'
                         ? 'taxi.materials'.tr()
-                        : (type == 'freight'
-                            ? 'taxi.freight'.tr()
-                            : EquipmentTypes.label(type))),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.captionS.copyWith(color: AppPalette.textPrimary),
-              ),
+                        : (type == 'freight' ? 'taxi.freight'.tr() : EquipmentTypes.label(type)));
+                final t = Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  maxLines: text.contains(' ') ? 2 : 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.captionS.copyWith(color: AppPalette.textPrimary),
+                );
+                // Одно длинное слово («Manipulyator») не переносим посреди
+                // слова — чуть уменьшаем шрифт.
+                return text.contains(' ') ? t : FittedBox(fit: BoxFit.scaleDown, child: t);
+              }),
             ],
           ),
         ),
@@ -571,7 +579,7 @@ class PaymentButton extends StatelessWidget {
                     ? const TaxiIcon('cash', size: 24)
                     : card
                     ? const TaxiIcon('menu_card', size: 22)
-                    : const Icon(Icons.account_balance_wallet_outlined,
+                    : const HIcon(Icons.account_balance_wallet_outlined,
                         size: 24, color: AppPalette.iconPrimary),
                 const SizedBox(width: 6),
                 Text(
@@ -904,7 +912,7 @@ class MenuRow extends StatelessWidget {
                   decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
                   alignment: Alignment.center,
                   child: iconData != null
-                      ? Icon(iconData, size: 20, color: AppPalette.iconPrimary)
+                      ? HIcon(iconData, size: 20, color: AppPalette.iconPrimary)
                       : TaxiIcon(icon, size: 20),
                 ),
                 const SizedBox(width: 12),

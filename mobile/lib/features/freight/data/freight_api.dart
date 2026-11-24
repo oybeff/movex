@@ -20,6 +20,40 @@ class FreightVehicle {
   int? get hours => j['hours'] as int?;
   int get minHours => (j['min_hours'] ?? 1) as int;
   double? get price => _dn(j['price']);
+
+  // Шаги Y1–Y8
+  String get brand => (j['brand'] ?? name) as String;
+  String get sizeClass => (j['size_class'] ?? 'medium') as String;
+  double? get bodyL => _dn(j['body_length_m']);
+  double? get bodyW => _dn(j['body_width_m']);
+  double? get bodyH => _dn(j['body_height_m']);
+  List<String> get bodyTypes => [for (final b in (j['body_types'] as List? ?? const [])) b as String];
+  double? get pricePerKm => _dn(j['price_per_km']);
+  double get baseFee => _d(j['base_fee']);
+  double? get minPrice => _dn(j['min_price']);
+  int get freeDrivers => (j['free_drivers'] ?? 0) as int;
+  double? get nearestKm => _dn(j['nearest_km']);
+  bool get fits => j['fits'] != false;
+  String? get fitProblem => j['fit_problem'] as String?;
+
+  /// «2.8 × 1.6 × 1.6 m» — размеры кузова для карточек Y2/Y7/Y8.
+  String? get dims => bodyL == null || bodyW == null
+      ? null
+      : [bodyL, bodyW, if (bodyH != null) bodyH].map((x) => x == x!.roundToDouble() ? x.toStringAsFixed(0) : '$x').join(' × ');
+
+  /// Влезет ли груз — та же проверка, что на сервере (fit_problem): длину
+  /// и ширину можно развернуть, высоту — нет.
+  bool fitsCargo({double? kg, double? l, double? w, double? h, double? m3}) {
+    if (kg != null && kg > capacityKg) return false;
+    if (m3 != null && bodyL != null && bodyW != null && bodyH != null && m3 > bodyL! * bodyW! * bodyH!) return false;
+    if (l != null && w != null && bodyL != null && bodyW != null) {
+      final a = l > w ? l : w, b = l > w ? w : l;
+      final bl = bodyL! > bodyW! ? bodyL! : bodyW!, bw = bodyL! > bodyW! ? bodyW! : bodyL!;
+      if (a > bl || b > bw) return false;
+    }
+    if (h != null && bodyH != null && h > bodyH!) return false;
+    return true;
+  }
 }
 
 class FreightQuote {
@@ -28,6 +62,7 @@ class FreightQuote {
 
   double get distanceKm => _d(j['distance_km']);
   String? get suggested => j['suggested'] as String?;
+  double get loaderFee => _d(j['loader_fee']);
   List<FreightVehicle> get vehicles =>
       [for (final v in (j['vehicles'] as List? ?? const [])) FreightVehicle((v as Map).cast<String, dynamic>())];
 }
@@ -52,6 +87,9 @@ class FreightOrder {
   double get distanceKm => _d(j['distance_km']);
   int? get hours => j['hours'] as int?;
   double get price => _d(j['price']);
+  String? get cargoType => j['cargo_type'] as String?;
+  bool get needsLoader => j['needs_loader'] == true;
+  DateTime? get scheduledAt => j['scheduled_at'] == null ? null : DateTime.tryParse('${j['scheduled_at']}')?.toLocal();
   bool get cash => j['payment_method'] == 'cash';
   double get driverFee => _d(j['driver_fee'] ?? j['price']);
   double get commission => _d(j['driver_commission']);
@@ -81,6 +119,9 @@ class FreightIncoming {
   String? get toAddress => j['to_address'] as String?;
   double get distanceKm => _d(j['distance_km']);
   double? get toPickupKm => _dn(j['to_pickup_km']);
+  String? get cargoType => j['cargo_type'] as String?;
+  bool get needsLoader => j['needs_loader'] == true;
+  DateTime? get scheduledAt => j['scheduled_at'] == null ? null : DateTime.tryParse('${j['scheduled_at']}')?.toLocal();
   int? get hours => j['hours'] as int?;
   bool get cash => j['payment_method'] == 'cash';
   double get fee => _d(j['driver_fee']);
@@ -98,8 +139,20 @@ class FreightApi {
     required double toLon,
     double? tonnes,
     int? hours,
+    String? body,
+    double? weightKg,
+    double? length,
+    double? width,
+    double? height,
+    bool loader = false,
   }) async {
     final r = await _dio.get('/freight/quote', queryParameters: {
+      if (body != null) 'body': body,
+      if (weightKg != null && weightKg > 0) 'weight_kg': weightKg,
+      if (length != null && length > 0) 'length': length,
+      if (width != null && width > 0) 'width': width,
+      if (height != null && height > 0) 'height': height,
+      if (loader) 'loader': true,
       'from_lat': fromLat,
       'from_lon': fromLon,
       'to_lat': toLat,
