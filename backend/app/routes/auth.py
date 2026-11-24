@@ -1,7 +1,7 @@
 import logging
 
 from app.core.account_state import lift_expired_block
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
@@ -30,7 +30,8 @@ from app.utils.phone_utils import to_db_phone
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db),
+                     request: Request = None):
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: int = int(payload.get("sub"))
@@ -58,6 +59,9 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             headers={"X-Account-Blocked": "1"},
         )
 
+    from app.core.app_info import touch_app_info
+
+    touch_app_info(db, user, request)
     return user
 
 # ========================

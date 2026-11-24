@@ -1,6 +1,7 @@
 <?php
 require_once 'config.php';
 requireAdmin();
+requirePagePerm('finance');
 
 $pageTitle = 'Budjet Jamg\'armasi';
 $currentPage = 'budget';

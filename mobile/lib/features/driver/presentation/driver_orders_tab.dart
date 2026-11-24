@@ -277,10 +277,39 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
       await prefs.remove(_onlineSinceKey);
     }
     setState(() => _online = v);
-    if (!v && _isDeliveryDriver) {
-      _delivery.heartbeat(online: false).catchError((_) {});
+    if (!v) {
+      // Liniyadan chiqdi — admin xaritasida darhol «oflayn».
+      _delivery.driverHeartbeat(online: false).catchError((_) {});
     }
     _restartPolling();
+  }
+
+  /// Joriy nuqta: avval yangi (5 s gacha kutamiz), bo'lmasa oxirgi ma'lum.
+  /// Yangi nuqta bo'lmasa ham heartbeat ketadi — server «GPS yo'q» deb
+  /// ko'rsatadi, «oflayn» emas.
+  Future<void> _sendHeartbeat() async {
+    try {
+      Position? pos;
+      try {
+        pos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 5),
+          ),
+        );
+      } catch (_) {
+        pos = await Geolocator.getLastKnownPosition();
+      }
+      if (pos != null) _here = TaxiPlace(pos.latitude, pos.longitude);
+      await _delivery.driverHeartbeat(
+        online: true,
+        lat: pos?.latitude,
+        lon: pos?.longitude,
+        accuracy: pos?.accuracy,
+        speed: pos?.speed,
+        heading: pos?.heading,
+      );
+    } catch (_) {}
   }
 
   Future<void> _refresh() async {
@@ -293,17 +322,11 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
       List<QuickIncomingModel> incoming = const [];
       List<DeliveryIncoming> dIncoming = const [];
       List<DeliveryOrder> dOrders = _dOrders;
+      // Jonli xarita (admin D4) va yetkazish radiusi: onlayn ekan — har
+      // opros nuqta. Xatosi buyurtmalar oprosini buzmasin.
+      if (_online) await _sendHeartbeat();
       if (_isDeliveryDriver) {
-        // Точка водителя — для подбора по радиусу от склада. Ошибка опроса
-        // доставки не должна ломать заказы техники.
         try {
-          if (_online) {
-            // Водитель едет — точка с прошлого раза устарела. Последняя
-            // известная — дёшево и без ожидания спутников.
-            final pos = await Geolocator.getLastKnownPosition();
-            if (pos != null) _here = TaxiPlace(pos.latitude, pos.longitude);
-          }
-          await _delivery.heartbeat(online: _online, lat: _here?.lat, lon: _here?.lon);
           dOrders = await _delivery.orders();
         } catch (_) {}
         try {

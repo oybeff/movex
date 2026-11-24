@@ -15,7 +15,16 @@
  */
 require_once 'config.php';
 requireAdmin();
+requirePerm('orders_view');
+if ($_SERVER['REQUEST_METHOD'] === 'POST') requirePerm('orders_manage', 'full');
 requireCsrfToken();
+// Audit (S9): har bir o'zgartiruvchi so'rov jurnalga — maydonlar bilan.
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $auditFields = array_diff_key($_POST, ['csrf_token' => 1, 'password' => 1, 'new_password' => 1]);
+    array_walk_recursive($auditFields, function (&$v) { $v = mb_substr((string) $v, 0, 200); });
+    auditLog('listing_' . preg_replace('/\W/', '', (string) ($_POST['action'] ?? 'change')), 'listing', (int) ($_POST['listing_id'] ?? 0) ?: null, $auditFields);
+}
+
 
 $pageTitle = "E'lonlar";
 $currentPage = 'listings';

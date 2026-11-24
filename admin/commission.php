@@ -16,6 +16,7 @@
  */
 require_once 'config.php';
 requireAdmin();
+requirePagePerm('settings');
 requireCsrfToken();
 
 $pageTitle = 'Platforma ulushi';
@@ -45,6 +46,12 @@ function settingValue(PDO $db, string $key, string $fallback): string {
 }
 
 function saveSetting(PDO $db, string $key, string $value): void {
+    // Audit (S9/S10): faqat haqiqatan o'zgargan kalitlar, eski → yangi.
+    $old = settingValue($db, $key, '');
+    if ($old !== $value) {
+        $GLOBALS['settingChanges']['before'][$key] = $old;
+        $GLOBALS['settingChanges']['after'][$key] = $value;
+    }
     $stmt = $db->prepare("SELECT id FROM app_settings WHERE key = ?");
     $stmt->execute([$key]);
     // to_jsonb(?::text) — qiymatni JSON ga aylantiradi. Oddiy satr bilan
@@ -121,6 +128,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Versiya 1.2.0 ko'rinishida bo'lsin";
         } elseif (mb_strlen($until) > 40) {
             $error = "Muddat matni juda uzun";
+        } elseif (isset($_POST['maintenance']) && settingValue($db, 'maintenance_enabled', '0') !== '1'
+                  && mb_strtoupper(trim((string) ($_POST['confirm_text'] ?? ''))) !== 'YOQISH') {
+            // S5: xavfli harakat — «YOQISH» deb yozib tasdiqlanadi.
+            $error = "Texnik ishlarni yoqish uchun tasdiqlash oynasida «YOQISH» deb yozing";
         } else {
             saveSetting($db, 'min_app_version', $minVersion === '' ? '0.0.0' : $minVersion);
             saveSetting($db, 'maintenance_enabled', isset($_POST['maintenance']) ? '1' : '0');
@@ -128,6 +139,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = isset($_POST['maintenance'])
                 ? "Saqlandi. Ilova hozir «Texnik ishlar» ekranini ko'rsatadi."
                 : "Saqlandi.";
+            $mChange = $GLOBALS['settingChanges']['after']['maintenance_enabled'] ?? null;
+            if ($mChange !== null) {
+                auditLog($mChange === '1' ? 'maintenance_on' : 'maintenance_off', 'settings', null,
+                         ['until' => $until, 'push' => !empty($_POST['notify_all'])]);
+                if ($mChange === '1' && !empty($_POST['notify_all'])) {
+                    $msg = trim((string) ($_POST['maintenance_message'] ?? '')) ?: ('Ilovada texnik ishlar olib borilmoqda'
+                        . ($until !== '' ? ". Taxminan $until da qayta ishlaydi" : '') . '. Faol buyurtmangiz bekor qilinmaydi.');
+                    $r = internalApiPost('/admin-p5/internal/push/campaigns', [
+                        'admin_id' => (int) $_SESSION['admin_user_id'], 'title_uz' => 'Texnik ishlar', 'body_uz' => mb_substr($msg, 0, 240),
+                        'audience' => ['role' => 'all', 'langs' => ['uz', 'ru']], 'mode' => 'now']);
+                    $message .= $r['ok'] ? ' Barcha foydalanuvchilarga xabar yuborildi.' : ' Xabar yuborilmadi: ' . $r['error'];
+                }
+                unset($GLOBALS['settingChanges']['before']['maintenance_enabled'], $GLOBALS['settingChanges']['after']['maintenance_enabled']);
+            }
         }
     } elseif ($form === 'compensation') {
         // Haydovchi ilovasi E1/E7: mijoz texnika yo'lga chiqqandan keyin bekor
@@ -197,6 +222,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+if (!empty($GLOBALS['settingChanges']['after'])) {
+    auditLog('settings_changed', 'settings', null, $GLOBALS['settingChanges']);
+}
+
 $mode = settingValue($db, 'commission_mode', 'fixed');
 $fixed = settingValue($db, 'commission_fixed', '5000');
 $percent = settingValue($db, 'commission_percent', '10');
@@ -214,6 +243,41 @@ $compensationAmount = settingValue($db, 'cancel_compensation_amount', '0');
 $minAppVersion = settingValue($db, 'min_app_version', '0.0.0');
 $maintenanceOn = settingValue($db, 'maintenance_enabled', '0') === '1';
 $maintenanceUntil = settingValue($db, 'maintenance_until', '');
+
+// S4: versiyalar — ilova har so'rovda X-App-Version yuboradi (1.0.12 dan).
+// «Eski versiyada» = minimal versiyadan pastlar: majburiy yangilanish
+// ularni to'xtatadi. Faqat 30 kunda faol bo'lganlar sanaladi.
+$versionRows = [];
+foreach ($db->query("SELECT COALESCE(app_flavor, CASE role WHEN 'owner' THEN 'driver' ELSE 'client' END) AS flavor,
+                            COALESCE(app_platform, 'android') AS platform, app_version AS v, COUNT(*) AS n
+                       FROM users WHERE role IN ('client','owner') AND app_version IS NOT NULL
+                        AND last_seen_at > NOW() - INTERVAL '30 days' AND COALESCE(is_blocked,false) = false
+                      GROUP BY 1, 2, 3") as $r) {
+    $versionRows[$r['flavor'] . '|' . $r['platform']][$r['v']] = (int) $r['n'];
+}
+$versionTable = [];
+foreach (['client|ios' => 'Mijoz · iOS', 'client|android' => 'Mijoz · Android',
+          'driver|ios' => 'Haydovchi · iOS', 'driver|android' => 'Haydovchi · Android'] as $k => $label) {
+    $vs = $versionRows[$k] ?? [];
+    $total = array_sum($vs);
+    $old = 0;
+    $latest = null;
+    foreach ($vs as $v => $n) {
+        if ($latest === null || version_compare($v, $latest, '>')) $latest = $v;
+        if (version_compare($v, $minAppVersion, '<')) $old += $n;
+    }
+    $versionTable[] = ['label' => $label, 'latest' => $latest, 'total' => $total, 'old' => $old, 'vs' => $vs,
+                       'pct' => $total ? round($old * 100 / $total, 1) : 0, 'driver' => strpos($k, 'driver') === 0];
+}
+$noVersion = (int) $db->query("SELECT COUNT(*) FROM users WHERE role IN ('client','owner') AND app_version IS NULL
+                                AND COALESCE(is_blocked,false) = false AND phone NOT LIKE 'deleted-%'")->fetchColumn();
+// S5: faol buyurtmalar va jarayondagi pul yechishlar
+$activeOrdersNow = (int) $db->query("SELECT
+      (SELECT COUNT(*) FROM orders WHERE status = 'confirmed' AND finished_at IS NULL)
+    + (SELECT COUNT(*) FROM freight_orders WHERE status IN ('searching','accepted','loaded','arrived'))
+    + (SELECT COUNT(*) FROM material_orders WHERE delivery_status IN ('searching','accepted','picked_up','arrived'))
+    + (SELECT COUNT(*) FROM equipment_requests WHERE mode = 'quick' AND status = 'open')")->fetchColumn();
+$payoutsNow = (int) $db->query("SELECT COUNT(*) FROM payout_requests WHERE status IN ('pending','processing')")->fetchColumn();
 
 // Rahmat: avtomatik o'tkazma va fiskal chek kodlari.
 // Standart qiymatlar rahmat_service.py dagilar bilan bir xil bo'lishi
@@ -493,44 +557,95 @@ include 'includes/header.php';
         </div>
     </div>
 
-    <div class="card mb-3" style="margin-top: 24px;">
+    <div class="card mb-3" style="margin-top: 24px;" id="app-status">
         <div class="card-header">
-            <h3 class="card-title">Ilova holati</h3>
+            <h3 class="card-title">Ilova versiyalari va texnik ishlar</h3>
         </div>
         <div class="card-body">
-            <div class="alert alert-info" style="margin-bottom: 18px;">
-                <strong>Minimal versiya</strong> — bundan eski ilova ishlamaydi va
-                «Yangi versiya chiqdi» ekranini ko'rsatadi. <strong>Texnik ishlar</strong>
-                yoqilsa, mijoz ilovasi faqat shu haqdagi ekranni ko'rsatadi (server
-                va panel ishlashda davom etadi).
-            </div>
-            <form method="POST" action="">
+            <p class="text-muted" style="margin-bottom:14px">Majburiy yangilanish va texnik ishlar rejimi (ilovalardagi U2, U3 holatlari). Server va panel texnik ishlarda ham ishlaydi.</p>
+            <div class="table-responsive" style="margin-bottom:16px"><table>
+                <thead><tr><th>Ilova</th><th>Joriy (eng yangi)</th><th>Minimal (majburiy)</th><th class="text-right">Eski versiyada</th></tr></thead>
+                <tbody>
+                <?php foreach ($versionTable as $v): ?>
+                    <tr class="<?= $v['old'] && $v['pct'] >= 10 ? 'row-alert' : '' ?>">
+                        <td><b><?= $v['label'] ?></b></td>
+                        <td class="num"><?= $v['latest'] ? htmlspecialchars($v['latest']) : '<span class="text-muted">—</span>' ?></td>
+                        <td class="num"><?= htmlspecialchars($minAppVersion) ?></td>
+                        <td class="text-right num"><?php if (!$v['total']): ?><span class="text-muted">ma'lumot yo'q</span>
+                            <?php else: ?><?= str_replace('.', ',', (string) $v['pct']) ?>%<small class="sub"><?= $v['old'] ?> / <?= $v['total'] ?> <?= $v['driver'] ? 'haydovchi' : 'foydalanuvchi' ?></small><?php endif; ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table></div>
+            <p class="form-hint" style="margin:-8px 0 16px">Faqat oxirgi 30 kunda ilovani ochganlar. Versiyani ilova 1.0.12 dan yuboradi — <?= $noVersion ?> ta foydalanuvchi hali eski ilovada yoki ilovani ochmagan.</p>
+            <form method="POST" action="" id="appStatusForm" data-dirty-guard>
                 <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                 <input type="hidden" name="form" value="app_status">
-                <div class="form-group">
-                    <label>Minimal versiya</label><br>
-                    <input type="text" name="min_app_version" placeholder="1.0.0"
-                           value="<?= htmlspecialchars($minAppVersion) ?>"
-                           style="max-width: 220px; margin-top: 6px;">
+                <input type="hidden" name="confirm_text" id="confirmText">
+                <input type="hidden" name="notify_all" id="notifyAll">
+                <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+                    <div class="form-group" style="margin:0"><label for="minVer">Minimal versiya (ikkala ilova)</label>
+                        <input type="text" id="minVer" name="min_app_version" placeholder="1.0.0" value="<?= htmlspecialchars($minAppVersion) ?>" style="max-width:160px"></div>
+                    <div class="form-group" style="margin:0"><label for="mUntil">Texnik ishlar qachongacha</label>
+                        <input type="text" id="mUntil" name="maintenance_until" maxlength="40" placeholder="04:00" value="<?= htmlspecialchars($maintenanceUntil) ?>" style="max-width:160px"></div>
+                    <label class="check" style="height:36px"><input type="checkbox" name="maintenance" id="mOn" <?= $maintenanceOn ? 'checked' : '' ?>> Texnik ishlar rejimi</label>
+                    <button type="submit" class="btn btn-primary">Saqlash</button>
                 </div>
-                <div class="form-group" style="margin-top: 12px;">
-                    <label>
-                        <input type="checkbox" name="maintenance" <?= $maintenanceOn ? 'checked' : '' ?>>
-                        Texnik ishlar olib borilmoqda
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label>Qachongacha (matn, masalan «02:00»)</label><br>
-                    <input type="text" name="maintenance_until" maxlength="40"
-                           value="<?= htmlspecialchars($maintenanceUntil) ?>"
-                           style="max-width: 220px; margin-top: 6px;">
-                </div>
-                <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
-                    💾 Saqlash
-                </button>
+                <div class="banner" id="minVerImpact" hidden style="margin:14px 0 0"><i data-lucide="alert-triangle"></i><div><b></b><span>Yangilamaganlar ilovani ocha olmaydi — avval ularga xabar bering.</span></div></div>
             </form>
         </div>
     </div>
+
+    <!-- S5 · Texnik ishlarni yoqish (tasdiq) -->
+    <div class="modal" id="modalMaint" role="dialog" aria-modal="true" aria-labelledby="mtTitle">
+        <div class="modal-content" style="max-width:480px">
+            <div class="modal-header"><div class="modal-title" id="mtTitle">Texnik ishlar rejimi yoqilsinmi?</div><button class="modal-close" type="button" data-close aria-label="Yopish">×</button></div>
+            <div class="modal-body">
+                <p>Ikkala ilovada ham yangi buyurtma, to'lov va pul yechish to'xtaydi.</p>
+                <div class="banner danger" style="margin:14px 0"><i data-lucide="alert-octagon"></i><div><b>Hozir <?= $activeOrdersNow ?> ta faol buyurtma va <?= $payoutsNow ?> ta pul yechish jarayonda</b>
+                    <span>Ilova ularni ham ochmaydi — ish tugagach yoqish yaxshiroq.</span></div></div>
+                <label class="check" style="margin-bottom:8px"><input type="checkbox" id="mtPush" checked> Barcha foydalanuvchilarga ilova ichida xabar yuborish</label>
+                <div class="form-group"><label for="mtMsg">Xabar matni (UZ)</label>
+                    <textarea id="mtMsg" name="maintenance_message" form="appStatusForm" rows="3" maxlength="240">Ilovada texnik ishlar olib borilmoqda. Faol buyurtmangiz bekor qilinmaydi.</textarea></div>
+                <div class="form-group"><label for="mtType">Tasdiqlash uchun <b>YOQISH</b> deb yozing</label>
+                    <input id="mtType" autocomplete="off"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" type="button" data-close>Bekor</button>
+                <button class="btn btn-danger" type="button" id="mtGo" disabled>Rejimni yoqish</button></div>
+        </div>
+    </div>
+    <script>
+    (() => {
+        const f = document.getElementById('appStatusForm'), on = document.getElementById('mOn');
+        const wasOn = <?= $maintenanceOn ? 'true' : 'false' ?>;
+        const vt = <?= json_encode(array_map(fn($v) => (object) $v['vs'], $versionTable)) ?>;
+        const cmp = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number);
+            for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0); } return 0; };
+        const minVer = document.getElementById('minVer'), imp = document.getElementById('minVerImpact');
+        minVer.addEventListener('input', () => {
+            const m = minVer.value.trim();
+            if (!/^\d+\.\d+\.\d+$/.test(m)) { imp.hidden = true; return; }
+            let n = 0, t = 0;
+            vt.forEach(vs => Object.entries(vs).forEach(([v, c]) => { t += c; if (cmp(v, m) < 0) n += c; }));
+            imp.hidden = n === 0;
+            imp.querySelector('b').textContent = n + ' ta foydalanuvchi (' + (t ? Math.round(n * 1000 / t) / 10 : 0) + '%) yangilamaguncha ilovadan foydalana olmaydi';
+        });
+        f.addEventListener('submit', e => {
+            if (on.checked && !wasOn && !document.getElementById('confirmText').value) {
+                e.preventDefault();
+                document.getElementById('modalMaint').classList.add('active');
+                document.getElementById('mtType').focus();
+            }
+        });
+        const t = document.getElementById('mtType'), go = document.getElementById('mtGo');
+        t.addEventListener('input', () => go.disabled = t.value.trim().toUpperCase() !== 'YOQISH');
+        go.addEventListener('click', () => {
+            document.getElementById('confirmText').value = t.value.trim();
+            document.getElementById('notifyAll').value = document.getElementById('mtPush').checked ? '1' : '';
+            f.requestSubmit();
+        });
+    })();
+    </script>
 
     <div class="card mb-3" style="margin-top: 24px;">
         <div class="card-header">

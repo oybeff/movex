@@ -1,6 +1,7 @@
 <?php
 require_once 'config.php';
 requireAdmin();
+requirePagePerm('admins');
 
 $pageTitle = 'Tizim Ma\'lumotlari';
 $currentPage = 'system';

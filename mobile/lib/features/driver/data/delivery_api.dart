@@ -129,6 +129,28 @@ class DeliveryApi {
     return DeliveryProfile(r.data as Map<String, dynamic>);
   }
 
+  /// Jonli xarita (admin D4): har bir haydovchi, onlayn ekan, har 10 s.
+  /// Yuk mashinasi profili bo'lsa, server o'sha nuqtani ham yangilaydi —
+  /// shuning uchun alohida /delivery/heartbeat kerak emas.
+  Future<void> driverHeartbeat({
+    required bool online,
+    double? lat,
+    double? lon,
+    double? accuracy,
+    double? speed,
+    double? heading,
+  }) =>
+      _dio.post('/drivers/heartbeat', data: {
+        'online': online,
+        if (lat != null && lon != null) ...{
+          'latitude': lat,
+          'longitude': lon,
+          if (accuracy != null && accuracy >= 0) 'accuracy': accuracy,
+          if (speed != null && speed >= 0) 'speed': speed,
+          if (heading != null && heading >= 0 && heading <= 360) 'heading': heading,
+        },
+      });
+
   /// Раз в опрос, пока онлайн: где водитель. online=false — ушёл с линии.
   Future<void> heartbeat({required bool online, double? lat, double? lon}) =>
       _dio.post('/drivers/delivery/heartbeat', data: {

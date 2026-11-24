@@ -18,6 +18,7 @@
  */
 require_once 'config.php';
 requireAdmin();
+requirePagePerm('settings');
 requireCsrfToken();
 
 $pageTitle = 'Tariflar';
@@ -80,6 +81,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $etas[$tier] = $eRaw === '' ? null : (int)$eRaw;
             }
             if ($error === null) {
+                $bst = $db->prepare('SELECT tier, COALESCE(package_price, price_per_hour) AS p, min_hours, eta_minutes FROM tariffs WHERE equipment_type = ?');
+                $bst->execute([$type]);
+                $tBefore = [];
+                foreach ($bst as $br) $tBefore[$br['tier']] = $br;
+                $aBefore = $aAfter = [];
+                foreach ($prices as $tier => $p) {
+                    $lab = $tiers[$tier];
+                    $ob = isset($tBefore[$tier]) ? (int) $tBefore[$tier]['p'] : null;
+                    if ($ob !== $p) { $aBefore["$lab: narx"] = $ob; $aAfter["$lab: narx"] = $p; }
+                    $oe = isset($tBefore[$tier]['eta_minutes']) ? (int) $tBefore[$tier]['eta_minutes'] : null;
+                    if ($p !== null && $oe !== $etas[$tier]) { $aBefore["$lab: kelish, daq"] = $oe; $aAfter["$lab: kelish, daq"] = $etas[$tier]; }
+                }
                 $db->beginTransaction();
                 foreach ($prices as $tier => $p) {
                     if ($p === null) {
@@ -107,6 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                  $ph, $ph ? $p : null]);
                 }
                 $db->commit();
+                if ($aAfter) auditLog('tariff_changed', 'tariff', null, ['type' => equipmentTypeName($type), 'before' => $aBefore, 'after' => $aAfter]);
                 $message = equipmentTypeName($type) . ' — saqlandi. Yangi buyurtmalarga darhol qo\'llaniladi.';
             }
         }

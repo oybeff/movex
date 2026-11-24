@@ -1,5 +1,5 @@
 # app/core/dependencies.py
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Request, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
@@ -9,7 +9,8 @@ from app.core.config import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db),
+                     request: Request = None) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -41,6 +42,9 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
                     or "Hisobingiz bloklangan. Administrator bilan bog'laning."),
             headers={"X-Account-Blocked": "1"},
         )
+    from app.core.app_info import touch_app_info
+
+    touch_app_info(db, user, request)
     return user
 
 def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:

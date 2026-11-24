@@ -15,6 +15,7 @@
  */
 require_once 'config.php';
 requireAdmin();
+requirePerm('orders_view');
 requireCsrfToken();
 require_once __DIR__ . '/includes/user_lib.php';
 
@@ -41,8 +42,7 @@ $deleted = isDeletedUser($u);
 
 function auditUser(PDO $db, int $adminId, string $action, int $userId, array $payload = []): void
 {
-    $db->prepare("INSERT INTO admin_actions (admin_id, action, entity, entity_id, payload) VALUES (?, ?, 'user', ?, ?::jsonb)")
-       ->execute([$adminId ?: null, $action, $userId, json_encode($payload, JSON_UNESCAPED_UNICODE)]);
+    auditLog($action, 'user', $userId, $payload, $adminId ?: null);
 }
 
 function flash(string $type, string $text): void
@@ -53,6 +53,7 @@ function flash(string $type, string $text): void
 // ----------------------------------------------------------------- POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+    requirePerm(in_array($action, ['grant_bonus', 'cash_topup', 'set_listing_fee'], true) ? 'finance' : 'users_block', 'full');
     if ($isAdminAcc) {
         flash('error', "Admin hisobiga bu amalni qo'llab bo'lmaydi");
     } else {

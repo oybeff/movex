@@ -1,9 +1,11 @@
+import logging
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
+from app.routes import admin_p5 as admin_p5_routes  # noqa: E402
 from app.routes import (
     auth,
     users,
@@ -141,6 +143,30 @@ app.include_router(freight_routes.router, prefix="/freight", tags=["Freight"])
 app.include_router(admin_order_routes.router, prefix="/admin-orders", tags=["Admin orders"])
 app.include_router(dispute_routes.router, prefix="/disputes", tags=["Disputes"])
 app.include_router(dispute_routes.support_router, prefix="/support", tags=["Support"])
+app.include_router(admin_p5_routes.router, prefix="/admin-p5", tags=["Admin P5"])
+
+
+# Rejalashtirilgan push xabarlar (Admin P5). Ikki worker ham aylanadi —
+# kampaniyani bittasi oladi (push_campaign_service._claim).
+@app.on_event("startup")
+async def _push_scheduler():
+    import asyncio
+
+    from app.db.session import SessionLocal
+    from app.services import push_campaign_service
+
+    async def loop():
+        while True:
+            await asyncio.sleep(60)
+            db = SessionLocal()
+            try:
+                await asyncio.to_thread(push_campaign_service.run_due, db)
+            except Exception:  # noqa: BLE001
+                logging.getLogger(__name__).exception("push scheduler")
+            finally:
+                db.close()
+
+    asyncio.create_task(loop())
 
 # Раздача загруженных файлов.
 #

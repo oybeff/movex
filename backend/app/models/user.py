@@ -59,6 +59,15 @@ class User(Base):
 
     last_login_at = Column(DateTime(timezone=True), nullable=True)
 
+    # Admin P5: panel roli (faqat role='admin' uchun) va «ishdan ketgan».
+    admin_role = Column(String(20), nullable=True)
+    admin_disabled_at = Column(DateTime(timezone=True), nullable=True)
+    # Ilova har so'rovda X-App-* sarlavhalarini yuboradi (dependencies.touch_app_info).
+    last_seen_at = Column(DateTime(timezone=True), nullable=True)
+    app_version = Column(String(20), nullable=True)
+    app_platform = Column(String(10), nullable=True)
+    app_flavor = Column(String(10), nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -69,6 +78,10 @@ class User(Base):
             name="check_search_radius",
         ),
         CheckConstraint("language IN ('uz','ru')", name="check_user_language"),
+        CheckConstraint(
+            "admin_role IS NULL OR admin_role IN ('super_admin','operator','finance','moderator','support')",
+            name="check_user_admin_role",
+        ),
         CheckConstraint(
             "listing_fee_override IS NULL OR listing_fee_override >= 0",
             name="check_listing_fee_override",

@@ -12,6 +12,7 @@
  */
 require_once 'config.php';
 requireAdmin();
+requirePagePerm('finance');
 requireCsrfToken();
 require_once __DIR__ . '/includes/user_lib.php';
 

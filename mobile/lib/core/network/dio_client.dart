@@ -1,12 +1,36 @@
 import '../widgets/session_expired_dialog.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../app_flavor.dart';
 
 import '../constants/app_config.dart';
 import '../../main.dart';
 
 bool _sessionDialogShown = false;
+
+/// Admin P5: qaysi ilova, qaysi versiya — har so'rovda. Server shundan
+/// «oxirgi faollik» (push auditoriyasi) va «eski versiyada» ni sanaydi.
+Map<String, String>? _appHeaders;
+Future<Map<String, String>> _appInfoHeaders() async {
+  if (_appHeaders != null) return _appHeaders!;
+  String version = '';
+  try {
+    version = (await PackageInfo.fromPlatform()).version;
+  } catch (_) {}
+  final platform = kIsWeb
+      ? 'web'
+      : defaultTargetPlatform == TargetPlatform.iOS
+          ? 'ios'
+          : 'android';
+  return _appHeaders = {
+    if (version.isNotEmpty) 'X-App-Version': version,
+    'X-App-Platform': platform,
+    'X-App-Flavor': AppFlavor.isDriver ? 'driver' : 'client',
+  };
+}
 
 class DioClient {
   static Dio create() {
@@ -33,6 +57,7 @@ class DioClient {
           if (token != null) {
             options.headers["Authorization"] = "Bearer $token";
           }
+          options.headers.addAll(await _appInfoHeaders());
 
           // Tokenning bir qismini ham jurnalga yozmaymiz: qurilma
           // jurnallari boshqa ilovalar va crash-hisobotlarga tushadi.

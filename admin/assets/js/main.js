@@ -80,24 +80,29 @@ const notify = {
 };
 
 function showNotification(message, type = 'info') {
-    // Figma «Toast»: to'q fon, chapda holat ikonkasi, 3.5 s
+    // E9: toast 5 s; xato — yopilguncha turadi (o'qilmay yo'qolmasin).
     const stack = document.getElementById('toastStack') || document.body;
     const icons = { success: 'circle-check', error: 'circle-x', warning: 'triangle-alert', info: 'info' };
     const el = document.createElement('div');
     el.className = `toast ${type}`;
+    el.setAttribute('role', type === 'error' ? 'alert' : 'status');
     const ic = document.createElement('i');
     ic.setAttribute('data-lucide', icons[type] || 'info');
     const txt = document.createElement('div');
     txt.textContent = message;
-    el.append(ic, txt);
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'toast-close';
+    close.setAttribute('aria-label', 'Yopish');
+    close.textContent = '×';
+    const remove = () => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 300); };
+    close.addEventListener('click', remove);
+    el.append(ic, txt, close);
     stack.appendChild(el);
     if (window.lucide) lucide.createIcons({ nodes: [ic] });
-    setTimeout(() => {
-        el.style.transition = 'opacity .3s';
-        el.style.opacity = '0';
-        setTimeout(() => el.remove(), 300);
-    }, 3500);
+    if (type !== 'error') setTimeout(remove, 5000);
 }
+window.toastOk = (m) => showNotification(m, 'success');
 
 // Modal helper
 const modal = {
@@ -201,6 +206,97 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Export for use in other scripts
+// ---------------------------------------------------------------- P5 umumiy
+document.addEventListener('DOMContentLoaded', () => {
+    // Modal: [data-open="id"] ochadi, fon yoki [data-close] yopadi, Esc ham
+    document.addEventListener('click', (e) => {
+        const o = e.target.closest('[data-open]');
+        if (o) { document.getElementById(o.dataset.open)?.classList.add('active'); return; }
+        const m = e.target.closest('.modal.active');
+        if (m && (e.target === m || e.target.closest('[data-close]'))) m.classList.remove('active');
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') document.querySelectorAll('.modal.active').forEach(m => m.classList.remove('active'));
+    });
+
+    // [data-confirm] — o'z oynamiz (brauzer confirm() emas)
+    document.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-confirm]');
+        if (!b || b.dataset.confirmed) return;
+        e.preventDefault();
+        askConfirm(b.dataset.confirm, b.dataset.confirmOk || 'Tasdiqlash').then(ok => {
+            if (!ok) return;
+            b.dataset.confirmed = '1';
+            if (b.form && b.name) {
+                const h = document.createElement('input');
+                h.type = 'hidden'; h.name = b.name; h.value = b.value;
+                b.form.appendChild(h);
+                b.form.submit();
+            } else b.click();
+        });
+    });
+
+    // E4 · Internet yo'q: banner, o'zgartirish tugmalari o'chadi
+    let loadedAt = new Date();
+    const since = document.getElementById('offlineSince');
+    const setOffline = () => {
+        document.body.classList.toggle('is-offline', !navigator.onLine);
+        if (since) {
+            const min = Math.max(0, Math.round((Date.now() - loadedAt) / 60000));
+            since.textContent = min < 1 ? 'hozirgina' : min + ' daqiqa oldin';
+        }
+    };
+    window.addEventListener('online', setOffline);
+    window.addEventListener('offline', setOffline);
+    setOffline();
+
+    // E6 · Saqlanmagan o'zgarishlar: [data-dirty-guard] forma o'zgarsa —
+    // sahifadan chiqishda brauzer so'raydi. Yuborilganda — so'ramaydi.
+    document.querySelectorAll('form[data-dirty-guard]').forEach(f => {
+        let dirty = false;
+        f.addEventListener('input', () => dirty = true);
+        f.addEventListener('change', () => dirty = true);
+        f.addEventListener('submit', () => dirty = false);
+        window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+    });
+
+    // E5 · 30 daqiqa harakatsizlik — server sessiyani yopadi. Sahifa ochiq
+    // qolgan bo'lsa, vaqt tugaganda kirishga o'tamiz (forma yo'qolmasin
+    // deb oldin ogohlantiramiz).
+    if (document.body.dataset.idle) {
+        const idleMs = +document.body.dataset.idle * 60000;
+        let last = Date.now();
+        ['click', 'keydown'].forEach(ev => document.addEventListener(ev, () => last = Date.now()));
+        let warned = false;
+        setInterval(() => {
+            const left = idleMs - (Date.now() - last);
+            if (left < 120000 && left > 0 && !warned) { warned = true; showNotification("2 daqiqadan keyin sessiya tugaydi — sahifani bosing", 'warning'); }
+            if (left > 120000) warned = false;
+            if (left <= 0) location.href = 'login.php?expired=1';
+        }, 15000);
+    }
+});
+
+function askConfirm(text, okLabel) {
+    return new Promise(resolve => {
+        const m = document.createElement('div');
+        m.className = 'modal active';
+        m.innerHTML = '<div class="modal-content" style="max-width:420px" role="alertdialog" aria-modal="true">'
+            + '<div class="modal-body" style="padding-top:22px"><b style="font-size:15px;display:block;margin-bottom:6px"></b></div>'
+            + '<div class="modal-footer"><button class="btn btn-secondary" data-r="0">Bekor</button>'
+            + '<button class="btn btn-danger" data-r="1"></button></div></div>';
+        m.querySelector('b').textContent = text;
+        m.querySelector('[data-r="1"]').textContent = okLabel;
+        document.body.appendChild(m);
+        m.querySelector('[data-r="1"]').focus();
+        m.addEventListener('click', e => {
+            const b = e.target.closest('[data-r]');
+            if (b || e.target === m) { m.remove(); resolve(!!(b && b.dataset.r === '1')); }
+        });
+    });
+}
+window.askConfirm = askConfirm;
+
 window.$ = $;
 window.ajax = ajax;
 window.notify = notify;

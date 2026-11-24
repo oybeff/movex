@@ -25,6 +25,7 @@
  */
 require_once 'config.php';
 requireAdmin();
+requirePagePerm('equipment');
 requireCsrfToken();
 
 $pageTitle = 'Texnika';

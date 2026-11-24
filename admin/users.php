@@ -11,6 +11,7 @@
  */
 require_once 'config.php';
 requireAdmin();
+requirePerm('orders_view');
 requireCsrfToken();
 require_once __DIR__ . '/includes/user_lib.php';
 

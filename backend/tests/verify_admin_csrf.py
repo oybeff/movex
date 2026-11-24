@@ -72,8 +72,8 @@ for name in pages:
     if "REQUEST_METHOD" not in src or "POST" not in src:
         continue
 
-    if name == "login.php":
-        # Kirish sahifasi die() qilmaydi: token eskirgan bo'lsa odam
+    if name in ("login.php", "invite.php"):
+        # Kirish va taklif sahifalari die() qilmaydi: token eskirgan bo'lsa odam
         # qaytadan urinadi, aks holda uni o'z panelidan quvib chiqarardik.
         check(f"{name}: токен проверяется", "verifyCsrfToken" in src)
         continue

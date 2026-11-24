@@ -219,3 +219,47 @@ def freight_step(order_id: int, step: str, db: Session = Depends(get_db),
     if step not in actions:
         raise HTTPException(404, "Not Found")
     return freight_service.read(db, actions[step](db, me, order_id), me)
+
+
+# ------------------------------------------------------------ jonli xarita (P5)
+
+class _HeartbeatIn(BaseModel):
+    online: bool = True
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+    accuracy: Optional[float] = Field(default=None, ge=0, le=100000)
+    speed: Optional[float] = Field(default=None, ge=0, le=400)  # m/s, geolocator kabi
+    heading: Optional[float] = Field(default=None, ge=0, le=360)
+
+
+@router.post("/heartbeat")
+def heartbeat(data: _HeartbeatIn, db: Session = Depends(get_db),
+              current_user: User = Depends(get_current_user)):
+    """
+    Har bir haydovchi, onlayn ekan, har 10 s: qayerda (Figma «Admin panel»
+    D4 — jonli xarita). Yuk mashinasi profili bo'lsa — o'sha nuqta ham
+    yangilanadi (yetkazib berish radiusi shundan hisoblanadi), shuning
+    uchun yangi ilova /delivery/heartbeat ni alohida chaqirmaydi.
+    """
+    from datetime import datetime, timezone
+
+    from app.models.admin_p5 import DriverLocation
+
+    user = _driver(current_user)
+    now = datetime.now(timezone.utc)
+    loc = db.query(DriverLocation).filter(DriverLocation.user_id == user.id).with_for_update().first()
+    if loc is None:
+        loc = DriverLocation(user_id=user.id)
+        db.add(loc)
+    loc.online = bool(data.online)
+    loc.updated_at = now
+    if data.latitude is not None and data.longitude is not None:
+        loc.latitude = data.latitude
+        loc.longitude = data.longitude
+        loc.accuracy_m = data.accuracy
+        loc.speed_kmh = round(data.speed * 3.6, 1) if data.speed is not None else None
+        loc.heading = data.heading
+        loc.location_at = now
+    db.commit()
+    delivery_service.heartbeat(db, user, data.online, data.latitude, data.longitude)
+    return {"ok": True}

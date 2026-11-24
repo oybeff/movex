@@ -29,3 +29,6 @@ from app.models.catalog import (  # noqa: E402,F401
     MaterialCategory,
 )
 from app.models.admin_action import AdminAction, OrderNote  # noqa: E402,F401
+from app.models.admin_p5 import (  # noqa: E402,F401
+    AdminInvite, AdminLoginAttempt, AdminOtp, AdminTrustedDevice, DriverLocation, PushCampaign,
+)

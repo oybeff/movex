@@ -12,6 +12,7 @@
  */
 require_once 'config.php';
 requireAdmin();
+requirePerm('orders_view');
 
 $pageTitle = 'Zayavkalar';
 $currentPage = 'requests';

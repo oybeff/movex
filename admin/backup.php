@@ -1,6 +1,7 @@
 <?php
 require_once 'config.php';
 requireAdmin();
+requirePagePerm('admins');
 requireCsrfToken();
 
 $pageTitle = 'Database Backup';

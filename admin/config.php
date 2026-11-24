@@ -143,15 +143,38 @@ function isAdminLoggedIn() {
     return isset($_SESSION['admin_user_id']) && isset($_SESSION['admin_role']);
 }
 
+/**
+ * Har bir sahifa boshida. P5 dan beri: 30 daqiqa harakatsizlik — sessiya
+ * tugaydi (E5), «ishdan ketgan» admin darhol chiqariladi, rol har so'rovda
+ * bazadan yangilanadi (super admin rolni o'zgartirsa — keyingi bosishda
+ * kuchga kiradi, qayta kirish shart emas).
+ */
 function requireAdmin() {
     if (!isAdminLoggedIn()) {
         header('Location: login.php');
         exit;
     }
-    
     if ($_SESSION['admin_role'] !== 'admin') {
         die('Access denied. Admin role required.');
     }
+    $last = (int) ($_SESSION['admin_last_activity'] ?? time());
+    if (time() - $last > IDLE_MINUTES * 60) {
+        session_unset();
+        session_destroy();
+        header('Location: login.php?expired=1');
+        exit;
+    }
+    $_SESSION['admin_last_activity'] = time();
+    $st = getDbConnection()->prepare("SELECT admin_role, admin_disabled_at FROM users WHERE id = ? AND role = 'admin'");
+    $st->execute([$_SESSION['admin_user_id']]);
+    $me = $st->fetch();
+    if (!$me || $me['admin_disabled_at']) {
+        session_unset();
+        session_destroy();
+        header('Location: login.php?disabled=1');
+        exit;
+    }
+    $_SESSION['admin_perm_role'] = $me['admin_role'] ?: 'super_admin';
 }
 
 /**
@@ -209,46 +232,9 @@ function getAdminUser() {
     }
     
     $db = getDbConnection();
-    $stmt = $db->prepare("SELECT id, full_name, email, phone, role FROM users WHERE id = ? AND role = 'admin'");
+    $stmt = $db->prepare("SELECT id, full_name, email, phone, role, admin_role FROM users WHERE id = ? AND role = 'admin'");
     $stmt->execute([$_SESSION['admin_user_id']]);
     return $stmt->fetch();
-}
-
-function adminLogin($phone, $password) {
-    $db = getDbConnection();
-    
-    // Bazada raqam + belgisiz va bo'shliqsiz: 998901234567. Odam esa
-    // «+998 90 123 45 67» yoki «901234567» deb yozadi — 24.11.2026 gacha
-    // bunday kiritish «parol noto'g'ri» berardi. Harfli login (eski
-    // akkaunt) — o'zgarishsiz qidiriladi.
-    $login = trim((string) $phone);
-    if (preg_match('/^[\d\s()+\-]+$/', $login)) {
-        $login = preg_replace('/\D/', '', $login);
-        if (strlen($login) === 9) {
-            $login = '998' . $login;
-        }
-    }
-    $stmt = $db->prepare("SELECT id, full_name, phone, password_hash, role FROM users WHERE phone = ? AND role = 'admin'");
-    $stmt->execute([$login]);
-    $user = $stmt->fetch();
-    
-    if (!$user) {
-        return false;
-    }
-    
-    // Verify password (bcrypt)
-    if (!password_verify($password, $user['password_hash'])) {
-        return false;
-    }
-    
-    // Set session
-    startAdminSession();
-    $_SESSION['admin_user_id'] = $user['id'];
-    $_SESSION['admin_role'] = $user['role'];
-    $_SESSION['admin_name'] = $user['full_name'];
-    $_SESSION['admin_login_time'] = time();
-    
-    return true;
 }
 
 function adminLogout() {
@@ -450,6 +436,9 @@ function internalApiPost(string $path, array $payload = []): array {
     }
 
     $decoded = json_decode($body, true);
+    if (isset($payload['admin_id']) && function_exists('auditStampIp')) {
+        auditStampIp((int) $payload['admin_id']);
+    }
     if ($status >= 200 && $status < 300) {
         return ['ok' => true, 'data' => is_array($decoded) ? $decoded : null, 'error' => ''];
     }
@@ -544,3 +533,17 @@ function sanitizeInput($data) {
     return htmlspecialchars(strip_tags(trim($data)));
 }
 
+require_once __DIR__ . '/includes/auth.php';
+
+/**
+ * E3 · 500: kutilmagan xato — xato ID bilan sahifa, tafsilot faqat logda.
+ * Dev muhitida PHP o'z xabarini ham ko'rsatadi (display_errors).
+ */
+set_exception_handler(function (Throwable $e) {
+    $rid = 'req_' . substr(bin2hex(random_bytes(4)), 0, 7);
+    error_log("[$rid] " . get_class($e) . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    if (!headers_sent()) http_response_code(500);
+    $GLOBALS['errorId'] = $rid;
+    $GLOBALS['errorDetail'] = IS_DEV ? $e->getMessage() : '';
+    require __DIR__ . '/errors/500.php';
+});

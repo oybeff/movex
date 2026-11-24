@@ -21,7 +21,16 @@
  */
 require_once 'config.php';
 requireAdmin();
+if (!adminCan('payouts') && !adminCan('finance')) requirePerm('payouts');
+if ($_SERVER['REQUEST_METHOD'] === 'POST') requirePerm('payouts', 'full');
 requireCsrfToken();
+// Audit (S9): har bir o'zgartiruvchi so'rov jurnalga — maydonlar bilan.
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $auditFields = array_diff_key($_POST, ['csrf_token' => 1, 'password' => 1, 'new_password' => 1]);
+    array_walk_recursive($auditFields, function (&$v) { $v = mb_substr((string) $v, 0, 200); });
+    auditLog('payout_' . preg_replace('/\W/', '', (string) ($_POST['action'] ?? 'change')), 'payout', (int) ($_POST['request_id'] ?? 0) ?: null, $auditFields);
+}
+
 
 $pageTitle = 'Pul Yechish Arizalari';
 $currentPage = 'payouts';

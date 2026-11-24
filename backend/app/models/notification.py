@@ -43,6 +43,9 @@ class Notification(Base):
     equipment_type = Column(String(50), nullable=True)
     equipment_model = Column(String(120), nullable=True)
 
+    # Admin «Push xabarlar» kampaniyasi (P1–P4): ochildi = is_read.
+    campaign_id = Column(Integer, ForeignKey("push_campaigns.id", ondelete="SET NULL"), nullable=True, index=True)
+
     is_read = Column(Boolean, nullable=False, default=False, index=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)

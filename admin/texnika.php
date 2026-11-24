@@ -13,6 +13,7 @@
  */
 require_once 'config.php';
 requireAdmin();
+requirePagePerm('equipment');
 requireCsrfToken();
 require_once __DIR__ . '/includes/user_lib.php';
 
@@ -25,8 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $eid = (int) ($_POST['equipment_id'] ?? 0);
     if (($_POST['action'] ?? '') === 'review') {
         $db->prepare('UPDATE equipment SET reviewed_at = NOW(), reviewed_by = ? WHERE id = ?')->execute([$adminId, $eid]);
-        $db->prepare("INSERT INTO admin_actions (admin_id, action, entity, entity_id, payload) VALUES (?, 'equipment_review', 'equipment', ?, ?::jsonb)")
-           ->execute([$adminId, $eid, json_encode(['dup_confirmed' => !empty($_POST['dup_ok'])])]);
+        auditLog('equipment_review', 'equipment', $eid, ['dup_confirmed' => !empty($_POST['dup_ok'])], $adminId);
         $_SESSION['eq_flash'] = 'Texnika #' . $eid . ' tekshirildi';
     }
     header('Location: texnika.php?' . http_build_query(array_diff_key($_GET, ['id' => 1])));

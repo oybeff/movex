@@ -69,9 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $db->prepare('INSERT INTO order_notes (kind, order_id, admin_id, text) VALUES (?, ?, ?, ?)')
                ->execute([$kind, $id, $adminId, $text]);
-            $db->prepare("INSERT INTO admin_actions (admin_id, action, entity, entity_id, payload)
-                          VALUES (?, 'order_note', ?, ?, ?::jsonb)")
-               ->execute([$adminId, $kind, $id, json_encode(['text' => mb_substr($text, 0, 200)], JSON_UNESCAPED_UNICODE)]);
+            auditLog('order_note', $kind, $id, ['text' => mb_substr($text, 0, 200)], $adminId);
             $flash = ['success', 'Izoh saqlandi'];
         }
     }

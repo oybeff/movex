@@ -19,7 +19,15 @@
  */
 require_once 'config.php';
 requireAdmin();
+requirePagePerm('docs');
 requireCsrfToken();
+// Audit (S9): har bir o'zgartiruvchi so'rov jurnalga — maydonlar bilan.
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $auditFields = array_diff_key($_POST, ['csrf_token' => 1, 'password' => 1, 'new_password' => 1]);
+    array_walk_recursive($auditFields, function (&$v) { $v = mb_substr((string) $v, 0, 200); });
+    auditLog('doc_review', 'document', (int) ($_POST['doc_id'] ?? 0) ?: null, $auditFields);
+}
+
 require_once __DIR__ . '/includes/user_lib.php';
 
 $db = getDbConnection();

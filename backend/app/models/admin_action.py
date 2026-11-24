@@ -14,6 +14,8 @@ class AdminAction(Base):
     entity = Column(String(20), nullable=False)
     entity_id = Column(Integer, nullable=True)
     payload = Column(JSONB, nullable=True)
+    ip = Column(String(64), nullable=True)
+    user_agent = Column(String(300), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 

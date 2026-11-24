@@ -13,6 +13,7 @@
 require_once 'config.php';
 require_once 'includes/orders_lib.php';
 requireAdmin();
+requirePerm('orders_view');
 requireCsrfToken();
 
 $db = getDbConnection();
