@@ -841,3 +841,114 @@ tr.row-muted td { color: var(--gray-500); background: var(--gray-50); }
 .auth-pitch h1 { color: #fff; }
 .auth .fl input, .auth .fl input:focus { border: 0; box-shadow: none; background: transparent; height: auto; padding: 2px 0 4px; border-radius: 0; }
 .perm-matrix th small.sub { display: block; }
+
+/* ===================================================================
+ * Figma 1:1 — karkas tokenlari (D1 «get_design_context», 25.11.2026).
+ * Yuqoridagi qoidalarni ataylab shu yerda bosib o'tamiz: sahifalar
+ * klasslari o'zgarmaydi, faqat o'lchamlar maketga tenglashadi.
+ * =================================================================== */
+:root { --sidebar-width: 248px; --header-height: 64px; --bg: var(--gray-100); --radius: 14px; }
+body { background: var(--gray-100); }
+.sidebar { padding: 16px 12px 12px; }
+.sidebar-header { padding: 0 8px 16px; gap: 8px; }
+.sidebar-logo { width: 28px; height: 28px; border-radius: 8px; font-size: 16px; font-weight: 900; }
+.sidebar-brand { font-size: 17px; letter-spacing: -.17px; }
+.sidebar-brand span { color: var(--blue-500); }
+.sidebar-tag { background: var(--yellow-400); color: var(--navy-900); font-size: 12px; font-weight: 600; line-height: 16px; padding: 2px 8px; border-radius: 6px; letter-spacing: 0; }
+.sidebar-nav { padding: 0; }
+.sidebar-nav ul { display: flex; flex-direction: column; gap: 2px; }
+.sidebar-nav a { height: 36px; padding: 0 10px 0 12px; margin: 0; gap: 10px; border-radius: 8px; font-size: 14px; font-weight: 400; color: var(--navy-900); line-height: 20px; }
+.sidebar-nav a.active { background: var(--blue-50); color: var(--blue-500); font-weight: 500; }
+.sidebar-nav a svg { width: 20px; height: 20px; color: var(--gray-600); }
+.nav-section { padding: 14px 12px 6px; margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0; color: var(--gray-400); line-height: 16px; }
+.nav-count, .nav-count.warn, .nav-count.danger { font-size: 12px; line-height: 16px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--gray-100); color: var(--gray-500); }
+.sidebar-user { margin-top: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
+.sidebar-user .user-avatar { background: var(--navy-900); color: #fff; }
+.sidebar-user .user-name { font-size: 14px; font-weight: 500; line-height: 20px; }
+.sidebar-user .user-role { font-size: 12px; line-height: 16px; }
+.header { padding: 0 24px 0 32px; background: #fff; backdrop-filter: none; }
+.header-left h1 { font-size: 14px; font-weight: 400; color: var(--gray-500); }
+.header-right { gap: 16px; }
+.top-search { width: 380px; }
+.top-search input[type=search] { height: 40px; border: 0; border-radius: 10px; background: var(--gray-100); padding-left: 38px; font-size: 14px; }
+.top-search > svg, .top-search > i { left: 12px; top: 11px; width: 18px; height: 18px; }
+.top-search kbd { top: 9px; right: 10px; background: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 12px; font-weight: 600; line-height: 16px; }
+.health-chip { padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.header-right > .icon-btn { width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 999px; }
+.header-right > .icon-btn svg { width: 20px; height: 20px; }
+.icon-btn .dot { top: 1px; right: auto; left: 23px; height: 18px; min-width: 18px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 16px; padding: 1px 5px; }
+.content { padding: 24px 32px 32px; max-width: none; }
+.page-head { align-items: center; margin-bottom: 20px; }
+.page-head h2 { font-size: 24px; line-height: 32px; letter-spacing: -.3px; }
+.page-head .sub { font-size: 14px; line-height: 20px; margin-top: 4px; }
+.card { border-radius: 14px; box-shadow: none; }
+.card-header { padding: 16px 20px; }
+.card-title { font-size: 17px; line-height: 24px; }
+.card-body { padding: 20px; }
+.stat-card { border-radius: 14px; padding: 20px; box-shadow: none; }
+.stat-header { gap: 10px; margin-bottom: 10px; }
+.stat-title { font-size: 14px; line-height: 20px; color: var(--gray-500); }
+.stat-icon { width: 36px; height: 36px; border-radius: 10px; }
+.stat-icon svg { width: 20px; height: 20px; }
+.stat-value { font-size: 24px; line-height: 32px; letter-spacing: -.3px; }
+.stat-change { font-size: 12px; line-height: 16px; }
+thead th, table th { height: 44px; padding: 0 16px; background: #F7F8FA; font-size: 12px; font-weight: 600; color: var(--gray-500); text-transform: none; letter-spacing: 0; border-bottom: 1px solid var(--border); }
+tbody td, table td { padding: 10px 16px; height: 56px; font-size: 14px; border-bottom: 1px solid var(--border); }
+.badge { height: auto; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 16px; gap: 6px; }
+.btn { height: 36px; padding: 0 16px; border-radius: 12px; font-size: 14px; font-weight: 600; letter-spacing: -.1px; }
+.btn-secondary, .btn-outline { box-shadow: 0 1px 1px rgba(22, 36, 56, .06); }
+.btn-sm { height: 32px; padding: 0 12px; border-radius: 10px; font-size: 13px; }
+.banner { border-radius: 12px; padding: 14px 16px; }
+.banner b { font-size: 14px; font-weight: 500; }
+.banner .sub, .banner span { font-size: 14px; color: var(--gray-500); }
+@media (max-width: 960px) { .content { padding: 16px; } .top-search { width: auto; } }
+.card-header { border-bottom: 0; padding-bottom: 4px; }
+.card-header + .card-body { padding-top: 12px; }
+.card-header + .table-responsive, .card-header + .card-body:has(> .table-responsive:only-child) { margin-top: 12px; }
+.dash-grid { gap: 16px; margin-bottom: 16px; }
+.dash-grid .card, .dash-col .card { margin-bottom: 0; }
+.stats-grid { gap: 16px; margin-bottom: 20px; }
+.dash-grid { grid-template-columns: minmax(0, 1fr) 400px; }
+.dash-col { gap: 16px; }
+/* 02 O1: bir qatorli satrlar, uzun matn qirqiladi (maketdagidek) */
+.orders-table { table-layout: fixed; min-width: 1080px; }
+.orders-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.orders-table td .sub { overflow: hidden; text-overflow: ellipsis; }
+.orders-table th:nth-child(1) { width: 50px; } .orders-table th:nth-child(2) { width: 116px; }
+.orders-table th:nth-child(3) { width: 166px; } .orders-table th:nth-child(4) { width: 156px; }
+.orders-table th:nth-child(5) { width: 156px; } .orders-table th:nth-child(6) { width: 186px; }
+.orders-table th:nth-child(7) { width: 110px; } .orders-table th:nth-child(8) { width: 110px; }
+.orders-table th:nth-child(9) { width: 48px; }
+.orders-table td:nth-child(2) a, .orders-table td:nth-child(2) a b { color: var(--navy-900); font-weight: 500; }
+.orders-table td.addr { max-width: none; }
+/* Filtr tugmalari: 40px, 10px burchak, 14px medium */
+.filters { gap: 10px; margin-bottom: 20px; }
+.filters .filter-search input { height: 40px; border-radius: 10px; font-size: 14px; }
+.filters select { height: 40px; min-height: 40px; border-radius: 10px; font-size: 14px; font-weight: 500; color: var(--navy-900); padding: 0 32px 0 12px; background-color: #fff; }
+.filters .btn { height: 40px; border-radius: 10px; }
+.tabs a { font-size: 14px; }
+.sidebar-nav { scrollbar-width: thin; scrollbar-color: var(--gray-200) transparent; }
+.orders-table td:first-child, .orders-table td:last-child { overflow: visible; text-overflow: clip; }
+.orders-table th:nth-child(9) { width: 56px; }
+.orders-table td:nth-child(6) { text-overflow: clip; }
+.orders-table td .badge { display: inline-flex; max-width: 100%; overflow: hidden; }
+.filters .filter-search > svg, .filters .filter-search > i { top: 50%; transform: translateY(-50%); }
+.filter-search svg, .filter-search i { top: 50%; transform: translateY(-50%); left: 12px; width: 18px; height: 18px; }
+.filter-search input[type=search] { padding-left: 38px; }
+/* 02 O2 karta */
+.od-head h2 { font-size: 28px; line-height: 36px; letter-spacing: -.4px; }
+.od-head .sub { font-size: 14px; }
+.icon-btn.back { width: 40px; height: 40px; border-radius: 10px; background: #fff; }
+.od-grid { grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; }
+.od-grid .card { margin-bottom: 16px; }
+.od-grid > div:last-child .card-body > .d-flex:first-child > b, .od-grid > div:last-child .card-body > b:first-child { font-size: 17px; font-weight: 600; line-height: 24px; }
+.person { gap: 12px; margin-bottom: 14px; }
+.person .user-avatar { width: 40px; height: 40px; font-size: 15px; font-weight: 600; }
+.person b { font-size: 16px; font-weight: 500; line-height: 24px; }
+.person small { font-size: 14px; }
+.mini-stats { gap: 8px; }
+.mini-stats div { background: var(--gray-100); border-radius: 10px; padding: 10px; }
+.mini-stats b { font-size: 15px; font-weight: 500; }
+.mini-stats small { font-size: 12px; }
+.action-list button, .action-list a { padding: 12px 0; font-size: 15px; }
+.orders-table td .badge { overflow: visible; }
