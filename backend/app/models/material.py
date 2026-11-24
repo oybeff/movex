@@ -208,6 +208,9 @@ class MaterialOrder(Base):
     accepted_at = Column(DateTime(timezone=True), nullable=True)
     picked_up_at = Column(DateTime(timezone=True), nullable=True)
     arrived_at = Column(DateTime(timezone=True), nullable=True)
+    #: Admin bekor qilganda: kim va nima uchun (Figma O3)
+    cancelled_by = Column(String(10), nullable=True)
+    cancel_reason = Column(String(30), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(

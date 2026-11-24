@@ -171,5 +171,6 @@ class FreightOrder(Base):
     arrived_at = Column(DateTime(timezone=True), nullable=True)
     finished_at = Column(DateTime(timezone=True), nullable=True)
     cancelled_by = Column(String(10), nullable=True)
+    cancel_reason = Column(String(30), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

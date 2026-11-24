@@ -429,6 +429,22 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "Buyurtma #{order_number} mijoz tomonidan bekor qilindi",
         "ru": "Заказ #{order_number} отменён клиентом",
     },
+    # Admin panel (Figma O3/O4): bekor qilish va ijrochini almashtirish
+    "admin_cancelled.title": {"uz": "Buyurtma bekor qilindi", "ru": "Заказ отменён"},
+    "admin_cancelled.body": {
+        "uz": "Buyurtma #{order_number} MoveX GO qo'llab-quvvatlash xizmati tomonidan bekor qilindi",
+        "ru": "Заказ #{order_number} отменён службой поддержки MoveX GO",
+    },
+    "admin_unassigned.title": {"uz": "Buyurtma sizdan olindi", "ru": "Заказ снят с вас"},
+    "admin_unassigned.body": {
+        "uz": "Buyurtma #{order_number} boshqa ijrochiga berildi",
+        "ru": "Заказ #{order_number} передан другому исполнителю",
+    },
+    "order_assigned.title": {"uz": "Sizga buyurtma tayinlandi", "ru": "Вам назначен заказ"},
+    "order_assigned.body": {
+        "uz": "Buyurtma #{order_number} sizga berildi — ilovada oching",
+        "ru": "Заказ #{order_number} назначен вам — откройте приложение",
+    },
     "tx.topup": {
         "uz": "Hisobni to'ldirish — {method}",
         "ru": "Пополнение счёта — {method}",

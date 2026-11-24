@@ -27,3 +27,4 @@ from app.models.catalog import (  # noqa: E402,F401
     DeliveryDriverCategory, DeliveryDriverProfile, DeliveryVehicleRow, EquipmentCatalogType, FreightOrder,
     MaterialCategory,
 )
+from app.models.admin_action import AdminAction, OrderNote  # noqa: E402,F401

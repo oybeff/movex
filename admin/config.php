@@ -80,7 +80,7 @@ define('DB_PASSWORD', getenv('POSTGRES_PASSWORD') ?: $movexDb['pass']);
 // bajariladi, ya'ni mantiq BITTA joyda — payout_service da — turishi
 // kerak. Ilgari payouts.php pul harakatini o'zi takrorlardi va ikkisi
 // ajralib ketishi mumkin edi.
-define('API_BASE_URL', $movexEnv['INTERNAL_API_URL'] ?? 'http://127.0.0.1:8000');
+define('API_BASE_URL', getenv('INTERNAL_API_URL') ?: ($movexEnv['INTERNAL_API_URL'] ?? 'http://127.0.0.1:8000'));
 define('API_TIMEOUT', 45);
 //: Bo'sh bo'lsa ichki manzillar 404 qaytaradi va panel pul o'tkaza olmaydi —
 //: bu himoya, nosozlik emas. Kalit backend/.env da.
@@ -371,12 +371,21 @@ function materialUnitName($unit) {
 
 /** Yetkazadigan mashina: kod → nomi va sig'imi. */
 function deliveryVehicleName($code) {
-    static $vehicles = [
-        'labo'  => 'Labo (0.7 t)',
-        'isuzu' => 'Isuzu (5 t)',
-        'kamaz' => 'KamAZ (15 t)',
-        'howo'  => 'Howo (25 t)',
-    ];
+    // Nomlar admin katalogidan (delivery_vehicles, catalog.php) — 24.11.2026
+    // gacha bu yerda 4 ta qattiq yozilgan nom bor edi va qolgan mashinalar
+    // (gazel, porter, …) panelda kod bo'lib chiqardi.
+    static $vehicles = null;
+    if ($vehicles === null) {
+        $vehicles = [];
+        try {
+            foreach (getDbConnection()->query('SELECT code, name, capacity_kg FROM delivery_vehicles') as $r) {
+                $t = (float) $r['capacity_kg'] / 1000;
+                $vehicles[$r['code']] = $r['name'] . ' (' . rtrim(rtrim(number_format($t, 1, '.', ''), '0'), '.') . ' t)';
+            }
+        } catch (Throwable $e) {
+            $vehicles = [];
+        }
+    }
     return $vehicles[$code] ?? ($code ?? '—');
 }
 

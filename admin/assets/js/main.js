@@ -80,22 +80,23 @@ const notify = {
 };
 
 function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type}`;
-    notification.style.position = 'fixed';
-    notification.style.top = '20px';
-    notification.style.right = '20px';
-    notification.style.zIndex = '9999';
-    notification.style.minWidth = '300px';
-    notification.textContent = message;
-    
-    document.body.appendChild(notification);
-    
+    // Figma «Toast»: to'q fon, chapda holat ikonkasi, 3.5 s
+    const stack = document.getElementById('toastStack') || document.body;
+    const icons = { success: 'circle-check', error: 'circle-x', warning: 'triangle-alert', info: 'info' };
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    const ic = document.createElement('i');
+    ic.setAttribute('data-lucide', icons[type] || 'info');
+    const txt = document.createElement('div');
+    txt.textContent = message;
+    el.append(ic, txt);
+    stack.appendChild(el);
+    if (window.lucide) lucide.createIcons({ nodes: [ic] });
     setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transition = 'opacity 0.3s';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
+        el.style.transition = 'opacity .3s';
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 300);
+    }, 3500);
 }
 
 // Modal helper
@@ -154,38 +155,49 @@ function formatDate(dateString) {
     });
 }
 
-// Sidebar toggle for mobile
 document.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide) lucide.createIcons();
+
+    // Telefon/planshet: menyu chapdan chiqadi, fonni bosish yopadi
     const toggleBtn = document.getElementById('toggleSidebar');
     const sidebar = document.getElementById('sidebar');
-    
+    const backdrop = document.getElementById('sidebarBackdrop');
     if (toggleBtn && sidebar) {
-        // Show toggle button on mobile
-        if (window.innerWidth <= 1024) {
-            toggleBtn.style.display = 'block';
-        }
-        
-        toggleBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('active');
-        });
-        
-        // Close sidebar when clicking outside on mobile
-        document.addEventListener('click', (e) => {
-            if (window.innerWidth <= 1024 && 
-                !sidebar.contains(e.target) && 
-                !toggleBtn.contains(e.target) &&
-                sidebar.classList.contains('active')) {
-                sidebar.classList.remove('active');
+        toggleBtn.addEventListener('click', () => sidebar.classList.toggle('active'));
+        if (backdrop) backdrop.addEventListener('click', () => sidebar.classList.remove('active'));
+    }
+
+    // Ctrl/⌘ + K — umumiy qidiruv
+    const search = document.getElementById('globalSearch');
+    if (search) {
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                search.focus();
+                search.select();
             }
         });
     }
-    
-    // Handle window resize
-    window.addEventListener('resize', () => {
-        if (toggleBtn) {
-            toggleBtn.style.display = window.innerWidth <= 1024 ? 'block' : 'none';
-        }
-    });
+
+    // «Tizim ishlayapti»: API va baza holati, har 30 s
+    const chip = document.getElementById('healthChip');
+    if (chip) {
+        const label = chip.querySelector('.label');
+        const check = async () => {
+            try {
+                const r = await fetch('health.php', { cache: 'no-store' });
+                const j = await r.json();
+                const ok = j.api && j.db;
+                chip.className = 'health-chip ' + (ok ? 'ok' : 'down');
+                label.textContent = ok ? 'Tizim ishlayapti' : (!j.db ? 'Baza javob bermayapti' : 'API javob bermayapti');
+            } catch (e) {
+                chip.className = 'health-chip down';
+                label.textContent = "Aloqa yo'q";
+            }
+        };
+        check();
+        setInterval(check, 30000);
+    }
 });
 
 // Export for use in other scripts
