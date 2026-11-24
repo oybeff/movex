@@ -305,10 +305,16 @@ class _BlockIn(BaseModel):
     note: Optional[str] = Field(default=None, max_length=1000)
     sms_text: Optional[str] = Field(default=None, max_length=300)
     cancel_active: bool = False
+    send_sms: bool = False
 
 
 class _AdminIn(BaseModel):
     admin_id: Optional[int] = None
+
+
+class _UnblockIn(BaseModel):
+    admin_id: Optional[int] = None
+    send_sms: bool = False
 
 
 class _MessageIn(BaseModel):
@@ -327,13 +333,13 @@ def internal_active_orders(user_id: int, db: Session = Depends(get_db), _a=Depen
 def internal_block(user_id: int, data: _BlockIn, db: Session = Depends(get_db),
                    _a=Depends(require_internal_admin)):
     return user_admin_service.block(db, user_id, data.admin_id, data.reason, data.duration,
-                                    data.note, data.sms_text, data.cancel_active)
+                                    data.note, data.sms_text, data.cancel_active, data.send_sms)
 
 
 @router.post("/internal/{user_id}/unblock")
-def internal_unblock(user_id: int, data: _AdminIn, db: Session = Depends(get_db),
+def internal_unblock(user_id: int, data: _UnblockIn, db: Session = Depends(get_db),
                      _a=Depends(require_internal_admin)):
-    return user_admin_service.unblock(db, user_id, data.admin_id)
+    return user_admin_service.unblock(db, user_id, data.admin_id, data.send_sms)
 
 
 @router.post("/internal/{user_id}/message")

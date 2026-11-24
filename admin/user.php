@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'reason' => (string) ($_POST['reason'] ?? ''),
                     'duration' => (string) ($_POST['duration'] ?? ''),
                     'note' => trim((string) ($_POST['note'] ?? '')),
-                    'sms_text' => !empty($_POST['send_sms']) ? trim((string) ($_POST['sms_text'] ?? '')) : null,
+                    'send_sms' => !empty($_POST['send_sms']),
                     'cancel_active' => !empty($_POST['cancel_active']),
                 ]);
                 if ($res['ok']) {
@@ -82,8 +82,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
             case 'unblock':
-                $res = internalApiPost('/users/internal/' . $id . '/unblock', ['admin_id' => $adminId]);
-                flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'Blokdan chiqarildi' : 'Xato: ' . $res['error']);
+                $res = internalApiPost('/users/internal/' . $id . '/unblock', ['admin_id' => $adminId, 'send_sms' => !empty($_POST['send_sms'])]);
+                $sms = $res['data']['sms'] ?? null;
+                flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'Blokdan chiqarildi.' . ($sms === null ? '' : ($sms['sent'] ? ' SMS yuborildi.' : " SMS yuborilmadi (Eskiz shabloni hali tasdiqlanmagan bo'lishi mumkin).")) : 'Xato: ' . $res['error']);
                 break;
             case 'message':
                 $res = internalApiPost('/users/internal/' . $id . '/message', [
@@ -247,7 +248,6 @@ $docNames = ['id_front' => 'ID karta — old', 'id_back' => 'ID karta — orqa',
 $pageTitle = $u['full_name'] ?: 'Profil';
 $currentPage = $isOwner ? 'haydovchilar' : 'users';
 include 'includes/header.php';
-$smsDefault = 'MoveX GO: akkauntingiz 7 kunga cheklandi. Savollar uchun: ilovadagi «Yordam».';
 ?>
 <div class="content">
     <?php if ($flashMsg): ?>
@@ -270,6 +270,7 @@ $smsDefault = 'MoveX GO: akkauntingiz 7 kunga cheklandi. Savollar uchun: ilovada
                     <form method="post" style="display:inline">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCsrfToken()) ?>">
                         <input type="hidden" name="action" value="unblock">
+                        <label class="check" style="font-size:12.5px;margin-right:6px" title="MoveX GO: hisobingiz blokdan chiqarildi. Ilovadan yana foydalanishingiz mumkin."><input type="checkbox" name="send_sms" value="1" checked> SMS</label>
                         <button class="btn btn-primary btn-sm" type="submit"><i data-lucide="lock-open"></i> Blokdan chiqarish</button>
                     </form>
                 <?php else: ?>
@@ -569,8 +570,8 @@ $smsDefault = 'MoveX GO: akkauntingiz 7 kunga cheklandi. Savollar uchun: ilovada
                 <textarea id="blockNote" name="note" rows="2" placeholder="Masalan: haydovchiga qo'pollik qilgan, audio yozuv bor"></textarea>
             </div>
             <label class="d-flex gap-1 align-center" style="font-size:13px"><input type="checkbox" name="send_sms" value="1" id="smsOn"> Foydalanuvchiga SMS yuborish</label>
-            <textarea name="sms_text" id="smsText" rows="2" maxlength="300" class="mt-1"><?= htmlspecialchars($smsDefault) ?></textarea>
-            <div class="form-hint">SMS Eskiz orqali ketadi. Eskiz faqat my.eskiz.uz da shablon sifatida tasdiqlangan matnni yuboradi.</div>
+            <div class="note mt-1" id="smsText" aria-live="polite"></div>
+            <div class="form-hint">Matn Eskizda tasdiqlangan shablon bo'yicha avtomatik tuziladi (sabab va muddatdan) — o'zgartirib bo'lmaydi, aks holda Eskiz rad etadi.</div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" type="button" data-close>Bekor</button>
@@ -619,8 +620,23 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.que
 (() => {
     const on = document.getElementById('smsOn'), txt = document.getElementById('smsText');
     if (!on) return;
-    const sync = () => { txt.style.display = on.checked ? '' : 'none'; };
-    on.addEventListener('change', sync); sync();
+    // backend/app/services/user_admin_service.block_sms bilan BIR XIL bo'lishi shart
+    const why = {fraud: "to'lov firibgarligi", abuse: "haqoratli xatti-harakat", cancels: "ko'p bekor qilish",
+                 fake_docs: "soxta hujjat", other: "qoidalarni buzish"};
+    const hrs = {'24h': 24, '7d': 168, '30d': 720};
+    const pad = n => String(n).padStart(2, '0');
+    const form = on.form;
+    const sync = () => {
+        txt.style.display = on.checked ? '' : 'none';
+        const r = (form.querySelector('[name=reason]:checked') || {}).value || 'other';
+        const d = (form.querySelector('[name=duration]:checked') || {}).value || '7d';
+        const tail = ' Sabab: ' + (why[r] || why.other) + '. Savollar uchun Telegram: @movex_support';
+        if (!hrs[d]) { txt.textContent = 'MoveX GO: hisobingiz bloklandi.' + tail; return; }
+        const t = new Date(Date.now() + hrs[d] * 3600e3);
+        txt.textContent = 'MoveX GO: hisobingiz ' + pad(t.getDate()) + '.' + pad(t.getMonth() + 1) + '.' + t.getFullYear()
+            + ' ' + pad(t.getHours()) + ':' + pad(t.getMinutes()) + ' gacha bloklandi.' + tail;
+    };
+    form.addEventListener('change', sync); sync();
 })();
 </script>
 <?php include 'includes/footer.php'; ?>

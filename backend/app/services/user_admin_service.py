@@ -91,9 +91,36 @@ def _until_text(until: Optional[datetime]) -> str:
     return (until + timedelta(hours=5)).strftime("%d.%m.%Y %H:%M") + " gacha"
 
 
+# SMS matnlari Eskiz shablonlari bilan HARFMA-HARF bir xil bo'lishi shart
+# (my.eskiz.uz «Mening matnlarim», 25.11.2026 da moderatsiyaga berilgan:
+# 103853 vaqtincha, 103854 doimiy, 103855 blokdan chiqarildi). Boshqa matnni
+# Eskiz rad etadi — shuning uchun admin SMS matnini yozmaydi, faqat yoqadi.
+# Sabab — ro'yxatdan (shablonda o'zgaruvchan so'z), tafsilot SMSda yo'q.
+SUPPORT_CONTACT = "Telegram: @movex_support"
+SMS_REASONS = {
+    "fraud": "to'lov firibgarligi",
+    "abuse": "haqoratli xatti-harakat",
+    "cancels": "ko'p bekor qilish",
+    "fake_docs": "soxta hujjat",
+    "other": "qoidalarni buzish",
+}
+
+
+def block_sms(reason: str, until: Optional[datetime]) -> str:
+    why = SMS_REASONS.get(reason, SMS_REASONS["other"])
+    if until is None:
+        return f"MoveX GO: hisobingiz bloklandi. Sabab: {why}. Savollar uchun {SUPPORT_CONTACT}"
+    when = (until + timedelta(hours=5)).strftime("%d.%m.%Y %H:%M")
+    return f"MoveX GO: hisobingiz {when} gacha bloklandi. Sabab: {why}. Savollar uchun {SUPPORT_CONTACT}"
+
+
+UNBLOCK_SMS = "MoveX GO: hisobingiz blokdan chiqarildi. Ilovadan yana foydalanishingiz mumkin."
+
+
 def default_sms(reason: str, duration: str) -> str:
-    until = "doimiy" if duration == "forever" else {"24h": "24 soatga", "7d": "7 kunga", "30d": "30 kunga"}[duration]
-    return f"MoveX GO: akkauntingiz {until} cheklandi. Sabab: {REASONS[reason].lower()}. Savollar uchun: ilovadagi «Yordam»."
+    """Oldindan ko'rish uchun (muddat hozirdan hisoblanadi)."""
+    delta = DURATIONS.get(duration)
+    return block_sms(reason, _now() + delta if delta else None)
 
 
 def _send_sms(db: Session, phone: str, message: str) -> dict:
@@ -109,7 +136,8 @@ def _send_sms(db: Session, phone: str, message: str) -> dict:
 
 
 def block(db: Session, user_id: int, admin_id: Optional[int], reason: str, duration: str,
-          note: Optional[str] = None, sms_text: Optional[str] = None, cancel_active: bool = False) -> dict:
+          note: Optional[str] = None, sms_text: Optional[str] = None, cancel_active: bool = False,
+          send_sms: bool = False) -> dict:
     if reason not in REASONS:
         raise HTTPException(400, "Sababni tanlang")
     if duration not in DURATIONS:
@@ -143,22 +171,24 @@ def block(db: Session, user_id: int, admin_id: Optional[int], reason: str, durat
     u.block_reason_code = reason
     u.block_note = (note or "").strip()[:1000] or None
     u.blocked_reason = (f"Hisobingiz {_until_text(until)} bloklangan. Sabab: {REASONS[reason]}. "
-                        "Savollar bo'lsa — qo'llab-quvvatlash xizmatiga yozing.")
+                        f"Savollar bo'lsa — {SUPPORT_CONTACT}")
     _log(db, admin_id, "user_block", user_id,
          {"reason": reason, "duration": duration, "note": u.block_note, "cancelled": cancelled,
           "until": until.isoformat() if until else None})
     db.commit()
 
     sms = None
-    if sms_text and sms_text.strip():
-        sms = _send_sms(db, u.phone, sms_text.strip()[:300])
+    # sms_text — eski panel uchun: matni e'tiborsiz, faqat «yuborilsin» belgisi.
+    if send_sms or (sms_text and sms_text.strip()):
+        text_ = block_sms(reason, until)
+        sms = _send_sms(db, u.phone, text_)
         db.add(AdminAction(admin_id=admin_id, action="user_sms", entity="user", entity_id=user_id,
-                           payload={"text": sms_text.strip()[:300], **sms}))
+                           payload={"text": text_, **sms}))
         db.commit()
     return {"user_id": user_id, "blocked_until": until, "cancelled": cancelled, "sms": sms}
 
 
-def unblock(db: Session, user_id: int, admin_id: Optional[int]) -> dict:
+def unblock(db: Session, user_id: int, admin_id: Optional[int], send_sms: bool = False) -> dict:
     u = _target(db, user_id)
     if u.phone.startswith("deleted-"):
         raise HTTPException(400, "O'chirilgan akkauntni tiklab bo'lmaydi")
@@ -167,7 +197,13 @@ def unblock(db: Session, user_id: int, admin_id: Optional[int]) -> dict:
     u.blocked_until = None
     _log(db, admin_id, "user_unblock", user_id, {"reason": u.block_reason_code})
     db.commit()
-    return {"user_id": user_id, "unblocked": True}
+    sms = None
+    if send_sms:
+        sms = _send_sms(db, u.phone, UNBLOCK_SMS)
+        db.add(AdminAction(admin_id=admin_id, action="user_sms", entity="user", entity_id=user_id,
+                           payload={"text": UNBLOCK_SMS, **sms}))
+        db.commit()
+    return {"user_id": user_id, "unblocked": True, "sms": sms}
 
 
 def message(db: Session, user_id: int, admin_id: Optional[int], body: str, sms: bool = False) -> dict:

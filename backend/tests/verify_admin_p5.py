@@ -230,6 +230,15 @@ def main():
           pcs.shift_quiet(datetime(2026, 1, 1, 7, 59, tzinfo=TK)).astimezone(TK).hour == 8
           and pcs.shift_quiet(datetime(2026, 1, 1, 12, 0, tzinfo=TK)).astimezone(TK).hour == 12)
 
+    head("8. Blok SMS - Eskiz shablonlari bilan harfma-harf (103853-103855)")
+    from app.services.user_admin_service import UNBLOCK_SMS, block_sms
+    check("vaqtincha", block_sms("cancels", datetime(2026, 12, 2, 9, 0, tzinfo=timezone.utc))
+          == "MoveX GO: hisobingiz 02.12.2026 14:00 gacha bloklandi. Sabab: ko'p bekor qilish. Savollar uchun Telegram: @movex_support")
+    check("doimiy", block_sms("fraud", None)
+          == "MoveX GO: hisobingiz bloklandi. Sabab: to'lov firibgarligi. Savollar uchun Telegram: @movex_support")
+    check("blokdan chiqarildi", UNBLOCK_SMS == "MoveX GO: hisobingiz blokdan chiqarildi. Ilovadan yana foydalanishingiz mumkin.")
+    check("sabab other - qoidalarni buzish", "Sabab: qoidalarni buzish." in block_sms("other", None))
+
     head("7. Sinov push va jurnal")
     before = sql("SELECT COUNT(*) FROM notifications WHERE user_id=:u", u=cid)[0][0]
     r = post("/admin-p5/internal/push/test", dict(base, phone=cphone[3:]))
