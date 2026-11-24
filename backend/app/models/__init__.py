@@ -16,6 +16,7 @@ from .notification import DeviceToken, Notification
 from .eskiz_token import EskizToken
 from .equipment_request import EquipmentRequest, RequestOffer
 from .tariff import EquipmentAttachment, Tariff
+from .price_zone import PriceZone, ZoneTariff
 from .order_problem import OrderProblem
 from .listing import Listing, ListingOffer, ListingPhoto, ListingReaction
 from .material import MaterialOrder, MaterialPhoto, MaterialProduct

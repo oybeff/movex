@@ -216,6 +216,7 @@ class TariffQuote {
     required this.hours,
     required this.total,
     this.etaMinutes,
+    this.packageHours,
   });
 
   factory TariffQuote.fromJson(Map<String, dynamic> j) => TariffQuote(
@@ -226,7 +227,11 @@ class TariffQuote {
         hours: j['hours'] as int,
         total: _num(j['total']),
         etaMinutes: j['eta_minutes'] as int?,
+        packageHours: j['package_hours'] as int?,
       );
+
+  /// Paket (Tezkor 6 soat, Kun davomida 12 soat): narx paket uchun, soatlar qat'iy.
+  final int? packageHours;
 
   final String tier;
   final double pricePerHour;

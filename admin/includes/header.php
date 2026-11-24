@@ -38,6 +38,7 @@ $navSections = [
     ],
     'Tizim' => [
         ['tariffs', 'tariffs.php', 'tag', 'Tariflar va narxlar', null, ''],
+        ['zones', 'zones.php', 'map', 'Hududlar va narxlar', null, ''],
         ['catalog', 'catalog.php', 'layers', 'Katalog', null, ''],
         ['commission', 'commission.php', 'sliders-horizontal', 'Sozlamalar', null, ''],
         ['backup', 'backup.php', 'database', 'Zaxira nusxa', null, ''],

@@ -29,6 +29,31 @@ class TariffQuote:
     hours: int
     total: Decimal
     eta_minutes: Optional[int] = None
+    #: Paket soatlari (6 / 12); None — soatbay
+    package_hours: Optional[int] = None
+    #: Регион цены (zone_service); None — базовая цена.
+    zone_id: Optional[int] = None
+    zone_name: Optional[str] = None
+
+
+def _price(t: Tariff, hours: int, att_price: Decimal, zone=None, zone_price: Optional[Decimal] = None):
+    """
+    (soatlar, jami, soat narxi). Paketda soatlar qat'iy, narx — paket narxi.
+    Регион (24.11.2026): zone_price подменяет цену часа или пакета, надбавка
+    зоны — к итогу.
+    """
+    from app.services import zone_service
+
+    if t.package_hours:
+        h = int(t.package_hours)
+        pkg = zone_price if zone_price is not None else Decimal(str(t.package_price))
+        total = pkg + att_price * h
+        per_hour = (pkg / h).quantize(Decimal("1"))
+    else:
+        h = hours
+        per_hour = zone_price if zone_price is not None else Decimal(str(t.price_per_hour))
+        total = (per_hour + att_price) * h
+    return h, zone_service.apply_surcharge(total, zone), per_hour
 
 
 def active_tariffs(db: Session, equipment_type: str) -> List[Tariff]:
@@ -90,8 +115,11 @@ def quote_all(
     клиента, ищется ближайшая доступная техника данного типа и рассчитывается
     время доезда по формуле (дистанция / 25 км/ч) + буфер подготовки.
     """
+    from app.services import zone_service
+
     att = get_attachment(db, equipment_type, attachment_id)
     att_price = Decimal(str(att.price_per_hour)) if att else Decimal("0")
+    zone = zone_service.find_zone(db, latitude, longitude)
 
     # Ищем минимальное расстояние до доступной техники данного типа
     nearest_km: Optional[float] = None
@@ -144,20 +172,26 @@ def quote_all(
                 # Эконом: плановая подача с буфером 15 мин, минимум 20 мин
                 eta = max(20, min(180, travel_mins + 15))
 
+        h, total, price = _price(t, h, att_price, zone,
+                                 zone_service.zone_price(db, zone, equipment_type, t.tier))
         result.append(TariffQuote(
             tier=t.tier,
             price_per_hour=price,
             attachment_per_hour=att_price,
             min_hours=t.min_hours,
             hours=h,
-            total=(price + att_price) * h,
+            total=total,
             eta_minutes=eta,
+            package_hours=t.package_hours,
+            zone_id=zone.id if zone else None,
+            zone_name=zone.name if zone else None,
         ))
     return result
 
 
 def quote(
-    db: Session, equipment_type: str, tier: str, hours: int, attachment_id: Optional[int]
+    db: Session, equipment_type: str, tier: str, hours: int, attachment_id: Optional[int],
+    latitude: Optional[float] = None, longitude: Optional[float] = None,
 ) -> TariffQuote:
     """
     Сумма ОДНОГО тарифа для создания заказа. Здесь, в отличие от экрана,
@@ -169,19 +203,29 @@ def quote(
     tariff = next((t for t in active_tariffs(db, equipment_type) if t.tier == tier), None)
     if tariff is None:
         raise HTTPException(400, "Bu texnika uchun tarif mavjud emas")
+    if tariff.package_hours:
+        # Paket: ilova qancha yuborgan bo'lsa ham, soatlar — paketniki
+        hours = int(tariff.package_hours)
     if hours is None or hours < tariff.min_hours:
         raise HTTPException(400, f"Ish vaqti kamida {tariff.min_hours} soat")
     if hours > MAX_HOURS:
         raise HTTPException(400, f"Ish vaqti {MAX_HOURS} soatdan oshmasin")
     att = get_attachment(db, equipment_type, attachment_id)
     att_price = Decimal(str(att.price_per_hour)) if att else Decimal("0")
-    price = Decimal(str(tariff.price_per_hour))
+    from app.services import zone_service
+
+    zone = zone_service.find_zone(db, latitude, longitude)
+    hours, total, price = _price(tariff, hours, att_price, zone,
+                                 zone_service.zone_price(db, zone, equipment_type, tier))
     return TariffQuote(
         tier=tier,
         price_per_hour=price,
         attachment_per_hour=att_price,
         min_hours=tariff.min_hours,
         hours=hours,
-        total=(price + att_price) * hours,
+        total=total,
         eta_minutes=tariff.eta_minutes,
+        package_hours=tariff.package_hours,
+        zone_id=zone.id if zone else None,
+        zone_name=zone.name if zone else None,
     )

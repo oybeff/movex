@@ -249,7 +249,7 @@ def quote(
     result = material_service.calculate(
         db,
         product,
-        data.quantity,
+        material_service.to_units(product, data.quantity, data.input_unit),
         data.delivery_latitude,
         data.delivery_longitude,
         data.vehicle_code,

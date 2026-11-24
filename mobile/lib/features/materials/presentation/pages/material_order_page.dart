@@ -108,7 +108,23 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
   }
 
   double get _quantity =>
-      double.tryParse(_quantityController.text.replaceAll(' ', '')) ?? 0;
+      double.tryParse(_quantityController.text.replaceAll(' ', '').replaceAll(',', '.')) ?? 0;
+
+  /// m³ tovarni tonnada ham buyurtma qilsa bo'ladi (Sherzodbek 24.11.2026):
+  /// server tonnani tovarning bir birlik og'irligi orqali m³ ga aylantiradi.
+  bool get _canTonnes => widget.product.unit == 'm3' && widget.product.unitWeightKg > 0;
+  String _inputUnit = 'unit';
+
+  void _switchUnit(String u) {
+    if (u == _inputUnit) return;
+    final w = widget.product.unitWeightKg;
+    final q = _quantity;
+    final next = u == 'tonne' ? q * w / 1000 : q * 1000 / w;
+    setState(() => _inputUnit = u);
+    _quantityController.text = next == next.roundToDouble()
+        ? next.toStringAsFixed(0)
+        : next.toStringAsFixed(2);
+  }
 
   void _onQuantityChanged() {
     _debounce?.cancel();
@@ -135,6 +151,7 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
       final quote = await _service.quote(
         productId: widget.product.id,
         quantity: _quantity,
+        inputUnit: _inputUnit,
         latitude: _destLat,
         longitude: _destLon,
       );
@@ -178,6 +195,7 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
       await _service.createOrder(
         productId: widget.product.id,
         quantity: _quantity,
+        inputUnit: _inputUnit,
         address: _dest!.address ?? '',
         latitude: _destLat,
         longitude: _destLon,
@@ -316,13 +334,28 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
                 style: const TextStyle(
                     fontSize: 15, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
+            if (_canTonnes) ...[
+              Wrap(spacing: 8, children: [
+                ChoiceChip(
+                  label: Text(product.unitLabel),
+                  selected: _inputUnit == 'unit',
+                  onSelected: (_) => _switchUnit('unit'),
+                ),
+                ChoiceChip(
+                  label: Text('material_units.tonne'.tr()),
+                  selected: _inputUnit == 'tonne',
+                  onSelected: (_) => _switchUnit('tonne'),
+                ),
+              ]),
+              const SizedBox(height: 10),
+            ],
             TextField(
               controller: _quantityController,
               textInputAction: TextInputAction.next,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
               decoration: InputDecoration(
-                suffixText: product.unitLabel,
+                suffixText: _inputUnit == 'tonne' ? 'material_units.tonne'.tr() : product.unitLabel,
                 border: const OutlineInputBorder(),
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: 14, vertical: 12),

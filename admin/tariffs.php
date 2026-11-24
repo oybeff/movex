@@ -27,6 +27,9 @@ $db = getDbConnection();
 
 // Turlar — catalog.php dan (admin yangi tur qo'shsa, shu yerda ham chiqadi).
 $types = equipmentTypeCodes();
+// Paket tariflar (Sherzodbek 24.11.2026): narx — PAKET uchun, soatlar qat'iy.
+// Ekonom — soatbay. Soatlik narx (uzaytirish uchun) paketdan hisoblanadi.
+$packageHours = ['fast' => 6, 'day' => 12];
 $tiers = [
     'econom' => 'Ekonom',
     'fast'   => 'Tezkor',
@@ -84,16 +87,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                            ->execute([$type, $tier]);
                         continue;
                     }
+                    $ph = $packageHours[$tier] ?? null;
                     $db->prepare('
-                        INSERT INTO tariffs (equipment_type, tier, price_per_hour, min_hours, eta_minutes, is_active)
-                        VALUES (?, ?, ?, ?, ?, true)
+                        INSERT INTO tariffs (equipment_type, tier, price_per_hour, min_hours, eta_minutes, is_active,
+                                             package_hours, package_price)
+                        VALUES (?, ?, ?, ?, ?, true, ?, ?)
                         ON CONFLICT (equipment_type, tier)
                         DO UPDATE SET price_per_hour = EXCLUDED.price_per_hour,
                                       min_hours = EXCLUDED.min_hours,
                                       eta_minutes = EXCLUDED.eta_minutes,
+                                      package_hours = EXCLUDED.package_hours,
+                                      package_price = EXCLUDED.package_price,
                                       is_active = true,
                                       updated_at = NOW()
-                    ')->execute([$type, $tier, $p, (int)$minHours, $etas[$tier]]);
+                    ')->execute([$type, $tier,
+                                 $ph ? (int) round($p / $ph) : $p,
+                                 $ph ?: (int)$minHours,
+                                 $etas[$tier],
+                                 $ph, $ph ? $p : null]);
                 }
                 $db->commit();
                 $message = equipmentTypeName($type) . ' — saqlandi. Yangi buyurtmalarga darhol qo\'llaniladi.';
@@ -131,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$rows = $db->query('SELECT equipment_type, tier, price_per_hour, min_hours, eta_minutes FROM tariffs')->fetchAll();
+$rows = $db->query('SELECT equipment_type, tier, price_per_hour, min_hours, eta_minutes, package_hours, package_price FROM tariffs')->fetchAll();
 $tariffs = [];
 foreach ($rows as $r) {
     $tariffs[$r['equipment_type']][$r['tier']] = $r;
@@ -193,18 +204,19 @@ function money($v) {
         </div>
         <div class="card-body">
             <p style="margin-top:0;color:#6b7280">
-                Buyurtma summasi = (tarif narxi + jihoz ustamasi) × soat. Narxni bo'sh qoldirsangiz,
-                o'sha tarif o'chadi. Naqd to'lovda komissiya egasining balansidan olinadi
+                <b>Ekonom</b> — soatbay: (narx + jihoz ustamasi) × soat. <b>Tezkor</b> — 6 soatlik paket,
+                <b>Kun davomida</b> — 12 soatlik paket: narx butun paket uchun, mijoz soatni o'zgartirmaydi.
+                Narxni bo'sh qoldirsangiz, o'sha tarif o'chadi. Naqd to'lovda komissiya egasining balansidan olinadi
                 (stavka — <a href="commission.php">Platforma ulushi</a>).
             </p>
             <table>
                 <thead>
                     <tr>
                         <th>Texnika</th>
-                        <?php foreach ($tiers as $label): ?>
-                            <th><?= htmlspecialchars($label) ?>, so'm/soat</th>
+                        <?php foreach ($tiers as $tier => $label): ?>
+                            <th><?= htmlspecialchars($label) ?>, <?= isset($packageHours[$tier]) ? 'so\'m / ' . $packageHours[$tier] . ' soat' : 'so\'m/soat' ?></th>
                         <?php endforeach; ?>
-                        <th>Kamida, soat</th>
+                        <th>Ekonom: kamida, soat</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -212,7 +224,7 @@ function money($v) {
                 <?php foreach ($types as $type):
                     $t = $tariffs[$type] ?? [];
                     $min = 1;
-                    foreach ($t as $row) { $min = (int)$row['min_hours']; break; }
+                    if (isset($t['econom'])) { $min = (int)$t['econom']['min_hours']; }
                     $formId = 'tf_' . $type;
                 ?>
                     <tr>
@@ -221,7 +233,7 @@ function money($v) {
                             <td>
                                 <input form="<?= $formId ?>" type="text" inputmode="numeric"
                                        name="price_<?= $tier ?>" style="width:130px"
-                                       value="<?= isset($t[$tier]) ? (int)$t[$tier]['price_per_hour'] : '' ?>"
+                                       value="<?= isset($t[$tier]) ? (int)($t[$tier]['package_price'] ?? $t[$tier]['price_per_hour']) : '' ?>"
                                        placeholder="—">
                                 <br>
                                 <input form="<?= $formId ?>" type="text" inputmode="numeric"

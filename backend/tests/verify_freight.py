@@ -140,6 +140,23 @@ try:
         "from_lat": 41.30, "from_lon": 69.24, "to_lat": 41.35, "to_lon": 69.30, "loader": "true"}).json()
     gl = next(v for v in ql["vehicles"] if v["code"] == "gazel")
     check("грузчик добавляется к цене", D(gl["price"]) - D(g["price"]) == D(ql["loader_fee"]), f"{gl['price']} {g['price']}")
+    # Шерзодбек 24.11: грузчик по часам или на день, обе цены — из админки.
+    hf, df = D(ql["loader_hour_fee"]), D(ql["loader_day_fee"])
+    check("в ответе цена часа и дня грузчика", hf >= 0 and df >= 0, f"{hf} {df}")
+    q3h = requests.get(f"{API}/freight/quote", headers=client, params={
+        "from_lat": 41.30, "from_lon": 69.24, "to_lat": 41.35, "to_lon": 69.30, "loader": "true",
+        "loader_mode": "hour", "loader_hours": 3}).json()
+    check("грузчик 3 часа = 3 × цена часа", D(q3h["loader_fee"]) == hf * 3, f"{q3h['loader_fee']} {hf}")
+    g3 = next(v for v in q3h["vehicles"] if v["code"] == "gazel")
+    check("3 часа грузчика в цене машины", D(g3["price"]) - D(g["price"]) == hf * 3)
+    qdy = requests.get(f"{API}/freight/quote", headers=client, params={
+        "from_lat": 41.30, "from_lon": 69.24, "to_lat": 41.35, "to_lon": 69.30, "loader": "true",
+        "loader_mode": "day", "loader_hours": 5}).json()
+    check("грузчик на день = цена дня (часы не важны)", D(qdy["loader_fee"]) == df, f"{qdy['loader_fee']} {df}")
+    r = requests.get(f"{API}/freight/quote", headers=client, params={
+        "from_lat": 41.30, "from_lon": 69.24, "to_lat": 41.35, "to_lon": 69.30, "loader": "true",
+        "loader_mode": "week"})
+    check("неизвестный режим грузчика — 422", r.status_code == 422, f"{r.status_code}")
     check("свободные водители считаются (Y2)", isinstance(g.get("free_drivers"), int))
 
     head("2. ПРОВЕРКИ ПРИ СОЗДАНИИ")

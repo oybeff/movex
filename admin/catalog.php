@@ -63,15 +63,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $form = $_POST['form'] ?? '';
 
     if ($form === 'loader_fee') {
+        // Грузчик: цена часа и цена дня (Шерзодбек, 24.11.2026).
         $fee = cleanInt((string)($_POST['fee'] ?? ''));
-        if ($fee === false || $fee === null) {
+        $day = cleanInt((string)($_POST['day_fee'] ?? ''));
+        if ($fee === false || $fee === null || $day === false || $day === null) {
             $error = "Yuklovchi narxi — 0 yoki musbat butun son";
         } else {
-            $db->prepare("
-                INSERT INTO app_settings (key, value) VALUES ('freight_loader_fee', to_jsonb(?::text))
+            $st = $db->prepare("
+                INSERT INTO app_settings (key, value) VALUES (?, to_jsonb(?::text))
                 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
-            ")->execute([(string)$fee]);
-            $message = 'Yuklovchi narxi saqlandi: ' . number_format($fee, 0, '.', ' ') . " so'm.";
+            ");
+            $st->execute(['freight_loader_fee', (string)$fee]);
+            $st->execute(['freight_loader_day_fee', (string)$day]);
+            $message = 'Yuklovchi narxi saqlandi: soatiga ' . number_format($fee, 0, '.', ' ')
+                . " so'm, kuniga " . number_format($day, 0, '.', ' ') . " so'm.";
         }
     } elseif ($form === 'materials_toggle') {
         $on = isset($_POST['enabled']) ? '1' : '0';
@@ -228,6 +233,9 @@ $materialsOn = settingOn($db, 'materials_enabled');
 $loaderStmt = $db->query("SELECT value FROM app_settings WHERE key = 'freight_loader_fee'");
 $loaderRaw = $loaderStmt ? $loaderStmt->fetchColumn() : false;
 $loaderFee = $loaderRaw === false ? 0 : (int)json_decode((string)$loaderRaw, true);
+$loaderDayStmt = $db->query("SELECT value FROM app_settings WHERE key = 'freight_loader_day_fee'");
+$loaderDayRaw = $loaderDayStmt ? $loaderDayStmt->fetchColumn() : false;
+$loaderDayFee = $loaderDayRaw === false ? 0 : (int)json_decode((string)$loaderDayRaw, true);
 $types = $db->query('
     SELECT c.*, EXISTS (SELECT 1 FROM tariffs t WHERE t.equipment_type = c.code AND t.is_active) AS has_tariff
       FROM equipment_catalog c
@@ -275,11 +283,15 @@ function money($v) {
             <form method="POST" action="" style="display:flex;gap:12px;align-items:center">
                 <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                 <input type="hidden" name="form" value="loader_fee">
-                <label>Mijoz «Yuklovchi kerak» ni tanlasa narxga qo'shiladi, so'm
+                <label>Soatiga, so'm
                     <input name="fee" value="<?= $loaderFee ?>" style="width:120px">
+                </label>
+                <label>Kuniga, so'm
+                    <input name="day_fee" value="<?= $loaderDayFee ?>" style="width:120px">
                 </label>
                 <button type="submit" class="btn btn-primary btn-sm">Saqlash</button>
             </form>
+            <p style="margin:8px 0 0;color:#6b7280">Mijoz «Yuklovchi kerak» ni yoqib, soatbay yoki kunlikni tanlaydi — summa yuk tashish narxiga qo'shiladi va haydovchiga o'tadi.</p>
         </div>
     </div>
 

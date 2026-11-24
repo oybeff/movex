@@ -50,6 +50,10 @@ class Tariff(Base):
     is_active = Column(Boolean, nullable=False, default=True, server_default="true")
     #: «45 daqiqada keladi» в карточке тарифа. Задаёт админ; пусто — без минут.
     eta_minutes = Column(Integer, nullable=True)
+    #: Paket (24.11.2026): «Tezkor» 6 soat, «Kun davomida» 12 soat — narx
+    #: paket uchun, soatlar qat'iy. NULL — soatbay tarif (Ekonom).
+    package_hours = Column(Integer, nullable=True)
+    package_price = Column(Numeric(12, 2), nullable=True)
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

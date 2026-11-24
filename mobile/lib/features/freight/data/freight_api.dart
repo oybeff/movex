@@ -63,6 +63,8 @@ class FreightQuote {
   double get distanceKm => _d(j['distance_km']);
   String? get suggested => j['suggested'] as String?;
   double get loaderFee => _d(j['loader_fee']);
+  double get loaderHourFee => _d(j['loader_hour_fee']);
+  double get loaderDayFee => _d(j['loader_day_fee']);
   List<FreightVehicle> get vehicles =>
       [for (final v in (j['vehicles'] as List? ?? const [])) FreightVehicle((v as Map).cast<String, dynamic>())];
 }
@@ -145,6 +147,8 @@ class FreightApi {
     double? width,
     double? height,
     bool loader = false,
+    String? loaderMode,
+    int? loaderHours,
   }) async {
     final r = await _dio.get('/freight/quote', queryParameters: {
       if (body != null) 'body': body,
@@ -153,6 +157,8 @@ class FreightApi {
       if (width != null && width > 0) 'width': width,
       if (height != null && height > 0) 'height': height,
       if (loader) 'loader': true,
+      if (loader && loaderMode != null) 'loader_mode': loaderMode,
+      if (loader && loaderHours != null) 'loader_hours': loaderHours,
       'from_lat': fromLat,
       'from_lon': fromLon,
       'to_lat': toLat,

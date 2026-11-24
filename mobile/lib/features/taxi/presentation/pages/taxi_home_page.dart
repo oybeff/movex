@@ -104,6 +104,12 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   List<MapObject> _mapObjects = const [];
   String? _mapKey;
   final _sheetKey = GlobalKey();
+
+  /// Panel yig'ilgan (Sherzodbek 24.11: «pastka qaytmayapti») — xaritani
+  /// to'liq ko'rish uchun pastga suriladi, yuqoriga surish yoki bosish ochadi.
+  bool _sheetMin = false;
+  _Step? _sheetMinStep;
+  bool get _minimized => _sheetMin && _sheetMinStep == _step;
   Offset? _pulseAt; // шаг 7: где на экране точка «откуда»
   bool _justFound = false; // шаг 8 только что открылся — «нашли!»
   Timer? _foundTimer;
@@ -412,6 +418,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
       tier: _tier,
       minHours: q.minHours,
       hours: q.hours,
+      fixedHours: q.packageHours != null,
       scheduledAt: _scheduledAt,
       comment: _comment,
       attachmentId: _attachment?.id,
@@ -1238,18 +1245,37 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
             alignment: Alignment.bottomCenter,
             child: ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.78),
-                child: TaxiSheet(
-                  key: _sheetKey,
-                  // Панель доходит до низа экрана, а отступ под полоской
-                  // жестов — внутри неё (нижнего меню у клиента нет).
-                  bottomInset: MediaQuery.of(context).padding.bottom,
-                  child: Flexible(
-                    child: SingleChildScrollView(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        child: KeyedSubtree(key: ValueKey(_step), child: _panel()),
-                      ),
-                    ),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onVerticalDragEnd: (d) {
+                    final v = d.primaryVelocity ?? 0;
+                    if (v > 250 && !_minimized) setState(() { _sheetMin = true; _sheetMinStep = _step; });
+                    if (v < -250 && _minimized) setState(() => _sheetMin = false);
+                  },
+                  child: TaxiSheet(
+                    key: _sheetKey,
+                    // Панель доходит до низа экрана, а отступ под полоской
+                    // жестов — внутри неё (нижнего меню у клиента нет).
+                    bottomInset: MediaQuery.of(context).padding.bottom,
+                    child: _minimized
+                        ? InkWell(
+                            onTap: () => setState(() => _sheetMin = false),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter, vertical: 4),
+                              child: Row(children: [
+                                Expanded(child: Text('taxi.sheet_show'.tr(), style: AppTypography.bodyMedium)),
+                                const HIcon(Icons.keyboard_arrow_up_rounded, color: AppPalette.textSecondary),
+                              ]),
+                            ),
+                          )
+                        : Flexible(
+                            child: SingleChildScrollView(
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                child: KeyedSubtree(key: ValueKey(_step), child: _panel()),
+                              ),
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -1718,6 +1744,11 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   /// Подпись тарифа как в макете: «45 daqiqada keladi» (время задаёт
   /// админ), «Bugun ichida keladi» для дневного; без времени — общая.
   String _tierNote(TariffQuote q) {
+    final pack = q.packageHours != null ? '${'taxi.hours_n'.tr(args: ['${q.packageHours}'])} · ' : '';
+    return pack + _tierNoteBase(q);
+  }
+
+  String _tierNoteBase(TariffQuote q) {
     if (q.tier == 'day') return 'taxi.tier_day_note'.tr();
     if (q.etaMinutes != null) return 'taxi.arrives_in'.tr(args: ['${q.etaMinutes}']);
     return 'taxi.tier_${q.tier}_note'.tr();

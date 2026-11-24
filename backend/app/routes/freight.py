@@ -28,6 +28,8 @@ class FreightCreate(BaseModel):
     cargo_height_m: Optional[Decimal] = Field(default=None, gt=0, le=Decimal("5"))
     cargo_volume_m3: Optional[Decimal] = Field(default=None, gt=0, le=Decimal("200"))
     needs_loader: bool = False
+    loader_mode: Optional[str] = Field(default="hour", pattern="^(hour|day)$")
+    loader_hours: Optional[int] = Field(default=None, ge=1, le=24)
     scheduled_at: Optional[datetime] = None
     cargo_tonnes: Optional[Decimal] = Field(default=None, gt=0, le=Decimal("100"))
     cargo_note: Optional[str] = Field(default=None, max_length=1000)
@@ -55,12 +57,15 @@ def freight_quote(
     width: Optional[Decimal] = Query(None, gt=0, le=5),
     height: Optional[Decimal] = Query(None, gt=0, le=5),
     loader: bool = Query(False),
+    loader_mode: Optional[str] = Query(None, pattern="^(hour|day)$"),
+    loader_hours: Optional[int] = Query(None, ge=1, le=24),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Все грузовики с ценой на маршрут и подсказка, какой подходит по весу."""
     return freight_service.quote(db, from_lat, from_lon, to_lat, to_lon, tonnes, hours, body,
-                                 weight_kg, length, width, height, loader)
+                                 weight_kg, length, width, height, loader,
+                                 loader_mode, loader_hours)
 
 
 @router.post("/orders")

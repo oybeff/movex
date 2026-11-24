@@ -102,6 +102,8 @@ class MaterialQuoteRequest(BaseModel):
     delivery_longitude: Optional[float] = Field(default=None, ge=-180, le=180)
     #: Foydalanuvchi mashinani o'zgartirgan bo'lsa
     vehicle_code: Optional[str] = Field(default=None, max_length=20)
+    #: unit — tovar birligida (m³, dona…), tonne — tonnada (24.11.2026)
+    input_unit: Optional[str] = Field(default=None, pattern="^(unit|tonne)$")
 
 
 class MaterialQuoteRead(BaseModel):
@@ -127,6 +129,8 @@ class MaterialQuoteRead(BaseModel):
 class MaterialOrderCreate(BaseModel):
     product_id: int
     quantity: Decimal = Field(gt=0)
+    #: unit — tovar birligida, tonne — tonnada (server birlikka aylantiradi)
+    input_unit: Optional[str] = Field(default=None, pattern="^(unit|tonne)$")
 
     delivery_address: Optional[str] = Field(default=None, max_length=500)
     delivery_latitude: Optional[float] = Field(default=None, ge=-90, le=90)

@@ -84,23 +84,24 @@ def main():
     r = requests.get(f"{API}/drivers/me", headers=owner)
     check("новый водитель — incomplete", r.status_code == 200 and r.json()["status"] == "incomplete", r.text)
 
-    check("клиент загружать не может — 403", upload(client, "passport").status_code == 403)
+    check("клиент загружать не может — 403", upload(client, "id_front").status_code == 403)
     check("неизвестный тип — 404", upload(owner, "selfie").status_code == 404)
-    check("не картинка — 400", upload(owner, "passport", b"%PDF", "doc.pdf").status_code == 400)
+    check("не картинка — 400", upload(owner, "id_front", b"%PDF", "doc.pdf").status_code == 400)
 
-    for kind in ("passport", "driver_license", "tech_passport"):
+    NEW = ("id_front", "id_back", "license_front", "license_back", "tech_front", "tech_back", "car_front", "car_back", "car_left", "car_right")
+    for kind in NEW[:-1]:
         upload(owner, kind)
     check("не все обязательные — всё ещё incomplete",
           requests.get(f"{API}/drivers/me", headers=owner).json()["status"] == "incomplete")
-    r = upload(owner, "equipment_photo")
-    check("все четыре загружены — pending", r.status_code == 200 and r.json()["status"] == "pending", r.text)
+    r = upload(owner, NEW[-1])
+    check("все десять загружены — pending", r.status_code == 200 and r.json()["status"] == "pending", r.text)
 
-    name = sql("SELECT file_name FROM driver_documents WHERE user_id=:u AND kind='passport'", u=owner_id)[0][0]
+    name = sql("SELECT file_name FROM driver_documents WHERE user_id=:u AND kind='id_front'", u=owner_id)[0][0]
     check("файл лежит в private_media", os.path.isfile(os.path.join(PRIVATE_ROOT, name)))
     check("по /static его нет", requests.get(f"{API}/static/driver_docs/{name}").status_code == 404)
-    r = requests.get(f"{API}/drivers/me/documents/passport/file", headers=owner)
+    r = requests.get(f"{API}/drivers/me/documents/id_front/file", headers=owner)
     check("своё фото водитель получает", r.status_code == 200 and r.content == PNG, r.status_code)
-    r = requests.get(f"{API}/drivers/me/documents/passport/file", headers=other)
+    r = requests.get(f"{API}/drivers/me/documents/id_front/file", headers=other)
     check("чужого фото у другого водителя нет — 404", r.status_code == 404, r.status_code)
 
     check("очередь без секрета закрыта", requests.get(f"{API}/drivers/internal/queue").status_code in (403, 404))
@@ -108,32 +109,42 @@ def main():
     me = next((i for i in q if i["user_id"] == owner_id), None)
     check("водитель в очереди со статусом pending", me is not None and me["status"] == "pending", me)
     ids = {d["kind"]: d["id"] for d in me["documents"]}
-    r = requests.get(f"{API}/drivers/internal/documents/{ids['passport']}/file", headers=SECRET)
+    r = requests.get(f"{API}/drivers/internal/documents/{ids['id_front']}/file", headers=SECRET)
     check("админка получает фото", r.status_code == 200 and r.content == PNG, r.status_code)
 
-    r = requests.post(f"{API}/drivers/internal/documents/{ids['tech_passport']}/review", headers=SECRET,
+    r = requests.post(f"{API}/drivers/internal/documents/{ids['tech_front']}/review", headers=SECRET,
                       json={"approve": False})
     check("отказ без причины — 400", r.status_code == 400, r.text)
-    requests.post(f"{API}/drivers/internal/documents/{ids['tech_passport']}/review", headers=SECRET,
+    requests.post(f"{API}/drivers/internal/documents/{ids['tech_front']}/review", headers=SECRET,
                   json={"approve": False, "reason": "Rasm xira"})
     s = requests.get(f"{API}/drivers/me", headers=owner).json()
-    tech = next(d for d in s["documents"] if d["kind"] == "tech_passport")
+    tech = next(d for d in s["documents"] if d["kind"] == "tech_front")
     n = sql("SELECT title, body FROM notifications WHERE user_id=:u AND type='driver_document_rejected'", u=owner_id)
     check("водителю ушло уведомление об отказе с причиной", n and "Rasm xira" in n[0][1], n)
     check("отклонён — статус rejected, причина видна водителю",
           s["status"] == "rejected" and tech["reject_reason"] == "Rasm xira", s)
-    upload(owner, "tech_passport")
+    upload(owner, "tech_front")
     s = requests.get(f"{API}/drivers/me", headers=owner).json()
     check("перезагрузил — снова pending", s["status"] == "pending", s)
 
     q = requests.get(f"{API}/drivers/internal/queue", headers=SECRET).json()
     ids = {d["kind"]: d["id"] for d in next(i for i in q if i["user_id"] == owner_id)["documents"]}
-    for kind in ("passport", "driver_license", "tech_passport", "equipment_photo"):
+    for kind in NEW:
         requests.post(f"{API}/drivers/internal/documents/{ids[kind]}/review", headers=SECRET, json={"approve": True})
     check("все одобрены — approved", requests.get(f"{API}/drivers/me", headers=owner).json()["status"] == "approved")
     n = sql("SELECT count(*) FROM notifications WHERE user_id=:u AND type='driver_approved'", u=owner_id)
     check("уведомление «одобрено» — ровно одно", n[0][0] == 1, n)
-    check("одобренный заменить нельзя — 409", upload(owner, "passport").status_code == 409)
+    check("одобренный заменить нельзя — 409", upload(owner, "id_front").status_code == 409)
+    # Старый водитель: одобрены прежние четыре документа — остаётся approved
+    old_id, old = register("owner")
+    for kind in ("passport", "driver_license", "tech_passport", "equipment_photo"):
+        upload(old, kind)
+    qq = requests.get(f"{API}/drivers/internal/queue", headers=SECRET).json()
+    oids = {d["kind"]: d["id"] for d in next(i for i in qq if i["user_id"] == old_id)["documents"]}
+    for k, i in oids.items():
+        requests.post(f"{API}/drivers/internal/documents/{i}/review", headers=SECRET, json={"approve": True})
+    check("старые четыре одобрены — approved без новых фото",
+          requests.get(f"{API}/drivers/me", headers=old).json()["status"] == "approved")
     r = upload(owner, "insurance")
     check("страховка по желанию не сбивает approved", r.json()["status"] == "approved", r.text)
 

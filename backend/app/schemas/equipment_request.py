@@ -63,6 +63,10 @@ class TariffQuoteRead(BaseModel):
     total: Decimal
     #: «45 daqiqada keladi». Задаёт админ; null — подпись без минут.
     eta_minutes: Optional[int] = None
+    #: Paket (Tezkor 6 / Kun davomida 12 soat): narx paket uchun, soatlar qat'iy
+    package_hours: Optional[int] = None
+    #: Регион цены — «Andijon narxi». null — базовая цена.
+    zone_name: Optional[str] = None
 
 
 class AttachmentRead(BaseModel):

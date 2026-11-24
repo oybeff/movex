@@ -227,8 +227,12 @@ class DriverVerification {
 
   final Map<String, dynamic> j;
 
-  static const kinds = ['passport', 'driver_license', 'tech_passport', 'equipment_photo', 'insurance'];
-  static const required = ['passport', 'driver_license', 'tech_passport', 'equipment_photo'];
+  /// 24.11.2026 (Sherzodbek): har hujjat ikki tomondan, mashina 4 tomondan.
+  static const required = [
+    'id_front', 'id_back', 'license_front', 'license_back', 'tech_front', 'tech_back',
+    'car_front', 'car_back', 'car_left', 'car_right',
+  ];
+  static const kinds = required;
 
   String get status => (j['status'] as String?) ?? 'incomplete';
   bool get approved => status == 'approved';

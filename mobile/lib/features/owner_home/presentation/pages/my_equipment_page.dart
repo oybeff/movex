@@ -11,6 +11,9 @@ import '../../../../core/widgets/equipment_type_icon.dart';
 import '../../../../core/widgets/bottom_nav_space.dart';
 import '../../../driver/presentation/driver_equipment_step.dart';
 import '../../../driver/presentation/driver_ui.dart';
+import '../../../driver/presentation/delivery_setup_page.dart';
+import '../../../driver/data/delivery_api.dart';
+import '../../../../core/app_flavor.dart';
 import '../../../materials/presentation/pages/my_materials_page.dart';
 import '../../../../core/widgets/h_icon.dart';
 
@@ -374,6 +377,9 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
       ),
       body: Column(
         children: [
+          // Haydovchi ilovasida yuk mashinasi ham shu yerda (24.11.2026:
+          // profildagi alohida «Yuk mashinam» olib tashlandi)
+          if (AppFlavor.isDriver) _TruckTile(),
           // Поиск
           Container(
             color: AppPalette.surface,
@@ -620,6 +626,51 @@ class _MyEquipmentPageState extends State<MyEquipmentPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+
+/// «Yuk mashinam» — yuk tashish va material yetkazish uchun mashina.
+class _TruckTile extends StatefulWidget {
+  @override
+  State<_TruckTile> createState() => _TruckTileState();
+}
+
+class _TruckTileState extends State<_TruckTile> {
+  DeliveryProfile? _p;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final p = await DeliveryApi().profile();
+      if (mounted) setState(() => _p = p);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = _p;
+    final has = p?.registered ?? false;
+    return Material(
+      color: AppPalette.surface,
+      child: ListTile(
+        leading: const HIcon(Icons.local_shipping_outlined, color: AppPalette.brand),
+        title: Text('driver.delivery_title'.tr(), style: AppTypography.bodyMedium),
+        subtitle: Text(has
+            ? [p!.vehicleName, p.plate].whereType<String>().where((x) => x.isNotEmpty).join(' · ')
+            : 'driver.truck_add'.tr()),
+        trailing: const HIcon(Icons.chevron_right_rounded, color: AppPalette.textSecondary),
+        onTap: () async {
+          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DeliverySetupPage()));
+          _load();
+        },
       ),
     );
   }

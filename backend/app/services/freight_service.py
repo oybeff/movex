@@ -83,15 +83,35 @@ def _km(a_lat, a_lon, b_lat, b_lon) -> Decimal:
 BODY_TYPES = ("tent", "open", "van", "isothermal", "fridge", "tank", "manipulator")
 
 
-def loader_fee(db: Session) -> Decimal:
-    """Грузчик (Y4 «Yuklovchi kerak») — фиксированная сумма из админки."""
+def _setting(db: Session, key: str, default: str) -> Decimal:
     from app.models.app_settings import AppSettings
 
-    row = db.query(AppSettings).filter(AppSettings.key == "freight_loader_fee").first()
+    row = db.query(AppSettings).filter(AppSettings.key == key).first()
     try:
-        return Decimal(str(row.value)) if row and row.value not in (None, "") else Decimal("0")
+        return Decimal(str(row.value)) if row and row.value not in (None, "") else Decimal(default)
     except Exception:
-        return Decimal("0")
+        return Decimal(default)
+
+
+def loader_prices(db: Session) -> tuple:
+    """Грузчик (Шерзодбек 24.11): (цена часа, цена дня) из админки (catalog.php)."""
+    return _setting(db, "freight_loader_fee", "0"), _setting(db, "freight_loader_day_fee", "0")
+
+
+def loader_total(db: Session, needs: bool, mode: Optional[str], hours: Optional[int]) -> tuple:
+    """(сумма, режим, часы). Без грузчика — (0, None, None)."""
+    if not needs:
+        return Decimal("0"), None, None
+    hour_fee, day_fee = loader_prices(db)
+    if mode == "day":
+        return day_fee, "day", None
+    h = max(1, min(int(hours or 1), 24))
+    return hour_fee * h, "hour", h
+
+
+def loader_fee(db: Session) -> Decimal:
+    """Цена часа грузчика — оставлено для старых вызовов."""
+    return loader_prices(db)[0]
 
 
 def fit_problem(v: DeliveryVehicleRow, weight_kg: Optional[Decimal], l=None, w=None, h=None) -> Optional[str]:
@@ -134,12 +154,14 @@ def _free_drivers(db: Session, v: DeliveryVehicleRow, body: Optional[str],
 def quote(db: Session, from_lat: float, from_lon: float, to_lat: float, to_lon: float,
           tonnes: Optional[Decimal], hours: Optional[int], body: Optional[str] = None,
           weight_kg: Optional[Decimal] = None, length=None, width=None, height=None,
-          needs_loader: bool = False) -> dict:
+          needs_loader: bool = False, loader_mode: Optional[str] = None,
+          loader_hours: Optional[int] = None) -> dict:
     """Все машины с ценой на этот маршрут, свободные водители и «влезет ли»."""
     km = _km(from_lat, from_lon, to_lat, to_lon)
     if weight_kg is None and tonnes is not None:
         weight_kg = tonnes * 1000
-    loader = loader_fee(db) if needs_loader else Decimal("0")
+    loader, _, _ = loader_total(db, needs_loader, loader_mode, loader_hours)
+    hour_fee, day_fee = loader_prices(db)
     radius = delivery_service.radius_km(db)
     items = []
     for v in _vehicles(db):
@@ -177,7 +199,8 @@ def quote(db: Session, from_lat: float, from_lon: float, to_lat: float, to_lon: 
             if weight_kg is not None or length is not None:
                 suggested = it["code"]
                 break
-    return {"distance_km": km, "loader_fee": loader_fee(db), "vehicles": items, "suggested": suggested}
+    return {"distance_km": km, "loader_fee": loader, "loader_hour_fee": hour_fee,
+            "loader_day_fee": day_fee, "vehicles": items, "suggested": suggested}
 
 
 def create(db: Session, client: User, data) -> FreightOrder:
@@ -204,7 +227,8 @@ def create(db: Session, client: User, data) -> FreightOrder:
     price, hours = price_for(v, km, data.hours)
     if price is None or price <= 0:
         raise HTTPException(400, "Bu mashina uchun narx hali qo'yilmagan")
-    loader = loader_fee(db) if data.needs_loader else Decimal("0")
+    loader, loader_mode, loader_hours = loader_total(
+        db, bool(data.needs_loader), data.loader_mode, data.loader_hours)
     price = price + loader
     scheduled = data.scheduled_at
     if scheduled is not None:
@@ -229,7 +253,8 @@ def create(db: Session, client: User, data) -> FreightOrder:
         cargo_tonnes=data.cargo_tonnes, cargo_note=(data.cargo_note or None),
         cargo_type=data.cargo_type, cargo_length_m=data.cargo_length_m, cargo_width_m=data.cargo_width_m,
         cargo_height_m=data.cargo_height_m, cargo_volume_m3=data.cargo_volume_m3,
-        needs_loader=bool(data.needs_loader), loader_fee=loader, scheduled_at=scheduled,
+        needs_loader=bool(data.needs_loader), loader_fee=loader, loader_mode=loader_mode,
+        loader_hours=loader_hours, scheduled_at=scheduled,
         from_address=data.from_address, from_latitude=data.from_latitude, from_longitude=data.from_longitude,
         to_address=data.to_address, to_latitude=data.to_latitude, to_longitude=data.to_longitude,
         distance_km=km, price_mode=v.price_mode, hours=hours, price=price,
@@ -263,7 +288,8 @@ def _card(db: Session, order: FreightOrder, to_pickup: Decimal) -> dict:
         "cargo_tonnes": order.cargo_tonnes, "cargo_note": order.cargo_note,
         "cargo_type": order.cargo_type, "cargo_length_m": order.cargo_length_m,
         "cargo_width_m": order.cargo_width_m, "cargo_height_m": order.cargo_height_m,
-        "needs_loader": order.needs_loader, "scheduled_at": order.scheduled_at,
+        "needs_loader": order.needs_loader, "loader_mode": order.loader_mode,
+        "loader_hours": order.loader_hours, "scheduled_at": order.scheduled_at,
         "from_address": order.from_address, "to_address": order.to_address,
         "distance_km": order.distance_km, "to_pickup_km": to_pickup.quantize(Decimal("0.1")),
         "price_mode": order.price_mode, "hours": order.hours,

@@ -117,8 +117,10 @@ class MaterialService {
     double? latitude,
     double? longitude,
     String? vehicleCode,
+    String? inputUnit,
   }) async {
     final response = await _dio.post('/materials/quote', data: {
+      if (inputUnit != null) 'input_unit': inputUnit,
       'product_id': productId,
       'quantity': quantity,
       if (latitude != null) 'delivery_latitude': latitude,
@@ -139,8 +141,10 @@ class MaterialService {
     String? vehicleCode,
     String? comment,
     String deliveryPayment = 'balance',
+    String? inputUnit,
   }) async {
     final response = await _dio.post('/materials/orders', data: {
+      if (inputUnit != null) 'input_unit': inputUnit,
       'delivery_payment': deliveryPayment,
       'product_id': productId,
       'quantity': quantity,

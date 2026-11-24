@@ -79,6 +79,7 @@ Future<ScheduleResult?> showScheduleSheet(
   required String tier,
   required int minHours,
   required int hours,
+  bool fixedHours = false,
   DateTime? scheduledAt,
   String? comment,
   int? attachmentId,
@@ -91,6 +92,7 @@ Future<ScheduleResult?> showScheduleSheet(
         tier: tier,
         minHours: minHours,
         hours: hours,
+        fixedHours: fixedHours,
         scheduledAt: scheduledAt,
         comment: comment,
         attachmentId: attachmentId,
@@ -104,6 +106,7 @@ class _ScheduleSheet extends StatefulWidget {
     required this.tier,
     required this.minHours,
     required this.hours,
+    this.fixedHours = false,
     required this.scheduledAt,
     required this.comment,
     required this.attachmentId,
@@ -114,6 +117,9 @@ class _ScheduleSheet extends StatefulWidget {
   final String tier;
   final int minHours;
   final int hours;
+
+  /// Paketli tarif — soatlarni o'zgartirib bo'lmaydi
+  final bool fixedHours;
   final DateTime? scheduledAt;
   final String? comment;
   final int? attachmentId;
@@ -221,13 +227,14 @@ class _ScheduleSheetState extends State<_ScheduleSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('taxi.work_time'.tr(), style: AppTypography.bodyMedium),
-                    Text('taxi.min_hours'.tr(args: ['${widget.minHours}']), style: AppTypography.captionS),
+                    Text(widget.fixedHours ? 'taxi.package_fixed'.tr() : 'taxi.min_hours'.tr(args: ['${widget.minHours}']),
+                        style: AppTypography.captionS),
                   ],
                 ),
               ),
               _StepButton(
                 icon: Icons.remove_rounded,
-                onTap: _hours > widget.minHours
+                onTap: !widget.fixedHours && _hours > widget.minHours
                     ? () {
                         setState(() => _hours--);
                         _refreshPrice();
@@ -244,7 +251,7 @@ class _ScheduleSheetState extends State<_ScheduleSheet> {
               ),
               _StepButton(
                 icon: Icons.add_rounded,
-                onTap: _hours < 24
+                onTap: !widget.fixedHours && _hours < 24
                     ? () {
                         setState(() => _hours++);
                         _refreshPrice();

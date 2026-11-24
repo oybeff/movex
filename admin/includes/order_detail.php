@@ -196,7 +196,10 @@ if ($kind === 'equipment') {
     $price = (float) $o['price'];
     $com = (float) ($o['driver_commission'] ?? 0);
     $pay[] = [($o['price_mode'] === 'hour' ? (int) $o['hours'] . ' soat' : 'Yo\'l ' . (float) $o['distance_km'] . ' km'), moneyFmt($price - (float) $o['loader_fee'])];
-    if ((float) $o['loader_fee'] > 0) { $pay[] = ['Yuk ortuvchi', moneyFmt($o['loader_fee'])]; }
+    if ((float) $o['loader_fee'] > 0) {
+        $lm = ($o['loader_mode'] ?? null) === 'day' ? 'kunlik' : ((int) ($o['loader_hours'] ?? 1)) . ' soat';
+        $pay[] = ['Yuk ortuvchi (' . $lm . ')', moneyFmt($o['loader_fee'])];
+    }
     $pay[] = ['Jami mijozdan', moneyFmt($price), true];
     if ($o['driver_id']) {
         $pay[] = ['MoveX komissiyasi', '− ' . moneyFmt($com)];

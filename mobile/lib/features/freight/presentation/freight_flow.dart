@@ -33,6 +33,9 @@ class FreightDraft {
   double? weightKg;
   double? length, width, height, volume;
   bool loader = false;
+  /// Грузчик: 'hour' — по часам, 'day' — на день (цены в админке).
+  String loaderMode = 'hour';
+  int loaderHours = 1;
   DateTime? when; // null — «Hozir»
   String? note;
   bool cash = false;
@@ -543,6 +546,9 @@ class _FreightCargoPageState extends State<FreightCargoPage> {
   final _h = TextEditingController();
   String _type = 'construction';
   bool _loader = false;
+  String _loaderMode = 'hour';
+  int _loaderHours = 1;
+  double _loaderHourFee = 0, _loaderDayFee = 0;
   List<FreightVehicle> _all = const [];
   FreightVehicle? _alt;
 
@@ -552,7 +558,13 @@ class _FreightCargoPageState extends State<FreightCargoPage> {
   void initState() {
     super.initState();
     _catalog(d).then((q) {
-      if (mounted) setState(() => _all = q.vehicles);
+      if (mounted) {
+        setState(() {
+          _all = q.vehicles;
+          _loaderHourFee = q.loaderHourFee;
+          _loaderDayFee = q.loaderDayFee;
+        });
+      }
     }).catchError((_) {});
   }
 
@@ -586,6 +598,8 @@ class _FreightCargoPageState extends State<FreightCargoPage> {
               d.width = _num(_w);
               d.height = _num(_h);
               d.loader = _loader;
+              d.loaderMode = _loaderMode;
+              d.loaderHours = _loaderHours;
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => FreightRoutePage(draft: d)));
             },
       children: [
@@ -644,6 +658,33 @@ class _FreightCargoPageState extends State<FreightCargoPage> {
           title: Text('freight.loader'.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: Text('freight.loader_hint'.tr()),
         ),
+        if (_loader) ...[
+          Wrap(children: [
+            _chip('freight.loader_hourly'.tr(args: [_sum(_loaderHourFee)]), _loaderMode == 'hour',
+                () => setState(() => _loaderMode = 'hour')),
+            _chip('freight.loader_daily'.tr(args: [_sum(_loaderDayFee)]), _loaderMode == 'day',
+                () => setState(() => _loaderMode = 'day')),
+          ]),
+          if (_loaderMode == 'hour')
+            Row(children: [
+              Expanded(child: Text('freight.loader_hours'.tr(), style: const TextStyle(fontWeight: FontWeight.w600))),
+              IconButton(
+                onPressed: _loaderHours > 1 ? () => setState(() => _loaderHours--) : null,
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
+              Text('$_loaderHours', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              IconButton(
+                onPressed: _loaderHours < 24 ? () => setState(() => _loaderHours++) : null,
+                icon: const Icon(Icons.add_circle_outline),
+              ),
+            ]),
+          Text(
+            'freight.loader_total'.tr(args: [
+              _sum(_loaderMode == 'day' ? _loaderDayFee : _loaderHourFee * _loaderHours),
+            ]),
+            style: AppTypography.captionS.copyWith(color: AppPalette.textSecondary),
+          ),
+        ],
       ],
     );
   }
@@ -906,6 +947,8 @@ class _FreightConfirmPageState extends State<FreightConfirmPage> {
         width: d.width,
         height: d.height,
         loader: d.loader,
+        loaderMode: d.loaderMode,
+        loaderHours: d.loaderHours,
       );
       if (mounted) setState(() => _q = q);
     } catch (_) {
@@ -928,6 +971,8 @@ class _FreightConfirmPageState extends State<FreightConfirmPage> {
         if (d.height != null) 'cargo_height_m': d.height,
         if (d.volume != null) 'cargo_volume_m3': d.volume,
         'needs_loader': d.loader,
+        if (d.loader) 'loader_mode': d.loaderMode,
+        if (d.loader && d.loaderMode == 'hour') 'loader_hours': d.loaderHours,
         if (d.when != null) 'scheduled_at': d.when!.toUtc().toIso8601String(),
         if (d.note != null) 'cargo_note': d.note,
         'from_address': d.from.address ?? d.from.label,
@@ -1031,7 +1076,11 @@ class _FreightConfirmPageState extends State<FreightConfirmPage> {
                   _row('${_t(double.parse(km.toStringAsFixed(1)))} km × ${NumberFormatter.formatCurrency(v.pricePerKm!)} so\'m',
                       _sum((v.price ?? 0) - v.baseFee - (d.loader ? q!.loaderFee : 0))),
               ],
-              _row('freight.loader'.tr(), d.loader ? _sum(q!.loaderFee) : '—'),
+              _row(
+                  d.loader
+                      ? '${'freight.loader'.tr()} · ${d.loaderMode == 'day' ? 'freight.loader_day_short'.tr() : 'freight.hours_n'.tr(args: ['${d.loaderHours}'])}'
+                      : 'freight.loader'.tr(),
+                  d.loader ? _sum(q!.loaderFee) : '—'),
             ]),
           ),
           const SizedBox(height: 12),

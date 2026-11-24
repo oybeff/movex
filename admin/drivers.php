@@ -55,6 +55,16 @@ $queue = internalApiGet('/drivers/internal/queue');
 $drivers = $queue['ok'] && is_array($queue['data']) ? $queue['data'] : [];
 
 $kindNames = [
+    'id_front' => 'ID karta — old',
+    'id_back' => 'ID karta — orqa',
+    'license_front' => 'Haydovchilik guvohnomasi — old',
+    'license_back' => 'Haydovchilik guvohnomasi — orqa',
+    'tech_front' => 'Texpasport — old',
+    'tech_back' => 'Texpasport — orqa',
+    'car_front' => 'Mashina — old',
+    'car_back' => 'Mashina — orqa',
+    'car_left' => 'Mashina — chap',
+    'car_right' => "Mashina — o'ng",
     'passport' => 'Pasport (ID karta)',
     'driver_license' => 'Haydovchilik guvohnomasi',
     'tech_passport' => 'Texnika texpasporti',

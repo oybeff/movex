@@ -33,7 +33,9 @@ class DriverDocument(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "kind", name="uq_driver_document_kind"),
         CheckConstraint(
-            "kind IN ('passport','driver_license','tech_passport','equipment_photo','insurance')",
+            "kind IN ('passport','driver_license','tech_passport','equipment_photo','insurance',"
+            "'id_front','id_back','license_front','license_back','tech_front','tech_back',"
+            "'car_front','car_back','car_left','car_right')",
             name="check_driver_document_kind",
         ),
         CheckConstraint("status IN ('pending','approved','rejected')", name="check_driver_document_status"),

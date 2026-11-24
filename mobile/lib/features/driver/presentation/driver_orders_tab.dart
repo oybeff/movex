@@ -136,6 +136,8 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
     }
   }
 
+  static const _regAskedKey = 'driver_registration_asked';
+
   Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
     _online = prefs.getBool(_onlineKey) ?? false;
@@ -156,6 +158,16 @@ class _DriverOrdersTabState extends State<DriverOrdersTab> with WidgetsBindingOb
     if (_verification != null && !_verification!.approved && _online) await _setOnline(false);
     if (mounted) setState(() {});
     _restartPolling();
+    // Sherzodbek 24.11: «ro'yxatdan o'tayotganda haydovchi texnika turini
+    // tanlasin» — hali hech narsa qo'shmagan bo'lsa, ro'yxatdan o'tish
+    // ilova ochilishi bilan boshlanadi (bir marta, keyin — «Ishga chiqish»da).
+    final asked = prefs.getBool(_regAskedKey) ?? false;
+    if (!asked && _equipment.isEmpty && !_isDeliveryDriver && mounted) {
+      await prefs.setBool(_regAskedKey, true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startVerification();
+      });
+    }
     final here = await TaxiGeo.current();
     if (!mounted) return;
     setState(() => _here = here);

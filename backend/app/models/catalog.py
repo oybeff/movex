@@ -147,6 +147,8 @@ class FreightOrder(Base):
     cargo_volume_m3 = Column(Numeric(7, 2), nullable=True)
     needs_loader = Column(Boolean, nullable=False, default=False)
     loader_fee = Column(Numeric(12, 2), nullable=False, default=0)
+    loader_mode = Column(String(4), nullable=True)   # hour | day
+    loader_hours = Column(Integer, nullable=True)
     #: NULL — «Hozir»; иначе когда подать машину (Y5)
     scheduled_at = Column(DateTime(timezone=True), nullable=True)
     from_address = Column(Text, nullable=True)

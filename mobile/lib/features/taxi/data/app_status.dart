@@ -21,13 +21,36 @@ class AppStatus {
   bool get materialsEnabled => j['materials_enabled'] != false;
   Map<String, dynamic> get area => (j['service_area'] as Map?)?.cast<String, dynamic>() ?? const {};
 
+  /// Регионы из админки (zones.php): там тоже обслуживаем, со своей ценой.
+  List<List<List<double>>> get zones => [
+        for (final z in (j['zones'] as List? ?? const []))
+          [
+            for (final p in ((z as Map)['polygon'] as List? ?? const []))
+              [((p as List)[0] as num).toDouble(), (p[1] as num).toDouble()],
+          ],
+      ];
+
   bool inArea(double lat, double lon) {
+    if (zones.any((z) => _inPolygon(lat, lon, z))) return true;
     final a = area;
     if (a.isEmpty) return true;
     return lat >= (a['min_lat'] as num) &&
         lat <= (a['max_lat'] as num) &&
         lon >= (a['min_lon'] as num) &&
         lon <= (a['max_lon'] as num);
+  }
+
+  /// Тот же ray casting, что на сервере (zone_service.point_in_polygon).
+  static bool _inPolygon(double lat, double lon, List<List<double>> poly) {
+    if (poly.length < 3) return false;
+    var inside = false;
+    for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      final yi = poly[i][0], xi = poly[i][1], yj = poly[j][0], xj = poly[j][1];
+      if ((yi > lat) != (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) {
+        inside = !inside;
+      }
+    }
+    return inside;
   }
 
   String areaName(String lang) => (lang == 'ru' ? area['name_ru'] : area['name_uz']) as String? ?? '';

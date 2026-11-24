@@ -85,6 +85,24 @@ class Quote:
         self.total = total
 
 
+def to_units(product: MaterialProduct, quantity, input_unit: Optional[str]) -> Decimal:
+    """
+    Mijoz miqdorni tovar birligida (m³, dona…) yoki TONNADA yozishi mumkin
+    (Sherzodbek 24.11.2026: «1 m3 emas tonnada hisoblanadi»). Tonna —
+    tovarning bir birlik og'irligi (unit_weight_kg) orqali birlikka
+    aylantiriladi; buyurtma, narx va eng kam miqdor — doim tovar birligida.
+    """
+    q = _dec(quantity)
+    if input_unit in (None, "", "unit") or product.unit == "tonne":
+        return q
+    if input_unit != "tonne":
+        raise HTTPException(400, "Birlik noto'g'ri")
+    weight = _dec(product.unit_weight_kg)
+    if weight <= 0:
+        raise HTTPException(400, "Bu tovarni tonnada buyurtma qilib bo'lmaydi")
+    return (q * Decimal("1000") / weight).quantize(Decimal("0.01"))
+
+
 def calculate(
     db: Session,
     product: MaterialProduct,
@@ -417,7 +435,7 @@ def create_order(db: Session, buyer: User, data) -> MaterialOrder:
     quote = calculate(
         db,
         product,
-        data.quantity,
+        to_units(product, data.quantity, getattr(data, "input_unit", None)),
         data.delivery_latitude,
         data.delivery_longitude,
         data.vehicle_code,

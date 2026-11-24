@@ -198,7 +198,8 @@ def create_request(db: Session, client: User, data) -> EquipmentRequest:
     attachment_price = None
     if tariff is not None:
         tariff_quote = tariff_service.quote(
-            db, equipment_type, tariff, data.hours, getattr(data, "attachment_id", None)
+            db, equipment_type, tariff, data.hours, getattr(data, "attachment_id", None),
+            data.delivery_latitude, data.delivery_longitude,
         )
         mode = "quick"
         budget = tariff_quote.total
@@ -207,7 +208,9 @@ def create_request(db: Session, client: User, data) -> EquipmentRequest:
             # Округление вверх до 1 000 — суммы на экране «круглые»
             raw = budget * (100 + surge) / 100
             budget = ((raw + 999) // 1000) * 1000
-        if not service_area.contains(data.delivery_latitude, data.delivery_longitude):
+        from app.services import zone_service
+
+        if not zone_service.served(db, data.delivery_latitude, data.delivery_longitude)[0]:
             raise HTTPException(400, "Bu manzilga hozircha xizmat yo'q")
         end_date = data.start_date
         if getattr(data, "attachment_id", None) is not None:
@@ -270,6 +273,7 @@ def create_request(db: Session, client: User, data) -> EquipmentRequest:
         hours=tariff_quote.hours if tariff_quote else None,
         attachment_id=getattr(data, "attachment_id", None) if tariff_quote else None,
         attachment_price=attachment_price,
+        price_zone_id=tariff_quote.zone_id if tariff_quote else None,
         payment_method=payment_method,
         origin_latitude=(
             str(data.origin_latitude) if getattr(data, "origin_latitude", None) is not None else None

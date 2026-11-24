@@ -21,8 +21,12 @@ from app.core.media import ALLOWED_EXTENSIONS, MAX_UPLOAD_BYTES
 from app.models.driver_document import DriverDocument
 from app.models.user import User
 
-KINDS = ("passport", "driver_license", "tech_passport", "equipment_photo", "insurance")
-REQUIRED = ("passport", "driver_license", "tech_passport", "equipment_photo")
+#: 24.11.2026 (Sherzodbek): har hujjat ikki tomondan, mashina 4 tomondan.
+#: Eski turlar (passport … insurance) — avval topshirganlar uchun qoldi.
+REQUIRED = ("id_front", "id_back", "license_front", "license_back", "tech_front", "tech_back",
+            "car_front", "car_back", "car_left", "car_right")
+LEGACY_REQUIRED = ("passport", "driver_license", "tech_passport", "equipment_photo")
+KINDS = REQUIRED + LEGACY_REQUIRED + ("insurance",)
 
 PRIVATE_ROOT = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -42,6 +46,11 @@ def status_of(docs: list[DriverDocument]) -> str:
     approved — все обязательные одобрены (V1).
     """
     by_kind = {d.kind: d for d in docs}
+    # Yangi ro'yxatgacha tekshiruvdan o'tganlar qayta topshirmaydi:
+    # eski to'rttasi tasdiqlangan bo'lsa — ular hisobga olinadi.
+    legacy = [by_kind.get(k) for k in LEGACY_REQUIRED]
+    if all(d is not None and d.status == "approved" for d in legacy):
+        return "approved"
     required = [by_kind.get(k) for k in REQUIRED]
     if any(d is not None and d.status == "rejected" for d in required):
         return "rejected"
