@@ -274,7 +274,7 @@ include 'includes/header.php';
                         <button class="btn btn-primary btn-sm" type="submit"><i data-lucide="lock-open"></i> Blokdan chiqarish</button>
                     </form>
                 <?php else: ?>
-                    <button class="btn btn-danger btn-sm" type="button" data-open="modalBlock"><i data-lucide="ban"></i> Bloklash</button>
+                    <button class="btn btn-danger-outline btn-sm" type="button" data-open="modalBlock"><i data-lucide="ban"></i> Bloklash</button>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
@@ -296,7 +296,7 @@ include 'includes/header.php';
             <div class="sub">Foydalanuvchi o'zi ilovadan o'chirgan. Ism va telefon o'chirilgan, buyurtma va to'lovlar ikkinchi tomon uchun saqlangan.</div></div></div>
     <?php endif; ?>
 
-    <div class="stats-grid" style="grid-template-columns:repeat(5,minmax(0,1fr))">
+    <div class="stats-grid stats-flat" style="grid-template-columns:repeat(5,minmax(0,1fr))">
         <div class="stat-card"><div class="stat-value"><?= (int) $cs['n'] ?></div><div class="stat-title">buyurtma (mijoz sifatida)</div></div>
         <div class="stat-card"><div class="stat-value"><?= moneyFmt($cs['paid']) ?></div><div class="stat-title">jami to'lagan, so'm</div></div>
         <div class="stat-card"><div class="stat-value <?= $pct !== null && $pct > 30 ? 'text-danger' : '' ?>"><?= $pct === null ? '—' : $pct . '%' ?></div><div class="stat-title">bekor qilingan</div></div>

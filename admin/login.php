@@ -296,7 +296,7 @@ $maskedPhone = $pending ? maskAdminPhone($pending['login']) : '';
                 <label class="fl<?= $fieldError ? ' error' : '' ?>"><span>Parol</span><input type="password" name="password" id="pw" autocomplete="current-password" required <?= $loginVal ? 'autofocus' : '' ?>>
                     <em id="pwHint"><?= htmlspecialchars($fieldError) ?></em></label>
                 <div class="auth-row">
-                    <label class="check"><input type="checkbox" name="remember" value="1"> Qurilmani <?= TRUST_DAYS ?> kun eslab qolish</label>
+                    <?php if (!ADMIN_SMS_2FA_OFF): ?><label class="check"><input type="checkbox" name="remember" value="1"> Qurilmani <?= TRUST_DAYS ?> kun eslab qolish</label><?php else: ?><span></span><?php endif; ?>
                     <a href="login.php?forgot=1">Parolni unutdingizmi?</a>
                 </div>
                 <button class="btn btn-primary btn-block btn-lg" type="submit">Kirish</button>

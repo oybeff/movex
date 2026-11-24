@@ -942,13 +942,30 @@ tbody td, table td { padding: 10px 16px; height: 56px; font-size: 14px; border-b
 .od-grid { grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; }
 .od-grid .card { margin-bottom: 16px; }
 .od-grid > div:last-child .card-body > .d-flex:first-child > b, .od-grid > div:last-child .card-body > b:first-child { font-size: 17px; font-weight: 600; line-height: 24px; }
-.person { gap: 12px; margin-bottom: 14px; }
-.person .user-avatar { width: 40px; height: 40px; font-size: 15px; font-weight: 600; }
-.person b { font-size: 16px; font-weight: 500; line-height: 24px; }
-.person small { font-size: 14px; }
+.od-grid .person { gap: 12px; margin-bottom: 14px; }
+.od-grid .person .user-avatar { width: 40px; height: 40px; font-size: 15px; font-weight: 600; }
+.od-grid .person b { font-size: 16px; font-weight: 500; line-height: 24px; }
+.od-grid .person small { font-size: 14px; }
+td .person .user-avatar { width: 32px; height: 32px; font-size: 12px; font-weight: 600; }
+td .person a, td .person b, td .person a b { color: var(--navy-900); font-size: 14px; font-weight: 500; line-height: 20px; }
+td .person small { font-size: 12px; line-height: 16px; display: block; }
 .mini-stats { gap: 8px; }
 .mini-stats div { background: var(--gray-100); border-radius: 10px; padding: 10px; }
 .mini-stats b { font-size: 15px; font-weight: 500; }
 .mini-stats small { font-size: 12px; }
 .action-list button, .action-list a { padding: 12px 0; font-size: 15px; }
 .orders-table td .badge { overflow: visible; }
+/* 03 C2: profil — yassi ko'rsatkichlar qatori, tablar scrollsiz */
+.stats-flat { gap: 16px; margin-bottom: 24px; }
+.stats-flat .stat-card { background: none; border: 0; padding: 0; border-radius: 0; }
+.stats-flat .stat-value { font-size: 15px; line-height: 22px; font-weight: 600; letter-spacing: 0; }
+.stats-flat .stat-title { font-size: 12px; line-height: 16px; }
+.tabs { scrollbar-width: none; gap: 0; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs a { padding: 10px 0; margin-right: 28px; color: var(--gray-500); font-weight: 400; }
+.tabs a.active { color: var(--blue-500); font-weight: 500; }
+.btn-danger-outline { background: #fff; color: var(--red-500); border-color: #F5B8BA; }
+.btn-danger-outline:hover { background: var(--red-50); color: var(--red-700); }
+td .person { white-space: nowrap; margin: 0; }
+.empty-state .btn svg { width: 16px; height: 16px; margin: 0; color: currentColor; }
+.empty-state > svg { width: 32px; height: 32px; }
