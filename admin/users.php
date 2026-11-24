@@ -1,576 +1,230 @@
 <?php
+/**
+ * C1 · Mijozlar ro'yxati (Figma «Admin panel» 03).
+ *
+ * Tablar: hammasi, faol (30 kun ichida kirgan), yangi (7 kun), ko'p bekor
+ * qiluvchi (>30%, kamida 3 buyurtma), bloklangan, muzlatilgan, o'chirilgan
+ * (C5: o'chirish o'zi bajariladi — ilovadan, 30 kun kutish yo'q).
+ *
+ * Statistika barcha buyurtma turlaridan (user_lib.clientStatsSql). Profil,
+ * bloklash va boshqa amallar — user.php.
+ */
 require_once 'config.php';
 requireAdmin();
 requireCsrfToken();
+require_once __DIR__ . '/includes/user_lib.php';
 
-$pageTitle = 'Foydalanuvchilar';
+$pageTitle = 'Mijozlar';
 $currentPage = 'users';
-
-$message = '';
-$messageType = '';
-
-/**
- * Foydalanuvchini boshqarish.
- *
- * Admin hisobiga hech qanday amal qo'llanmaydi: o'zini yoki boshqa adminni
- * bloklab qo'yish paneldan chiqib ketishning eng oson yo'li.
- *
- * Parolni KO'RSATIB bo'lmaydi — u bcrypt bilan shifrlangan va shunday
- * bo'lishi kerak. Faqat yangisini o'rnatish mumkin.
- */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
-    $action = $_POST['action'];
-    $userId = intval($_POST['user_id'] ?? 0);
-    $db = getDbConnection();
-
-    $target = $db->prepare("SELECT id, role, full_name FROM users WHERE id = ?");
-    $target->execute([$userId]);
-    $userData = $target->fetch();
-
-    if (!$userData) {
-        $message = 'Foydalanuvchi topilmadi';
-        $messageType = 'error';
-    } elseif ($userData['role'] === 'admin') {
-        $message = 'Admin hisobiga bu amalni qo\'llab bo\'lmaydi';
-        $messageType = 'error';
-    } else {
-        switch ($action) {
-            case 'delete':
-                $db->prepare("DELETE FROM users WHERE id = ?")->execute([$userId]);
-                $message = 'Foydalanuvchi o\'chirildi';
-                $messageType = 'success';
-                break;
-
-            case 'block':
-                $reason = trim((string)($_POST['reason'] ?? ''));
-                $db->prepare("UPDATE users SET is_blocked = true, blocked_reason = ? WHERE id = ?")
-                   ->execute([$reason !== '' ? $reason : null, $userId]);
-                $message = 'Hisob bloklandi — endi kira olmaydi';
-                $messageType = 'success';
-                break;
-
-            case 'unblock':
-                $db->prepare("UPDATE users SET is_blocked = false, blocked_reason = NULL WHERE id = ?")
-                   ->execute([$userId]);
-                $message = 'Blok olib tashlandi';
-                $messageType = 'success';
-                break;
-
-            case 'freeze':
-                $db->prepare("UPDATE users SET is_frozen = true WHERE id = ?")->execute([$userId]);
-                $message = 'Hisob muzlatildi — ko\'radi, lekin yangi amal qila olmaydi';
-                $messageType = 'success';
-                break;
-
-            case 'unfreeze':
-                $db->prepare("UPDATE users SET is_frozen = false WHERE id = ?")->execute([$userId]);
-                $message = 'Muzlatish olib tashlandi';
-                $messageType = 'success';
-                break;
-
-            case 'set_role':
-                $role = $_POST['role'] ?? '';
-                if (!in_array($role, ['client', 'owner'], true)) {
-                    $message = 'Rol faqat mijoz yoki ega bo\'lishi mumkin';
-                    $messageType = 'error';
-                } else {
-                    $db->prepare("UPDATE users SET role = ? WHERE id = ?")->execute([$role, $userId]);
-                    $message = 'Rol o\'zgartirildi';
-                    $messageType = 'success';
-                }
-                break;
-
-            case 'set_phone':
-                $phone = preg_replace('/\D/', '', (string)($_POST['phone'] ?? ''));
-                if (strlen($phone) !== 12 || strpos($phone, '998') !== 0) {
-                    $message = 'Telefon 998 bilan boshlanib, 12 raqamdan iborat bo\'lsin';
-                    $messageType = 'error';
-                } else {
-                    // Raqam band bo'lmasin: unique cheklov 500 xato berardi
-                    $busy = $db->prepare("SELECT id FROM users WHERE phone = ? AND id <> ?");
-                    $busy->execute([$phone, $userId]);
-                    if ($busy->fetch()) {
-                        $message = 'Bu raqam boshqa hisobda band';
-                        $messageType = 'error';
-                    } else {
-                        $db->prepare("UPDATE users SET phone = ? WHERE id = ?")
-                           ->execute([$phone, $userId]);
-                        $message = 'Telefon raqam o\'zgartirildi';
-                        $messageType = 'success';
-                    }
-                }
-                break;
-
-            case 'set_password':
-                $newPassword = (string)($_POST['password'] ?? '');
-                if (strlen($newPassword) < 6) {
-                    $message = 'Parol kamida 6 belgidan iborat bo\'lsin';
-                    $messageType = 'error';
-                } else {
-                    // bcrypt — backend'dagi passlib bilan bir xil format
-                    $hash = password_hash($newPassword, PASSWORD_BCRYPT);
-                    $db->prepare("UPDATE users SET password_hash = ? WHERE id = ?")
-                       ->execute([$hash, $userId]);
-                    $message = 'Parol o\'rnatildi. Uni foydalanuvchiga o\'zingiz ayting — '
-                             . 'panel parolni saqlamaydi va keyin ko\'rsata olmaydi.';
-                    $messageType = 'success';
-                }
-                break;
-
-            case 'grant_bonus':
-                // Faqat SOVG'A (ilovada sarflanadi, kartaga yechilmaydi).
-                // Pulni panel o'zi yozmaydi — API orqali, mantiq bitta joyda:
-                // balance_service.grant_admin_bonus.
-                $amount = preg_replace('/[^\d]/', '', (string)($_POST['amount'] ?? ''));
-                $comment = trim((string)($_POST['comment'] ?? ''));
-                if ($amount === '' || (int)$amount <= 0) {
-                    $message = 'Summani kiriting';
-                    $messageType = 'error';
-                } else {
-                    $result = internalApiPost('/balance/internal/bonus', [
-                        'user_id' => $userId,
-                        'amount' => (int)$amount,
-                        'comment' => $comment,
-                    ]);
-                    if ($result['ok']) {
-                        $message = number_format((int)$amount, 0, '.', ' ')
-                                 . " so'm sovg'a berildi — " . $userData['full_name']
-                                 . ". Kartaga yechib bo'lmaydi, ilovada sarflanadi.";
-                        $messageType = 'success';
-                    } else {
-                        $message = "Sovg'a berilmadi: " . $result['error'];
-                        $messageType = 'error';
-                    }
-                }
-                break;
-
-            case 'cash_topup':
-                // Naqd pul: HAQIQIY balans (kartaga yechish mumkin), sovg'a emas.
-                // Pulni panel o'zi yozmaydi — API orqali, mantiq bitta joyda:
-                // balance_service.credit_cash_topup.
-                $amount = preg_replace('/[^\d]/', '', (string)($_POST['amount'] ?? ''));
-                $comment = trim((string)($_POST['comment'] ?? ''));
-                if ($amount === '' || (int)$amount <= 0) {
-                    $message = 'Summani kiriting';
-                    $messageType = 'error';
-                } else {
-                    $result = internalApiPost('/balance/internal/cash_topup', [
-                        'user_id' => $userId,
-                        'amount' => (int)$amount,
-                        'comment' => $comment,
-                    ]);
-                    if ($result['ok']) {
-                        $message = number_format((int)$amount, 0, '.', ' ')
-                                 . " so'm naqd qabul qilindi va balansga yozildi — "
-                                 . $userData['full_name'] . '.';
-                        $messageType = 'success';
-                    } else {
-                        $message = 'Naqd pul yozilmadi: ' . $result['error'];
-                        $messageType = 'error';
-                    }
-                }
-                break;
-
-            case 'set_listing_fee':
-                // Bo'sh — umumiy narx (commission.php), 0 — bepul, >0 — o'z narxi
-                $raw = trim((string)($_POST['listing_fee'] ?? ''));
-                if ($raw === '') {
-                    $db->prepare("UPDATE users SET listing_fee_override = NULL WHERE id = ?")
-                       ->execute([$userId]);
-                    $message = "E'lon narxi: umumiy narx bo'yicha";
-                    $messageType = 'success';
-                } elseif (!ctype_digit($raw)) {
-                    $message = "E'lon narxi butun son bo'lsin (yoki bo'sh qoldiring)";
-                    $messageType = 'error';
-                } else {
-                    $db->prepare("UPDATE users SET listing_fee_override = ? WHERE id = ?")
-                       ->execute([(int)$raw, $userId]);
-                    $message = (int)$raw === 0
-                        ? "Bu foydalanuvchi e'lonni bepul joylaydi"
-                        : "E'lon narxi: " . number_format((int)$raw, 0, '.', ' ') . " so'm";
-                    $messageType = 'success';
-                }
-                break;
-
-            default:
-                $message = 'Noma\'lum amal';
-                $messageType = 'error';
-        }
-    }
-}
-
-// Pagination
-$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-$perPage = ITEMS_PER_PAGE;
-$offset = ($page - 1) * $perPage;
-
-// Filters
-$roleFilter = $_GET['role'] ?? '';
-$searchQuery = $_GET['search'] ?? '';
-
-// Build query
 $db = getDbConnection();
 
-$whereConditions = [];
+// Eski havolalar: users.php?search=telefon — bitta topilsa, profilga
+$q = trim((string) ($_GET['q'] ?? $_GET['search'] ?? ''));
+$tab = $_GET['tab'] ?? 'all';
+$tabs = [
+    'all' => 'Hammasi',
+    'active' => 'Faol (30 kun)',
+    'new' => 'Yangi (7 kun)',
+    'cancels' => "Ko'p bekor qiladi",
+    'blocked' => 'Bloklangan',
+    'frozen' => 'Muzlatilgan',
+    'deleted' => "O'chirilgan",
+];
+if (!isset($tabs[$tab])) {
+    $tab = 'all';
+}
+$sort = $_GET['sort'] ?? 'new';
+
+$base = "FROM users u LEFT JOIN (" . clientStatsSql() . ") s ON s.uid = u.id WHERE u.role = 'client'";
+$tabWhere = [
+    'all' => "u.phone NOT LIKE 'deleted-%'",
+    'active' => "u.phone NOT LIKE 'deleted-%' AND u.last_login_at > NOW() - INTERVAL '30 days'",
+    'new' => "u.phone NOT LIKE 'deleted-%' AND u.created_at > NOW() - INTERVAL '7 days'",
+    'cancels' => "u.phone NOT LIKE 'deleted-%' AND COALESCE(s.n, 0) >= 3 AND s.cx * 100 > s.n * 30",
+    'blocked' => "u.phone NOT LIKE 'deleted-%' AND u.is_blocked",
+    'frozen' => "u.phone NOT LIKE 'deleted-%' AND u.is_frozen",
+    'deleted' => "u.phone LIKE 'deleted-%'",
+];
+
+$where = [$tabWhere[$tab]];
 $params = [];
+if ($q !== '') {
+    $digits = preg_replace('/\D/', '', $q);
+    $cond = 'u.full_name ILIKE ?';
+    $params[] = '%' . $q . '%';
+    if ($digits !== '') {
+        $cond .= ' OR u.phone LIKE ?';
+        $params[] = '%' . $digits . '%';
+    }
+    if (ctype_digit($q)) {
+        $cond .= ' OR u.id = ?';
+        $params[] = (int) $q;
+    }
+    $where[] = '(' . $cond . ')';
+}
+$whereSql = implode(' AND ', $where);
 
-if (!empty($roleFilter)) {
-    $whereConditions[] = "role = ?";
-    $params[] = $roleFilter;
+$counts = [];
+foreach ($tabWhere as $k => $w) {
+    $counts[$k] = (int) $db->query("SELECT COUNT(*) $base AND $w")->fetchColumn();
 }
 
-if (!empty($searchQuery)) {
-    $whereConditions[] = "(full_name ILIKE ? OR phone ILIKE ? OR email ILIKE ?)";
-    $searchParam = "%$searchQuery%";
-    $params[] = $searchParam;
-    $params[] = $searchParam;
-    $params[] = $searchParam;
+$total = $db->prepare("SELECT COUNT(*) $base AND $whereSql");
+$total->execute($params);
+$total = (int) $total->fetchColumn();
+
+// Bitta topildi va eski havoladan kelindi — to'g'ri profilga
+if (isset($_GET['search']) && $total === 1 && !isset($_GET['export'])) {
+    $one = $db->prepare("SELECT u.id $base AND $whereSql");
+    $one->execute($params);
+    header('Location: user.php?id=' . (int) $one->fetchColumn());
+    exit;
 }
 
-$whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
+$orderBy = [
+    'new' => 'u.created_at DESC',
+    'orders' => 'COALESCE(s.n, 0) DESC, u.id DESC',
+    'paid' => 'COALESCE(s.paid, 0) DESC, u.id DESC',
+    'seen' => 'u.last_login_at DESC NULLS LAST',
+][$sort] ?? 'u.created_at DESC';
 
-// Get total count
-$countQuery = "SELECT COUNT(*) as total FROM users $whereClause";
-$countStmt = $db->prepare($countQuery);
-$countStmt->execute($params);
-$totalUsers = $countStmt->fetch()['total'];
-$totalPages = ceil($totalUsers / $perPage);
+$select = "SELECT u.id, u.full_name, u.phone, u.created_at, u.last_login_at, u.is_blocked, u.is_frozen,
+                  u.blocked_until, COALESCE(s.n, 0) AS n, COALESCE(s.cx, 0) AS cx, COALESCE(s.paid, 0) AS paid
+           $base AND $whereSql ORDER BY $orderBy";
 
-// Get users
-$query = "
-    SELECT 
-        id, 
-        full_name, 
-        email, 
-        phone, 
-        role, 
-        created_at,
-        is_blocked,
-        is_frozen,
-        blocked_reason,
-        last_login_at,
-        listing_fee_override,
-        (SELECT COUNT(*) FROM orders WHERE user_id = users.id) as orders_count,
-        (SELECT balance FROM balances WHERE user_id = users.id) as balance,
-        (SELECT bonus_balance FROM balances WHERE user_id = users.id) as bonus_balance
-    FROM users 
-    $whereClause
-    ORDER BY created_at DESC
-    LIMIT ? OFFSET ?
-";
+if (($_GET['export'] ?? '') === 'csv') {
+    $st = $db->prepare($select . ' LIMIT 50000');
+    $st->execute($params);
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="mijozlar-' . date('Y-m-d') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, ['ID', 'Ism', 'Telefon', "Ro'yxatdan", 'Buyurtmalar', "Jami to'lagan", 'Bekor %', 'Holat', 'Oxirgi kirish']);
+    foreach ($st as $r) {
+        $pct = cancelPct($r['n'], $r['cx']);
+        fputcsv($out, [$r['id'], $r['full_name'], $r['phone'], date('d.m.Y', strtotime($r['created_at'])), $r['n'],
+                       (int) $r['paid'], $pct === null ? '' : $pct, userStatusBadge($r, $pct)[0],
+                       $r['last_login_at'] ? date('d.m.Y H:i', strtotime($r['last_login_at'])) : '']);
+    }
+    fclose($out);
+    exit;
+}
 
-$params[] = $perPage;
-$params[] = $offset;
+$perPage = 30;
+$pages = max(1, (int) ceil($total / $perPage));
+$page = min($pages, max(1, (int) ($_GET['page'] ?? 1)));
+$offset = ($page - 1) * $perPage;
+$st = $db->prepare($select . " LIMIT $perPage OFFSET $offset");
+$st->execute($params);
+$rows = $st->fetchAll();
 
-$stmt = $db->prepare($query);
-$stmt->execute($params);
-$users = $stmt->fetchAll();
+function uqs(array $over = []): string
+{
+    $p = array_merge($_GET, $over);
+    unset($p['export'], $p['search']);
+    $p = array_filter($p, function ($v) { return $v !== '' && $v !== null; });
+    return '?' . http_build_query($p);
+}
 
 include 'includes/header.php';
 ?>
-
 <div class="content">
-    <?php if ($message): ?>
-        <div class="alert alert-<?= $messageType ?>">
-            <?= htmlspecialchars($message) ?>
+    <div class="page-head">
+        <div>
+            <h2>Mijozlar</h2>
+            <div class="sub">Mijoz ilovasidan ro'yxatdan o'tganlar (telefon + SMS + PIN). Haydovchilar — alohida bo'limda.</div>
         </div>
-    <?php endif; ?>
-    
-    <!-- Filters -->
-    <div class="card mb-3">
-        <div class="card-body">
-            <form method="GET" action="" class="d-flex gap-2" style="align-items: flex-end;">
-                <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                    <label for="search">Qidirish</label>
-                    <input 
-                        type="text" 
-                        id="search" 
-                        name="search" 
-                        placeholder="Ism, telefon yoki email..."
-                        value="<?= htmlspecialchars($searchQuery) ?>"
-                    >
-                </div>
-                
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="role">Rol</label>
-                    <select name="role" id="role">
-                        <option value="">Barchasi</option>
-                        <option value="client" <?= $roleFilter === 'client' ? 'selected' : '' ?>>Client</option>
-                        <option value="owner" <?= $roleFilter === 'owner' ? 'selected' : '' ?>>Owner</option>
-                        <option value="admin" <?= $roleFilter === 'admin' ? 'selected' : '' ?>>Admin</option>
-                    </select>
-                </div>
-                
-                <button type="submit" class="btn btn-primary">
-                    🔍 Qidirish
-                </button>
-                
-                <?php if (!empty($searchQuery) || !empty($roleFilter)): ?>
-                    <a href="users.php" class="btn btn-secondary">
-                        ✖️ Tozalash
-                    </a>
-                <?php endif; ?>
-            </form>
-        </div>
-    </div>
-    
-    <!-- Users Table -->
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Foydalanuvchilar Ro'yxati</h3>
-            <span class="badge badge-info"><?= number_format($totalUsers) ?> ta foydalanuvchi</span>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Ism</th>
-                            <th>Telefon</th>
-                            <th>Email</th>
-                            <th>Rol</th>
-                            <th>Holat</th>
-                            <th>Buyurtmalar</th>
-                            <th>Balans</th>
-                            <th>Oxirgi kirish</th>
-                            <th>Amallar</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($users as $user): ?>
-                        <tr>
-                            <td>#<?= $user['id'] ?></td>
-                            <td><strong><?= htmlspecialchars($user['full_name']) ?></strong></td>
-                            <td><?= htmlspecialchars($user['phone']) ?></td>
-                            <td><?= htmlspecialchars($user['email'] ?? '-') ?></td>
-                            <td>
-                                <?php
-                                $roleClass = [
-                                    'client' => 'info',
-                                    'owner' => 'warning',
-                                    'admin' => 'danger'
-                                ][$user['role']] ?? 'secondary';
-
-                                $roleLabel = [
-                                    'client' => 'Mijoz',
-                                    'owner' => 'Egasi',
-                                    'admin' => 'Admin'
-                                ][$user['role']] ?? ucfirst($user['role'] ?? '');
-                                ?>
-                                <span class="badge badge-<?= $roleClass ?>">
-                                    <?= $roleLabel ?>
-                                </span>
-                            </td>
-                            <td>
-                                <?php if ($user['is_blocked']): ?>
-                                    <span class="badge badge-danger">Bloklangan</span>
-                                    <?php if (!empty($user['blocked_reason'])): ?>
-                                        <br><small class="text-muted"><?= htmlspecialchars($user['blocked_reason']) ?></small>
-                                    <?php endif; ?>
-                                <?php elseif ($user['is_frozen']): ?>
-                                    <span class="badge badge-warning">Muzlatilgan</span>
-                                    <br><small class="text-muted">faqat ko'radi</small>
-                                <?php else: ?>
-                                    <span class="badge badge-success">Faol</span>
-                                <?php endif; ?>
-                            </td>
-                            <td><?= number_format($user['orders_count']) ?></td>
-                            <td>
-                                <?= number_format($user['balance'] ?? 0, 0) ?> so'm
-                                <?php if ((float)($user['bonus_balance'] ?? 0) > 0): ?>
-                                    <br><small class="text-muted">shundan sovg'a: <?= number_format($user['bonus_balance'], 0) ?></small>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php if (!empty($user['last_login_at'])): ?>
-                                    <?= formatDate($user['last_login_at'], 'd.m.Y H:i') ?>
-                                <?php else: ?>
-                                    <small class="text-muted">hech qachon</small>
-                                <?php endif; ?>
-                                <br><small class="text-muted">ro'yxat: <?= formatDate($user['created_at'], 'd.m.Y') ?></small>
-                            </td>
-                            <td style="white-space: nowrap;">
-                                <?php if ($user['role'] !== 'admin'): ?>
-                                    <button type="button" class="btn btn-sm btn-secondary"
-                                            onclick="document.getElementById('u<?= $user['id'] ?>').classList.toggle('hidden')">
-                                        ⚙️ Boshqarish
-                                    </button>
-                                    <form method="POST" action="" style="display: inline;"
-                                          onsubmit="return confirm('Bu foydalanuvchini butunlay o\'chirmoqchimisiz? Qaytarib bo\'lmaydi.');">
-                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                                        <input type="hidden" name="action" value="delete">
-                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                        <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
-                                    </form>
-                                <?php else: ?>
-                                    <small class="text-muted">admin</small>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                        <?php if ($user['role'] !== 'admin'): ?>
-                        <tr id="u<?= $user['id'] ?>" class="hidden">
-                            <td colspan="10" style="background: #fafafa;">
-                                <div style="display: flex; flex-wrap: wrap; gap: 22px; padding: 14px 6px;">
-
-                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
-                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                        <?php if ($user['is_blocked']): ?>
-                                            <input type="hidden" name="action" value="unblock">
-                                            <button class="btn btn-sm btn-success">🔓 Blokni ochish</button>
-                                        <?php else: ?>
-                                            <input type="hidden" name="action" value="block">
-                                            <div>
-                                                <label style="font-size:12px;">Blok sababi</label>
-                                                <input type="text" name="reason" placeholder="ixtiyoriy"
-                                                       style="max-width:190px;">
-                                            </div>
-                                            <button class="btn btn-sm btn-danger">🚫 Bloklash</button>
-                                        <?php endif; ?>
-                                    </form>
-
-                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
-                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                        <?php if ($user['is_frozen']): ?>
-                                            <input type="hidden" name="action" value="unfreeze">
-                                            <button class="btn btn-sm btn-success">▶️ Muzlatishni olish</button>
-                                        <?php else: ?>
-                                            <input type="hidden" name="action" value="freeze">
-                                            <button class="btn btn-sm btn-warning">❄️ Muzlatish</button>
-                                        <?php endif; ?>
-                                    </form>
-
-                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
-                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                        <input type="hidden" name="action" value="set_role">
-                                        <div>
-                                            <label style="font-size:12px;">Rol</label>
-                                            <select name="role">
-                                                <option value="client" <?= $user['role']==='client'?'selected':'' ?>>Mijoz</option>
-                                                <option value="owner" <?= $user['role']==='owner'?'selected':'' ?>>Egasi</option>
-                                            </select>
-                                        </div>
-                                        <button class="btn btn-sm btn-primary">Saqlash</button>
-                                    </form>
-
-                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
-                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                        <input type="hidden" name="action" value="set_phone">
-                                        <div>
-                                            <label style="font-size:12px;">Telefon</label>
-                                            <input type="text" name="phone" value="<?= htmlspecialchars($user['phone']) ?>"
-                                                   style="max-width:160px;">
-                                        </div>
-                                        <button class="btn btn-sm btn-primary">Saqlash</button>
-                                    </form>
-
-                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
-                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                        <input type="hidden" name="action" value="set_password">
-                                        <div>
-                                            <label style="font-size:12px;">Yangi parol</label>
-                                            <input type="text" name="password" placeholder="kamida 6 belgi"
-                                                   style="max-width:170px;">
-                                        </div>
-                                        <button class="btn btn-sm btn-primary">O'rnatish</button>
-                                    </form>
-
-                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;"
-                                          onsubmit="this.querySelector('button').disabled = true;">
-                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                        <input type="hidden" name="action" value="grant_bonus">
-                                        <div>
-                                            <label style="font-size:12px;">Sovg'a (kartaga yechilmaydi)</label>
-                                            <input type="number" name="amount" min="1000" step="1000"
-                                                   placeholder="so'm" style="max-width:120px;">
-                                        </div>
-                                        <div>
-                                            <label style="font-size:12px;">Izoh</label>
-                                            <input type="text" name="comment" maxlength="200"
-                                                   placeholder="ixtiyoriy" style="max-width:150px;">
-                                        </div>
-                                        <button class="btn btn-sm btn-success">🎁 Berish</button>
-                                    </form>
-
-                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;"
-                                          onsubmit="if (!confirm('Naqd pul qabul qilindimi? Summa haqiqiy balansga yoziladi.')) return false; this.querySelector('button').disabled = true;">
-                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                        <input type="hidden" name="action" value="cash_topup">
-                                        <div>
-                                            <label style="font-size:12px;">Naqd pul qabul qilish</label>
-                                            <input type="number" name="amount" min="1000" step="1000"
-                                                   placeholder="so'm" style="max-width:120px;">
-                                        </div>
-                                        <div>
-                                            <label style="font-size:12px;">Izoh</label>
-                                            <input type="text" name="comment" maxlength="200"
-                                                   placeholder="ixtiyoriy" style="max-width:150px;">
-                                        </div>
-                                        <button class="btn btn-sm btn-primary">💵 Qabul qilish</button>
-                                    </form>
-
-                                    <form method="POST" style="display: flex; gap: 6px; align-items: flex-end;">
-                                        <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                        <input type="hidden" name="action" value="set_listing_fee">
-                                        <div>
-                                            <label style="font-size:12px;">E'lon narxi (bo'sh — umumiy, 0 — bepul)</label>
-                                            <input type="number" name="listing_fee" min="0" step="1000"
-                                                   value="<?= $user['listing_fee_override'] === null ? '' : (int)$user['listing_fee_override'] ?>"
-                                                   placeholder="umumiy" style="max-width:150px;">
-                                        </div>
-                                        <button class="btn btn-sm btn-primary">Saqlash</button>
-                                    </form>
-
-                                </div>
-                                <div style="padding: 0 6px 12px; font-size: 12px; color: #777;">
-                                    Parolni ko'rsatib bo'lmaydi — u shifrlangan holda saqlanadi.
-                                    Yangisini o'rnating va foydalanuvchiga o'zingiz ayting.
-                                </div>
-                            </td>
-                        </tr>
-                        <?php endif; ?>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            <?php if ($totalPages > 1): ?>
-                <div class="pagination">
-                    <?php if ($page > 1): ?>
-                        <a href="?page=<?= $page - 1 ?><?= $roleFilter ? '&role=' . $roleFilter : '' ?><?= $searchQuery ? '&search=' . urlencode($searchQuery) : '' ?>">
-                            ← Oldingi
-                        </a>
-                    <?php endif; ?>
-
-                    <?php for ($i = max(1, $page - 2); $i <= min($totalPages, $page + 2); $i++): ?>
-                        <?php if ($i === $page): ?>
-                            <span class="active"><?= $i ?></span>
-                        <?php else: ?>
-                            <a href="?page=<?= $i ?><?= $roleFilter ? '&role=' . $roleFilter : '' ?><?= $searchQuery ? '&search=' . urlencode($searchQuery) : '' ?>">
-                                <?= $i ?>
-                            </a>
-                        <?php endif; ?>
-                    <?php endfor; ?>
-
-                    <?php if ($page < $totalPages): ?>
-                        <a href="?page=<?= $page + 1 ?><?= $roleFilter ? '&role=' . $roleFilter : '' ?><?= $searchQuery ? '&search=' . urlencode($searchQuery) : '' ?>">
-                            Keyingi →
-                        </a>
-                    <?php endif; ?>
-                </div>
+        <div class="page-actions">
+            <?php if ($total > 0): ?>
+                <a class="btn btn-secondary btn-sm" href="<?= htmlspecialchars(uqs(['export' => 'csv'])) ?>"><i data-lucide="download"></i> Eksport (CSV)</a>
             <?php endif; ?>
         </div>
     </div>
+
+    <div class="tabs">
+        <?php foreach ($tabs as $k => $label): ?>
+            <a href="<?= htmlspecialchars(uqs(['tab' => $k, 'page' => null])) ?>" class="<?= $tab === $k ? 'active' : '' ?>">
+                <?= $label ?> <span class="nav-count <?= in_array($k, ['blocked'], true) && $counts[$k] ? 'danger' : '' ?>"><?= number_format($counts[$k], 0, '.', ' ') ?></span>
+            </a>
+        <?php endforeach; ?>
+    </div>
+
+    <form class="filters" method="get">
+        <input type="hidden" name="tab" value="<?= htmlspecialchars($tab) ?>">
+        <div class="filter-search">
+            <i data-lucide="search"></i>
+            <input type="search" name="q" value="<?= htmlspecialchars($q) ?>" placeholder="Ism, telefon yoki ID">
+        </div>
+        <select name="sort" onchange="this.form.submit()">
+            <?php foreach (['new' => 'Yangilari tepada', 'orders' => "Ko'p buyurtma", 'paid' => "Ko'p to'lagan", 'seen' => 'Oxirgi kirish'] as $k => $v): ?>
+                <option value="<?= $k ?>" <?= $sort === $k ? 'selected' : '' ?>><?= $v ?></option>
+            <?php endforeach; ?>
+        </select>
+        <button class="btn btn-secondary btn-sm" type="submit">Qidirish</button>
+        <?php if ($q !== ''): ?><a class="btn btn-ghost btn-sm" href="users.php?tab=<?= $tab ?>">Tozalash</a><?php endif; ?>
+    </form>
+
+    <?php if ($tab === 'deleted'): ?>
+        <div class="alert alert-info"><i data-lucide="info"></i>
+            <div>Akkauntni mijoz o'zi ilovadan o'chiradi (Google Play talabi). Ism va telefon o'chiriladi, buyurtma va
+                to'lovlar ikkinchi tomon uchun saqlanadi. Ochiq nizo, balans yoki faol buyurtma bo'lsa — ilova o'chirishga ruxsat bermaydi.</div></div>
+    <?php endif; ?>
+
+    <div class="card">
+        <?php if (!$rows): ?>
+            <div class="empty-state">
+                <i data-lucide="users"></i>
+                <div><b>Hech kim topilmadi</b></div>
+                <div class="mt-1"><?= $q !== '' ? '«' . htmlspecialchars($q) . '» bo\'yicha bu bo\'limda mijoz yo\'q.' : 'Bu bo\'limda hozircha mijoz yo\'q.' ?></div>
+            </div>
+        <?php else: ?>
+            <div class="table-responsive"><table>
+                <thead><tr>
+                    <th>Mijoz</th><th>Ro'yxatdan o'tgan</th><th class="text-right">Buyurtmalar</th>
+                    <th class="text-right">Jami to'lagan</th><th class="text-right">Bekor %</th><th>Holat</th><th>Oxirgi kirish</th><th style="width:40px"></th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($rows as $r):
+                    $pct = cancelPct($r['n'], $r['cx']);
+                    [$bt, $bc] = userStatusBadge($r, $pct);
+                    $href = 'user.php?id=' . (int) $r['id'];
+                ?>
+                    <tr data-href="<?= $href ?>" class="<?= $r['is_blocked'] ? 'row-alert' : '' ?>">
+                        <td>
+                            <div class="person" style="margin:0">
+                                <div class="user-avatar"><?= htmlspecialchars(initials($r['full_name'])) ?></div>
+                                <div><a href="<?= $href ?>"><b><?= htmlspecialchars($r['full_name'] ?: 'Ism kiritilmagan') ?></b></a>
+                                    <small class="num" style="white-space:nowrap"><?= isDeletedUser($r) ? '—' : htmlspecialchars(fmtPhone($r['phone'])) ?></small></div>
+                            </div>
+                        </td>
+                        <td class="num"><?= date('d.m.Y', strtotime($r['created_at'])) ?></td>
+                        <td class="text-right num"><?= (int) $r['n'] ?></td>
+                        <td class="text-right num"><?= moneyFmt($r['paid']) ?></td>
+                        <td class="text-right num <?= $pct !== null && $pct > 30 ? 'text-danger' : '' ?>"><?= $pct === null ? '—' : $pct . '%' ?></td>
+                        <td><span class="badge badge-<?= $bc ?>"><?= htmlspecialchars($bt) ?></span></td>
+                        <td class="text-muted"><?= lastSeenText($r['last_login_at']) ?></td>
+                        <td><a href="<?= $href ?>" class="icon-btn" aria-label="Ochish"><i data-lucide="chevron-right"></i></a></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table></div>
+            <div class="table-foot">
+                <span class="text-muted"><?= $offset + 1 ?>–<?= $offset + count($rows) ?> / <?= number_format($total, 0, '.', ' ') ?> ta</span>
+                <div class="pagination" style="padding:0">
+                    <?php if ($page > 1): ?><a href="<?= htmlspecialchars(uqs(['page' => $page - 1])) ?>">‹</a><?php endif; ?>
+                    <?php for ($i = max(1, $page - 2); $i <= min($pages, $page + 2); $i++): ?>
+                        <?= $i === $page ? '<span class="active">' . $i . '</span>' : '<a href="' . htmlspecialchars(uqs(['page' => $i])) . '">' . $i . '</a>' ?>
+                    <?php endfor; ?>
+                    <?php if ($page < $pages): ?><a href="<?= htmlspecialchars(uqs(['page' => $page + 1])) ?>">›</a><?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+    </div>
 </div>
-
+<script>
+document.querySelectorAll('tr[data-href]').forEach(tr => tr.addEventListener('click', e => {
+    if (e.target.closest('input,a,button')) return;
+    location.href = tr.dataset.href;
+}));
+</script>
 <?php include 'includes/footer.php'; ?>
-

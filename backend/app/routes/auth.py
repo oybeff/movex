@@ -1,5 +1,6 @@
 import logging
 
+from app.core.account_state import lift_expired_block
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordRequestForm
@@ -46,6 +47,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     #
     # Faqat kirish paytida tekshirish yetarli emas: token 30 kun yashaydi,
     # ya'ni bloklashdan oldin kirgan odam yana bir oy ishlayverardi.
+    lift_expired_block(db, user)
     if getattr(user, "is_blocked", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -212,6 +214,7 @@ def _login_by_phone(db: Session, clean_phone: str) -> OTPVerifyResponse:
             role=None,
         )
 
+    lift_expired_block(db, user)
     if getattr(user, "is_blocked", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

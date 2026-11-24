@@ -30,7 +30,7 @@ fi
 
 failed=0
 
-for test in verify_equipment_types verify_access verify_phone_normalization verify_demo_login verify_money verify_rahmat verify_commission verify_signup_bonus verify_refunds verify_payouts verify_notifications verify_requests verify_quick_orders verify_tariff_flow verify_zones verify_cards verify_listings verify_listing_money verify_materials verify_material_delivery verify_freight verify_catalog verify_tx_language verify_account_state verify_account_deletion verify_profile verify_driver_docs verify_driver_compensation verify_admin_bonus_listing_fee verify_admin_orders verify_disputes verify_legal verify_admin_csrf verify_otp_security verify_smoke_get; do
+for test in verify_equipment_types verify_access verify_phone_normalization verify_demo_login verify_money verify_rahmat verify_commission verify_signup_bonus verify_refunds verify_payouts verify_notifications verify_requests verify_quick_orders verify_tariff_flow verify_zones verify_cards verify_listings verify_listing_money verify_materials verify_material_delivery verify_freight verify_catalog verify_tx_language verify_account_state verify_account_deletion verify_profile verify_driver_docs verify_driver_compensation verify_admin_bonus_listing_fee verify_admin_orders verify_admin_users verify_disputes verify_legal verify_admin_csrf verify_otp_security verify_smoke_get; do
   printf '\n\033[1m### %s ###\033[0m\n' "$test"
   if "$PY" "$DIR/$test.py"; then
     :

@@ -310,6 +310,9 @@ def _balance(db: Session, user_id: int) -> Balance:
 
 def accept(db: Session, user: User, order_id: int) -> MaterialOrder:
     assert_not_frozen(user)
+    from app.services import driver_service
+
+    driver_service.assert_docs_valid(db, user)
     p = _profile(db, user)
     order = _lock(db, order_id)
     if order.dispatch != "driver" or order.status != MaterialOrder.STATUS_CONFIRMED:

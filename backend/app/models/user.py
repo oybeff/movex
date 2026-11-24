@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, Numeric, String, Text, DateTime
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.sql import func
 from sqlalchemy import CheckConstraint
 from app.db.base import Base
@@ -45,6 +45,13 @@ class User(Base):
     is_blocked = Column(Boolean, nullable=False, default=False)
     is_frozen = Column(Boolean, nullable=False, default=False)
     blocked_reason = Column(Text, nullable=True)
+    # Admin P4 (C3/C4): srok, kim va nega. blocked_until o'tsa — blok
+    # keyingi so'rovda o'zi olinadi (account_state.lift_expired_block).
+    blocked_until = Column(DateTime(timezone=True), nullable=True)
+    blocked_at = Column(DateTime(timezone=True), nullable=True)
+    blocked_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    block_reason_code = Column(String(20), nullable=True)
+    block_note = Column(Text, nullable=True)
 
     # E'lon joylash narxi shu odam uchun. NULL — umumiy narx
     # (app_settings.listing_fee_amount), 0 — bepul. Adminkadan qo'yiladi.

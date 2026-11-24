@@ -815,6 +815,9 @@ def quick_accept(db: Session, request_id: int, owner: User, equipment_id: Option
     yechiladi va egaga o'tadi, bekor qilinsa qaytariladi.
     """
     assert_not_frozen(owner)
+    from app.services import driver_service
+
+    driver_service.assert_docs_valid(db, owner)
     if owner.role != "owner":
         raise HTTPException(403, "Buyurtmani faqat texnika egasi oladi")
 

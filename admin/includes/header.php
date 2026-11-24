@@ -27,6 +27,7 @@ $navSections = [
     ],
     'Foydalanuvchilar' => [
         ['users', 'users.php', 'users', 'Mijozlar', null, ''],
+        ['haydovchilar', 'haydovchilar.php', 'user-round-check', 'Haydovchilar', null, ''],
         ['drivers', 'drivers.php', 'file-check-2', 'Hujjatlar tekshiruvi', $navCounts['docs_pending'], 'warn'],
         ['equipment', 'equipment.php', 'truck', 'Texnika', $navCounts['equipment_no_coords'], 'warn'],
         ['reviews', 'reviews.php', 'star', 'Sharhlar', $navCounts['reviews_flagged'], 'warn'],

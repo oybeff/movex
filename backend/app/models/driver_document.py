@@ -8,7 +8,7 @@
 backend/private_media/driver_docs: это паспортные данные. Отдаются
 только самому водителю и админке через X-Admin-Secret.
 """
-from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, Column, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.sql import func
 
 from app.db.base import Base
@@ -27,6 +27,10 @@ class DriverDocument(Base):
     status = Column(String(10), nullable=False, default="pending", server_default="pending")
     reject_reason = Column(Text, nullable=True)
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    #: Prava va texpasport muddati (admin tekshiruvda kiritadi). O'tgan —
+    #: haydovchi buyurtma ololmaydi.
+    expires_on = Column(Date, nullable=True)
+    reviewed_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

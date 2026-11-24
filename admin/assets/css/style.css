@@ -643,3 +643,4 @@ td.addr { max-width: 240px; }
 @media (max-width: 380px) {
     .stats-grid { grid-template-columns: 1fr; }
 }
+td.num, td .sub.num { white-space: nowrap; }

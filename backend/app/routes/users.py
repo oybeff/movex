@@ -289,3 +289,54 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User 
     db.delete(user)
     db.commit()
     return {"detail": "User deleted"}
+
+
+# ============================================================ Admin P4 (panel)
+from typing import Optional  # noqa: E402
+
+from app.core.internal_auth import require_internal_admin  # noqa: E402
+from app.services import user_admin_service  # noqa: E402
+
+
+class _BlockIn(BaseModel):
+    admin_id: Optional[int] = None
+    reason: str = Field(max_length=20)
+    duration: str = Field(max_length=10)
+    note: Optional[str] = Field(default=None, max_length=1000)
+    sms_text: Optional[str] = Field(default=None, max_length=300)
+    cancel_active: bool = False
+
+
+class _AdminIn(BaseModel):
+    admin_id: Optional[int] = None
+
+
+class _MessageIn(BaseModel):
+    admin_id: Optional[int] = None
+    text: str = Field(min_length=1, max_length=1000)
+    sms: bool = False
+
+
+@router.get("/internal/{user_id}/active-orders")
+def internal_active_orders(user_id: int, db: Session = Depends(get_db), _a=Depends(require_internal_admin)):
+    """C3/H4: bloklashdan oldin — faol buyurtmalar (mijoz yoki ijrochi sifatida)."""
+    return user_admin_service.active_orders(db, user_id)
+
+
+@router.post("/internal/{user_id}/block")
+def internal_block(user_id: int, data: _BlockIn, db: Session = Depends(get_db),
+                   _a=Depends(require_internal_admin)):
+    return user_admin_service.block(db, user_id, data.admin_id, data.reason, data.duration,
+                                    data.note, data.sms_text, data.cancel_active)
+
+
+@router.post("/internal/{user_id}/unblock")
+def internal_unblock(user_id: int, data: _AdminIn, db: Session = Depends(get_db),
+                     _a=Depends(require_internal_admin)):
+    return user_admin_service.unblock(db, user_id, data.admin_id)
+
+
+@router.post("/internal/{user_id}/message")
+def internal_message(user_id: int, data: _MessageIn, db: Session = Depends(get_db),
+                     _a=Depends(require_internal_admin)):
+    return user_admin_service.message(db, user_id, data.admin_id, data.text, data.sms)

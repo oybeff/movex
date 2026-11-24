@@ -334,6 +334,9 @@ def _balance(db: Session, user_id: int) -> Balance:
 
 def accept(db: Session, driver: User, order_id: int) -> FreightOrder:
     assert_not_frozen(driver)
+    from app.services import driver_service
+
+    driver_service.assert_docs_valid(db, driver)
     p = db.query(DeliveryDriverProfile).filter(DeliveryDriverProfile.user_id == driver.id).first()
     if p is None:
         raise HTTPException(400, "Avval yuk mashinangizni ro'yxatdan o'tkazing")

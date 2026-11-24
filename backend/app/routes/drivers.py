@@ -7,6 +7,8 @@
 """
 from typing import Optional
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -59,6 +61,9 @@ def my_document_file(kind: str, db: Session = Depends(get_db), current_user: Use
 class _ReviewIn(BaseModel):
     approve: bool
     reason: Optional[str] = Field(None, max_length=500)
+    #: Prava / texpasport muddati (Admin P4)
+    expires_on: Optional[date] = None
+    admin_id: Optional[int] = None
 
 
 @router.get("/internal/queue", dependencies=[Depends(require_internal_admin)])
@@ -95,8 +100,8 @@ def document_file(doc_id: int, db: Session = Depends(get_db)):
 
 @router.post("/internal/documents/{doc_id}/review", dependencies=[Depends(require_internal_admin)])
 def review_document(doc_id: int, data: _ReviewIn, db: Session = Depends(get_db)):
-    doc = driver_service.review(db, doc_id, data.approve, data.reason)
-    return {"id": doc.id, "status": doc.status, "reject_reason": doc.reject_reason}
+    doc = driver_service.review(db, doc_id, data.approve, data.reason, data.expires_on, data.admin_id)
+    return {"id": doc.id, "status": doc.status, "reject_reason": doc.reject_reason, "expires_on": doc.expires_on}
 
 
 # ------------------------------------------- доставка стройматериалов

@@ -31,6 +31,9 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     # заблокированный (и удалённый — у него тоже is_blocked) человек
     # продолжал работать с заказами, картами, чатом, балансом и платежами:
     # отказ приходил только от роутов, которые берут пользователя из auth.
+    from app.core.account_state import lift_expired_block
+
+    lift_expired_block(db, user)
     if getattr(user, "is_blocked", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -61,11 +61,63 @@ def status_of(docs: list[DriverDocument]) -> str:
     return "pending"
 
 
+#: Muddati bor hujjatlar (Admin P4, H2): prava va texpasport. Muddat
+#: old tomonga yoziladi (eski turlar — o'ziga).
+EXPIRY_KINDS = ("license_front", "tech_front", "driver_license", "tech_passport")
+EXPIRED_MARK = "Muddati o'tgan"
+
+
+def expire_outdated(db: Session, user_id: int) -> list:
+    """
+    Muddati o'tgan tasdiqlangan hujjat — «rad etilgan» bo'ladi, sababi
+    «Muddati o'tgan … — yangisini yuklang». Ilova buni odatdagi rad etish
+    kabi ko'rsatadi (qayta yuklash), yangi holat o'ylab topilmaydi.
+    Fon vazifasi yo'q — chaqirilganda (summary, navbat, buyurtma olish).
+    """
+    from datetime import date
+
+    today = date.today()
+    hit = (
+        db.query(DriverDocument)
+        .filter(DriverDocument.user_id == user_id, DriverDocument.status == "approved",
+                DriverDocument.expires_on.isnot(None), DriverDocument.expires_on < today)
+        .all()
+    )
+    for d in hit:
+        d.status = "rejected"
+        d.reject_reason = f"{EXPIRED_MARK} ({d.expires_on.strftime('%d.%m.%Y')}) — yangisini yuklang"
+    if hit:
+        db.commit()
+        for d in hit:
+            try:
+                _notify_review(db, d, "approved")
+            except Exception:  # noqa: BLE001
+                db.rollback()
+    return hit
+
+
+def assert_docs_valid(db: Session, user: User) -> None:
+    """
+    Buyurtma olishdan oldin: hujjati muddati o'tgan haydovchi — 403.
+    Hujjat topshirmagan ega (klient ilovasidan) bu tekshiruvga tushmaydi.
+    """
+    expire_outdated(db, user.id)
+    bad = (
+        db.query(DriverDocument)
+        .filter(DriverDocument.user_id == user.id, DriverDocument.status == "rejected",
+                DriverDocument.reject_reason.like(EXPIRED_MARK + "%"))
+        .first()
+    )
+    if bad is not None:
+        raise HTTPException(403, "Hujjatingiz muddati o'tgan — yangisini yuklang, tekshiruvdan so'ng buyurtma olasiz")
+
+
 def documents(db: Session, user_id: int) -> list[DriverDocument]:
     return db.query(DriverDocument).filter(DriverDocument.user_id == user_id).order_by(DriverDocument.id).all()
 
 
 def summary(db: Session, user: User) -> dict:
+    expire_outdated(db, user.id)
     docs = documents(db, user.id)
     return {
         "status": status_of(docs),
@@ -76,6 +128,7 @@ def summary(db: Session, user: User) -> dict:
                 "status": d.status,
                 "reject_reason": d.reject_reason,
                 "updated_at": d.updated_at,
+                "expires_on": d.expires_on,
             }
             for d in docs
         ],
@@ -153,13 +206,24 @@ def file_of(db: Session, user_id: Optional[int], doc_id: Optional[int] = None, k
     return _path(doc.file_name)
 
 
-def review(db: Session, doc_id: int, approve: bool, reason: Optional[str] = None) -> DriverDocument:
-    """Админ: одобрить или отклонить документ (с причиной, её увидит водитель)."""
+def review(db: Session, doc_id: int, approve: bool, reason: Optional[str] = None,
+           expires_on=None, admin_id: Optional[int] = None) -> DriverDocument:
+    """
+    Админ: одобрить или отклонить документ (с причиной, её увидит водитель).
+    Права и техпаспорт — со сроком (expires_on), он уже прошёл — 400.
+    """
+    from datetime import date
+
     doc = db.query(DriverDocument).filter(DriverDocument.id == doc_id).with_for_update().first()
     if doc is None:
         raise HTTPException(404, "Hujjat topilmadi")
     if not approve and not (reason or "").strip():
         raise HTTPException(400, "Rad etish sababini yozing")
+    if approve and expires_on is not None and expires_on < date.today():
+        raise HTTPException(400, "Hujjat muddati o'tgan — tasdiqlab bo'lmaydi")
+    if approve and doc.kind in EXPIRY_KINDS:
+        doc.expires_on = expires_on
+    doc.reviewed_by = admin_id
     before = status_of(documents(db, doc.user_id))  # до изменения: одобрение уведомляем один раз
     doc.status = "approved" if approve else "rejected"
     doc.reject_reason = None if approve else reason.strip()[:500]

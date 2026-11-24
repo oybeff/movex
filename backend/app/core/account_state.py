@@ -26,3 +26,23 @@ def assert_not_frozen(user) -> None:
             "taklif yuborish va pul yechish vaqtincha to'xtatilgan. "
             "Administrator bilan bog'laning.",
         )
+
+
+def lift_expired_block(db, user) -> bool:
+    """
+    Muddatli blok (Admin P4, C3): muddat o'tgan bo'lsa — blokni olib,
+    True qaytaradi. Fon vazifasi yo'q: tekshiruv kirishda va har so'rovda
+    (get_current_user). Doimiy blok (blocked_until IS NULL) — tegilmaydi.
+    """
+    from datetime import datetime, timezone
+
+    until = getattr(user, "blocked_until", None)
+    if not getattr(user, "is_blocked", False) or until is None:
+        return False
+    if until > datetime.now(timezone.utc):
+        return False
+    user.is_blocked = False
+    user.blocked_reason = None
+    user.blocked_until = None
+    db.commit()
+    return True
