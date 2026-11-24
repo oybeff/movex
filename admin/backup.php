@@ -4,7 +4,7 @@ requireAdmin();
 requirePagePerm('admins');
 requireCsrfToken();
 
-$pageTitle = 'Database Backup';
+$pageTitle = 'Tizim / Zaxira nusxa';
 $currentPage = 'backup';
 
 $message = '';
@@ -136,6 +136,8 @@ include 'includes/header.php';
 ?>
 
 <div class="content">
+    <div class="page-head"><div><h2>Zaxira nusxa</h2><div class="sub">Baza dampi: yaratish, tiklash va o&#39;chirish</div></div></div>
+
     <?php if ($message): ?>
         <div class="alert alert-<?= $messageType ?>">
             <?= htmlspecialchars($message) ?>
@@ -162,7 +164,7 @@ include 'includes/header.php';
                 </div>
                 
                 <button type="submit" class="btn btn-primary">
-                    💾 Backup Yaratish
+                    <i data-lucide="save"></i> Backup Yaratish
                 </button>
             </form>
         </div>
@@ -214,12 +216,12 @@ include 'includes/header.php';
                                     <div class="d-flex gap-1">
                                         <!-- Restore Button -->
                                         <form method="POST" action="" style="display: inline;"
-                                              onsubmit="return confirm('⚠️ DIQQAT! Bu amal hozirgi ma\'lumotlarni o\'chiradi va backup\'dan tiklaydi. Davom etasizmi?');">
+                                              onsubmit="return confirm('DIQQAT! Bu amal hozirgi ma\'lumotlarni o\'chiradi va backup\'dan tiklaydi. Davom etasizmi?');">
                                             <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                                             <input type="hidden" name="action" value="restore_backup">
                                             <input type="hidden" name="filename" value="<?= htmlspecialchars($backup['filename']) ?>">
                                             <button type="submit" class="btn btn-sm btn-success" title="Restore">
-                                                ♻️ Restore
+                                                <i data-lucide="rotate-ccw"></i> Restore
                                             </button>
                                         </form>
 
@@ -230,7 +232,7 @@ include 'includes/header.php';
                                             <input type="hidden" name="action" value="delete_backup">
                                             <input type="hidden" name="filename" value="<?= htmlspecialchars($backup['filename']) ?>">
                                             <button type="submit" class="btn btn-sm btn-danger" title="O'chirish">
-                                                🗑️ O'chirish
+                                                <i data-lucide="trash-2"></i> O'chirish
                                             </button>
                                         </form>
                                     </div>
@@ -257,7 +259,7 @@ include 'includes/header.php';
 
                 <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--gray-200);">
 
-                <h4 style="margin-bottom: 12px;">📝 Backup Turlari:</h4>
+                <h4 style="margin-bottom: 12px;"><i data-lucide="file-text"></i> Backup Turlari:</h4>
                 <ul style="margin-left: 20px;">
                     <li><strong>Full Backup:</strong> Database schema va barcha ma'lumotlar</li>
                     <li><strong>Schema Only:</strong> Faqat database strukturasi (jadvallar, indekslar)</li>
@@ -266,7 +268,7 @@ include 'includes/header.php';
 
                 <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--gray-200);">
 
-                <h4 style="margin-bottom: 12px;">⚠️ Muhim Eslatmalar:</h4>
+                <h4 style="margin-bottom: 12px;"><i data-lucide="alert-triangle"></i> Muhim Eslatmalar:</h4>
                 <ul style="margin-left: 20px;">
                     <li>Restore qilishdan oldin albatta yangi backup yarating</li>
                     <li>Restore jarayoni hozirgi ma'lumotlarni to'liq o'chiradi</li>

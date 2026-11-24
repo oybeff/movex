@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 
-$pageTitle = 'Qurilish materiallari';
+$pageTitle = 'Operatsiyalar / Materiallar';
 $currentPage = 'materials';
 
 $db = getDbConnection();
@@ -139,6 +139,8 @@ include 'includes/header.php';
 ?>
 
 <div class="content">
+    <div class="page-head"><div><h2>Qurilish materiallari</h2><div class="sub">Tovar moderatsiyasi va material buyurtmalari</div></div></div>
+
     <?php if ($message): ?>
         <div class="alert alert-<?= $messageType === 'success' ? 'success' : 'danger' ?>">
             <?= htmlspecialchars($message) ?>
@@ -164,7 +166,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format($stats['approved']) ?></div>
                     <div class="stat-change"><?= number_format($stats['rejected']) ?> ta rad etilgan</div>
                 </div>
-                <div class="stat-icon success">🧱</div>
+                <div class="stat-icon success"><i data-lucide="brick-wall"></i></div>
             </div>
         </div>
 
@@ -175,7 +177,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format($orderStats['total']) ?></div>
                     <div class="stat-change"><?= number_format($orderStats['pending']) ?> ta javob kutmoqda</div>
                 </div>
-                <div class="stat-icon primary">📦</div>
+                <div class="stat-icon primary"><i data-lucide="package"></i></div>
             </div>
         </div>
 
@@ -188,7 +190,7 @@ include 'includes/header.php';
                         ulush: <?= number_format($orderStats['commission'], 0, '.', ' ') ?> so'm
                     </div>
                 </div>
-                <div class="stat-icon success">💰</div>
+                <div class="stat-icon success"><i data-lucide="wallet"></i></div>
             </div>
         </div>
     </div>
@@ -197,9 +199,9 @@ include 'includes/header.php';
         <div class="card-body">
             <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                 <a href="?tab=products&status=pending"
-                   class="btn <?= $tab === 'products' ? 'btn-primary' : '' ?>">🧱 Tovarlar</a>
+                   class="btn <?= $tab === 'products' ? 'btn-primary' : '' ?>"><i data-lucide="brick-wall"></i> Tovarlar</a>
                 <a href="?tab=orders"
-                   class="btn <?= $tab === 'orders' ? 'btn-primary' : '' ?>">📦 Buyurtmalar</a>
+                   class="btn <?= $tab === 'orders' ? 'btn-primary' : '' ?>"><i data-lucide="package"></i> Buyurtmalar</a>
 
                 <form method="GET" action="" style="display:flex; gap:10px; margin-left:auto;">
                     <input type="hidden" name="tab" value="<?= htmlspecialchars($tab) ?>">
@@ -259,7 +261,7 @@ include 'includes/header.php';
                                 <?= htmlspecialchars(materialTypeName($p['material_type'])) ?>
                             </span>
                             <?php if ($p['photo_count'] > 0): ?>
-                                <span class="badge badge-info">📷 <?= (int)$p['photo_count'] ?></span>
+                                <span class="badge badge-info"><i data-lucide="camera"></i> <?= (int)$p['photo_count'] ?></span>
                             <?php endif; ?>
                             <?php if (!empty($p['description'])): ?>
                                 <br><small class="text-muted">
@@ -267,7 +269,7 @@ include 'includes/header.php';
                                 </small>
                             <?php endif; ?>
                             <?php if (!empty($p['address'])): ?>
-                                <br><small class="text-muted">📍 <?= htmlspecialchars($p['address']) ?></small>
+                                <br><small class="text-muted"><i data-lucide="map-pin"></i> <?= htmlspecialchars($p['address']) ?></small>
                             <?php endif; ?>
                         </td>
                         <td style="white-space:nowrap;">
@@ -293,7 +295,7 @@ include 'includes/header.php';
                                 eng kam: <?= number_format($p['min_quantity'], 0, '.', ' ') ?>
                             </small>
                             <?php if ($p['order_count'] > 0): ?>
-                                <br><small class="text-muted">📦 <?= (int)$p['order_count'] ?> buyurtma</small>
+                                <br><small class="text-muted"><i data-lucide="package"></i> <?= (int)$p['order_count'] ?> buyurtma</small>
                             <?php endif; ?>
                         </td>
                         <td>

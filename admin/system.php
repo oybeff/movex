@@ -3,7 +3,7 @@ require_once 'config.php';
 requireAdmin();
 requirePagePerm('admins');
 
-$pageTitle = 'Tizim Ma\'lumotlari';
+$pageTitle = 'Tizim / Tizim holati';
 $currentPage = 'system';
 
 $db = getDbConnection();
@@ -70,10 +70,12 @@ include 'includes/header.php';
 ?>
 
 <div class="content">
+    <div class="page-head"><div><h2>Tizim holati</h2><div class="sub">Baza, jadvallar hajmi va server ma&#39;lumotlari</div></div></div>
+
     <!-- Database Info -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">🗄️ Database Ma'lumotlari</h3>
+            <h3 class="card-title"><i data-lucide="database"></i> Database Ma'lumotlari</h3>
         </div>
         <div class="card-body">
             <table>
@@ -109,7 +111,7 @@ include 'includes/header.php';
     <!-- Table Sizes -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">📊 Jadvallar Hajmi</h3>
+            <h3 class="card-title"><i data-lucide="bar-chart-3"></i> Jadvallar Hajmi</h3>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -136,7 +138,7 @@ include 'includes/header.php';
     <!-- System Info -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">⚙️ Server Ma'lumotlari</h3>
+            <h3 class="card-title"><i data-lucide="settings"></i> Server Ma'lumotlari</h3>
         </div>
         <div class="card-body">
             <table>
@@ -155,7 +157,7 @@ include 'includes/header.php';
     <!-- Backup Info -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">💾 Backup Ma'lumotlari</h3>
+            <h3 class="card-title"><i data-lucide="save"></i> Backup Ma'lumotlari</h3>
         </div>
         <div class="card-body">
             <table>

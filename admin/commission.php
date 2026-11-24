@@ -19,7 +19,7 @@ requireAdmin();
 requirePagePerm('settings');
 requireCsrfToken();
 
-$pageTitle = 'Platforma ulushi';
+$pageTitle = 'Tizim / Sozlamalar';
 $currentPage = 'commission';
 
 $db = getDbConnection();
@@ -312,6 +312,8 @@ include 'includes/header.php';
 ?>
 
 <div class="content">
+    <div class="page-head"><div><h2>Sozlamalar</h2><div class="sub">Komissiya, to&#39;lovlar, bonus, garov va ilova holati</div></div></div>
+
     <?php if ($message): ?>
         <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
     <?php endif; ?>
@@ -333,7 +335,7 @@ include 'includes/header.php';
                         <?= $mode === 'fixed' ? "har bir buyurtmadan qat'iy" : 'ijara summasidan' ?>
                     </div>
                 </div>
-                <div class="stat-icon primary">💰</div>
+                <div class="stat-icon primary"><i data-lucide="wallet"></i></div>
             </div>
         </div>
 
@@ -344,7 +346,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format((float)$collected['total'], 0, '.', ' ') ?></div>
                     <div class="stat-change"><?= (int)$collected['cnt'] ?> ta buyurtmadan</div>
                 </div>
-                <div class="stat-icon success">🏦</div>
+                <div class="stat-icon success"><i data-lucide="landmark"></i></div>
             </div>
         </div>
     </div>
@@ -387,7 +389,7 @@ include 'includes/header.php';
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
-                    💾 Saqlash
+                    <i data-lucide="save"></i> Saqlash
                 </button>
             </form>
         </div>
@@ -432,7 +434,7 @@ include 'includes/header.php';
                         <?= $payoutMode === 'fixed' ? "har bir arizadan qat'iy" : 'ariza summasidan' ?>
                     </div>
                 </div>
-                <div class="stat-icon primary">💳</div>
+                <div class="stat-icon primary"><i data-lucide="credit-card"></i></div>
             </div>
         </div>
 
@@ -443,7 +445,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format((float)$payoutCollected['total'], 0, '.', ' ') ?></div>
                     <div class="stat-change"><?= (int)$payoutCollected['cnt'] ?> ta arizadan</div>
                 </div>
-                <div class="stat-icon success">🏦</div>
+                <div class="stat-icon success"><i data-lucide="landmark"></i></div>
             </div>
         </div>
     </div>
@@ -492,7 +494,7 @@ include 'includes/header.php';
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
-                    💾 Saqlash
+                    <i data-lucide="save"></i> Saqlash
                 </button>
             </form>
         </div>
@@ -551,7 +553,7 @@ include 'includes/header.php';
                     <small class="text-muted">so'm</small>
                 </div>
                 <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
-                    💾 Saqlash
+                    <i data-lucide="save"></i> Saqlash
                 </button>
             </form>
         </div>
@@ -669,7 +671,7 @@ include 'includes/header.php';
                     <small class="text-muted">so'm</small>
                 </div>
                 <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
-                    💾 Saqlash
+                    <i data-lucide="save"></i> Saqlash
                 </button>
             </form>
         </div>
@@ -697,7 +699,7 @@ include 'includes/header.php';
                     <small class="text-muted">so'm</small>
                 </div>
                 <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
-                    💾 Saqlash
+                    <i data-lucide="save"></i> Saqlash
                 </button>
             </form>
         </div>
@@ -727,7 +729,7 @@ include 'includes/header.php';
                     <small class="text-muted">so'm</small>
                 </div>
                 <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
-                    💾 Saqlash
+                    <i data-lucide="save"></i> Saqlash
                 </button>
             </form>
         </div>
@@ -785,7 +787,7 @@ include 'includes/header.php';
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="margin-top: 20px;">
-                    💾 Saqlash
+                    <i data-lucide="save"></i> Saqlash
                 </button>
             </form>
         </div>

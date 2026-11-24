@@ -14,7 +14,7 @@ require_once 'config.php';
 requireAdmin();
 requirePerm('orders_view');
 
-$pageTitle = 'Zayavkalar';
+$pageTitle = 'Operatsiyalar / Zayavkalar';
 $currentPage = 'requests';
 
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
@@ -99,6 +99,8 @@ include 'includes/header.php';
 ?>
 
 <div class="content">
+    <div class="page-head"><div><h2>Zayavkalar</h2><div class="sub">Tender va tezkor zayavkalar — ijrochini mijoz tanlaydi</div></div></div>
+
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-header">
@@ -106,7 +108,7 @@ include 'includes/header.php';
                     <div class="stat-title">Jami Zayavkalar</div>
                     <div class="stat-value"><?= number_format($stats['total']) ?></div>
                 </div>
-                <div class="stat-icon primary">📣</div>
+                <div class="stat-icon primary"><i data-lucide="megaphone"></i></div>
             </div>
         </div>
 
@@ -126,7 +128,7 @@ include 'includes/header.php';
                     <div class="stat-title">Buyurtmaga aylangan</div>
                     <div class="stat-value"><?= number_format($stats['assigned']) ?></div>
                 </div>
-                <div class="stat-icon success">✅</div>
+                <div class="stat-icon success"><i data-lucide="check-circle-2"></i></div>
             </div>
         </div>
 
@@ -137,7 +139,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format($unanswered) ?></div>
                     <div class="stat-change">taklif kelmagan</div>
                 </div>
-                <div class="stat-icon <?= $unanswered > 0 ? 'danger' : 'info' ?>">🔇</div>
+                <div class="stat-icon <?= $unanswered > 0 ? 'danger' : 'info' ?>"><i data-lucide="bell-off"></i></div>
             </div>
         </div>
     </div>
@@ -156,10 +158,10 @@ include 'includes/header.php';
                     </select>
                 </div>
 
-                <button type="submit" class="btn btn-primary">🔍 Filtrlash</button>
+                <button type="submit" class="btn btn-primary"><i data-lucide="search"></i> Filtrlash</button>
 
                 <?php if (!empty($statusFilter)): ?>
-                    <a href="requests.php" class="btn btn-secondary">✖️ Tozalash</a>
+                    <a href="requests.php" class="btn btn-secondary"><i data-lucide="x"></i> Tozalash</a>
                 <?php endif; ?>
             </form>
         </div>

@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 
-$pageTitle = "E'lonlar";
+$pageTitle = "Operatsiyalar / E'lonlar";
 $currentPage = 'listings';
 
 $db = getDbConnection();
@@ -186,6 +186,8 @@ include 'includes/header.php';
 ?>
 
 <div class="content">
+    <div class="page-head"><div><h2>E&#39;lonlar</h2><div class="sub">Erkin matnli e&#39;lonlar — bajaruvchini muallif tanlaydi; admin faqat spamni yopadi</div></div></div>
+
     <?php if ($message): ?>
         <div class="alert alert-<?= $messageType === 'success' ? 'success' : 'danger' ?>">
             <?= htmlspecialchars($message) ?>
@@ -199,7 +201,7 @@ include 'includes/header.php';
                     <div class="stat-title">Jami e'lonlar</div>
                     <div class="stat-value"><?= number_format($stats['total']) ?></div>
                 </div>
-                <div class="stat-icon primary">📢</div>
+                <div class="stat-icon primary"><i data-lucide="megaphone"></i></div>
             </div>
         </div>
 
@@ -220,7 +222,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format($stats['taken']) ?></div>
                     <div class="stat-change">ega oldi, mijoz javob bermadi</div>
                 </div>
-                <div class="stat-icon info">✋</div>
+                <div class="stat-icon info"><i data-lucide="hand"></i></div>
             </div>
         </div>
 
@@ -230,7 +232,7 @@ include 'includes/header.php';
                     <div class="stat-title">3 kundan beri javobsiz</div>
                     <div class="stat-value"><?= number_format($stale) ?></div>
                 </div>
-                <div class="stat-icon <?= $stale > 0 ? 'danger' : 'success' ?>">🔇</div>
+                <div class="stat-icon <?= $stale > 0 ? 'danger' : 'success' ?>"><i data-lucide="bell-off"></i></div>
             </div>
         </div>
     </div>
@@ -253,7 +255,7 @@ include 'includes/header.php';
                         </a>
                     </div>
                 </div>
-                <div class="stat-icon primary">👁</div>
+                <div class="stat-icon primary"><i data-lucide="eye"></i></div>
             </div>
         </div>
 
@@ -268,7 +270,7 @@ include 'includes/header.php';
                         </a>
                     </div>
                 </div>
-                <div class="stat-icon danger">❤️</div>
+                <div class="stat-icon danger"><i data-lucide="heart"></i></div>
             </div>
         </div>
 
@@ -283,7 +285,7 @@ include 'includes/header.php';
                         </a>
                     </div>
                 </div>
-                <div class="stat-icon info">🔖</div>
+                <div class="stat-icon info"><i data-lucide="bookmark"></i></div>
             </div>
         </div>
 
@@ -296,7 +298,7 @@ include 'includes/header.php';
                         <?= number_format($answered) ?> ta e'lon javob olgan
                     </div>
                 </div>
-                <div class="stat-icon success">💬</div>
+                <div class="stat-icon success"><i data-lucide="message-circle"></i></div>
             </div>
         </div>
 
@@ -307,7 +309,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format($engagement['unseen']) ?></div>
                     <div class="stat-change">ochiq, lekin 0 ko'rish</div>
                 </div>
-                <div class="stat-icon <?= $engagement['unseen'] > 0 ? 'warning' : 'success' ?>">🕳</div>
+                <div class="stat-icon <?= $engagement['unseen'] > 0 ? 'warning' : 'success' ?>"><i data-lucide="eye-off"></i></div>
             </div>
         </div>
     </div>
@@ -339,10 +341,10 @@ include 'includes/header.php';
                     </select>
                 </div>
 
-                <button type="submit" class="btn btn-primary">🔍 Filtrlash</button>
+                <button type="submit" class="btn btn-primary"><i data-lucide="search"></i> Filtrlash</button>
 
                 <?php if (!empty($statusFilter) || $sort !== 'created'): ?>
-                    <a href="listings.php" class="btn btn-secondary">✖️ Tozalash</a>
+                    <a href="listings.php" class="btn btn-secondary"><i data-lucide="x"></i> Tozalash</a>
                 <?php endif; ?>
             </form>
         </div>
@@ -396,10 +398,10 @@ include 'includes/header.php';
                                     <br><span class="badge badge-secondary"><?= htmlspecialchars(equipmentTypeName($l['equipment_type'])) ?></span>
                                 <?php endif; ?>
                                 <?php if ($l['photo_count'] > 0): ?>
-                                    <span class="badge badge-info">📷 <?= $l['photo_count'] ?></span>
+                                    <span class="badge badge-info"><i data-lucide="camera"></i> <?= $l['photo_count'] ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($l['address'])): ?>
-                                    <br><small class="text-muted">📍 <?= htmlspecialchars($l['address']) ?></small>
+                                    <br><small class="text-muted"><i data-lucide="map-pin"></i> <?= htmlspecialchars($l['address']) ?></small>
                                 <?php endif; ?>
                             </td>
                             <td>
@@ -462,19 +464,19 @@ include 'includes/header.php';
                                 $dim = 'color:#c0c4cc;';   // nol — bo'sh joydek
                                 ?>
                                 <span title="ko'rishlar" style="<?= $views ? '' : $dim ?>">
-                                    👁 <strong><?= $views ?></strong>
+                                    <i data-lucide="eye"></i> <strong><?= $views ?></strong>
                                 </span>
                                 &nbsp;
                                 <span title="yoqtirishlar" style="<?= $likes ? '' : $dim ?>">
-                                    ❤️ <strong><?= $likes ?></strong>
+                                    <i data-lucide="heart"></i> <strong><?= $likes ?></strong>
                                 </span>
                                 <br>
                                 <span title="saqlanganlar" style="<?= $saves ? '' : $dim ?>">
-                                    🔖 <strong><?= $saves ?></strong>
+                                    <i data-lucide="bookmark"></i> <strong><?= $saves ?></strong>
                                 </span>
                                 &nbsp;
                                 <span title="takliflar" style="<?= $offers ? '' : $dim ?>">
-                                    💬 <strong><?= $offers ?></strong>
+                                    <i data-lucide="message-circle"></i> <strong><?= $offers ?></strong>
                                 </span>
                                 <?php if ($l['best_offer'] !== null): ?>
                                     <br><small class="text-muted">

@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 
-$pageTitle = 'Katalog';
+$pageTitle = 'Tizim / Katalog';
 $currentPage = 'catalog';
 
 $db = getDbConnection();
@@ -273,6 +273,8 @@ function money($v) {
 ?>
 
 <div class="content">
+    <div class="page-head"><div><h2>Katalog</h2><div class="sub">Texnika turlari, yuk mashinalari va qurilish materiallari bo&#39;limi</div></div></div>
+
     <?php if ($message): ?>
         <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
     <?php endif; ?>

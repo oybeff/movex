@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 
-$pageTitle = 'Hududlar va narxlar';
+$pageTitle = 'Tizim / Xizmat hududlari';
 $currentPage = 'zones';
 
 $db = getDbConnection();
@@ -157,6 +157,8 @@ include 'includes/header.php';
 </style>
 
 <div class="content">
+    <div class="page-head"><div><h2>Xizmat hududlari</h2><div class="sub">Hudud chegarasi, ustama va hududiy narxlar. Hududdan tashqarida tarifli buyurtma berib bo&#39;lmaydi</div></div></div>
+
     <?php if ($message): ?><div class="alert alert-success"><?= htmlspecialchars($message) ?></div><?php endif; ?>
     <?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
@@ -203,7 +205,7 @@ include 'includes/header.php';
                                 <label><input type="checkbox" name="is_enabled" <?= !$zone || $zone['is_enabled'] ? 'checked' : '' ?>> Yoqilgan</label>
                             </div>
                             <div class="draw-bar">
-                                <button type="button" class="btn btn-secondary btn-sm" id="btnDraw">✏️ Qaytadan chizish</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btnDraw"><i data-lucide="pencil"></i> Qaytadan chizish</button>
                                 <button type="button" class="btn btn-secondary btn-sm" id="btnUndo">↶ Oxirgi nuqtani olib tashlash</button>
                                 <span class="muted" id="drawHint" style="color:#6b7280">Xaritaga bosib hudud chegarasini nuqtalab chizing.</span>
                                 <button type="submit" class="btn btn-primary btn-sm" style="margin-left:auto">Saqlash</button>

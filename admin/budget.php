@@ -3,7 +3,7 @@ require_once 'config.php';
 requireAdmin();
 requirePagePerm('finance');
 
-$pageTitle = 'Budjet Jamg\'armasi';
+$pageTitle = 'Moliya / Platforma daromadi';
 $currentPage = 'budget';
 
 // Pagination
@@ -119,6 +119,8 @@ include 'includes/header.php';
 ?>
 
 <div class="content">
+    <div class="page-head"><div><h2>Platforma daromadi</h2><div class="sub">Yakunlangan buyurtmalar, e&#39;lon narxi va komissiyalardan tushgan ulush</div></div></div>
+
     <!-- Statistics -->
     <div class="stats-grid">
         <div class="stat-card">
@@ -128,7 +130,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format($stats['total_amount'], 0) ?></div>
                     <div class="stat-change">so'm</div>
                 </div>
-                <div class="stat-icon success">💰</div>
+                <div class="stat-icon success"><i data-lucide="wallet"></i></div>
             </div>
         </div>
         
@@ -139,7 +141,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format($stats['today'], 0) ?></div>
                     <div class="stat-change">so'm</div>
                 </div>
-                <div class="stat-icon primary">📅</div>
+                <div class="stat-icon primary"><i data-lucide="calendar"></i></div>
             </div>
         </div>
         
@@ -150,7 +152,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format($stats['last_week'], 0) ?></div>
                     <div class="stat-change">so'm</div>
                 </div>
-                <div class="stat-icon info">📊</div>
+                <div class="stat-icon info"><i data-lucide="bar-chart-3"></i></div>
             </div>
         </div>
         
@@ -161,7 +163,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format($stats['last_month'], 0) ?></div>
                     <div class="stat-change">so'm</div>
                 </div>
-                <div class="stat-icon warning">📈</div>
+                <div class="stat-icon warning"><i data-lucide="trending-up"></i></div>
             </div>
         </div>
     </div>
@@ -202,12 +204,12 @@ include 'includes/header.php';
                 </div>
 
                 <button type="submit" class="btn btn-primary">
-                    🔍 Filtrlash
+                    <i data-lucide="search"></i> Filtrlash
                 </button>
 
                 <?php if (!empty($searchQuery) || !empty($dateFrom) || !empty($dateTo)): ?>
                     <a href="budget.php" class="btn btn-secondary">
-                        ✖️ Tozalash
+                        <i data-lucide="x"></i> Tozalash
                     </a>
                 <?php endif; ?>
             </form>
@@ -247,7 +249,7 @@ include 'includes/header.php';
                         <tr>
                             <td colspan="8" style="text-align: center; padding: 2rem;">
                                 <div style="color: var(--text-muted);">
-                                    📭 Hozircha budjet jamg'armasi yo'q
+                                    <i data-lucide="inbox"></i> Hozircha budjet jamg'armasi yo'q
                                 </div>
                             </td>
                         </tr>

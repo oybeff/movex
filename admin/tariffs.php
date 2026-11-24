@@ -182,103 +182,112 @@ function money($v) {
 ?>
 
 <div class="content">
-    <?php if ($message): ?>
-        <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
-    <?php endif; ?>
-    <?php if ($error): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-header">
-                <div>
-                    <div class="stat-title">Tarifli turlar</div>
-                    <div class="stat-value"><?= count($tariffs) ?> / <?= count($types) ?></div>
-                    <div class="stat-change">tarifi yo'q tur ilovada «taksi» oqimida ko'rinmaydi</div>
-                </div>
-                <div class="stat-icon primary">🚕</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div>
-                    <div class="stat-title">Faol naqd buyurtmalar</div>
-                    <div class="stat-value"><?= (int)$cashOrders['cnt'] ?></div>
-                    <div class="stat-change">egalarda muzlatilgan komissiya: <?= money($cashOrders['frozen']) ?> so'm</div>
-                </div>
-                <div class="stat-icon primary">💵</div>
-            </div>
-        </div>
+    <div class="page-head">
+        <div><h2>Tariflar va narxlar</h2>
+            <div class="sub">Texnika turi bo'yicha narxlar · <?= count($tariffs) ?> / <?= count($types) ?> turda tarif bor · faol naqd buyurtmalar: <?= (int)$cashOrders['cnt'] ?></div></div>
+        <div class="page-actions"><a class="btn btn-secondary" href="audit.php?section=Sozlamalar&amp;period=30d"><i data-lucide="history"></i> O'zgarishlar tarixi</a></div>
     </div>
+    <?php if ($message): ?><div class="alert alert-success"><?= htmlspecialchars($message) ?></div><?php endif; ?>
+    <?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
-    <div class="card mb-3">
-        <div class="card-header">
-            <h3 class="card-title">Soatlik narxlar</h3>
-        </div>
-        <div class="card-body">
-            <p style="margin-top:0;color:#6b7280">
-                <b>Ekonom</b> — soatbay: (narx + jihoz ustamasi) × soat. <b>Tezkor</b> — 6 soatlik paket,
-                <b>Kun davomida</b> — 12 soatlik paket: narx butun paket uchun, mijoz soatni o'zgartirmaydi.
-                Narxni bo'sh qoldirsangiz, o'sha tarif o'chadi. Naqd to'lovda komissiya egasining balansidan olinadi
-                (stavka — <a href="commission.php">Platforma ulushi</a>).
-            </p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Texnika</th>
-                        <?php foreach ($tiers as $tier => $label): ?>
-                            <th><?= htmlspecialchars($label) ?>, <?= isset($packageHours[$tier]) ? 'so\'m / ' . $packageHours[$tier] . ' soat' : 'so\'m/soat' ?></th>
-                        <?php endforeach; ?>
-                        <th>Ekonom: kamida, soat</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php foreach ($types as $type):
-                    $t = $tariffs[$type] ?? [];
-                    $min = 1;
-                    if (isset($t['econom'])) { $min = (int)$t['econom']['min_hours']; }
-                    $formId = 'tf_' . $type;
-                ?>
-                    <tr>
-                        <td><strong><?= htmlspecialchars(equipmentTypeName($type)) ?></strong></td>
-                        <?php foreach ($tiers as $tier => $label): ?>
-                            <td>
-                                <input form="<?= $formId ?>" type="text" inputmode="numeric"
-                                       name="price_<?= $tier ?>" style="width:130px"
-                                       value="<?= isset($t[$tier]) && $t[$tier]['is_active'] ? (int)($t[$tier]['package_price'] ?? $t[$tier]['price_per_hour']) : '' ?>"
-                                       placeholder="<?= isset($t[$tier]) && !$t[$tier]['is_active'] ? "o'chirilgan" : '—' ?>">
-                                <?php if (isset($t[$tier]) && !$t[$tier]['is_active']): ?>
-                                    <!-- O'chirilgan tarif eski narxini formaga qo'ymaydi: aks holda boshqa
-                                         narxni saqlaganda u noto'g'ri narx bilan qayta yoqilardi (24.11.2026). -->
-                                    <br><small style="color:#b45309">o'chirilgan<?= isset($packageHours[$tier]) ? ' — ' . $packageHours[$tier] . ' soatlik paket narxini kiriting' : '' ?></small>
-                                <?php endif; ?>
-                                <br>
-                                <input form="<?= $formId ?>" type="text" inputmode="numeric"
-                                       name="eta_<?= $tier ?>" style="width:130px;margin-top:4px"
-                                       value="<?= isset($t[$tier]['eta_minutes']) ? (int)$t[$tier]['eta_minutes'] : '' ?>"
-                                       placeholder="kelish, daqiqa" title="«N daqiqada keladi». Bo'sh — yozuvsiz">
-                            </td>
-                        <?php endforeach; ?>
-                        <td>
-                            <input form="<?= $formId ?>" type="number" min="1" max="24"
-                                   name="min_hours" style="width:70px" value="<?= $min ?>">
-                        </td>
-                        <td>
-                            <form id="<?= $formId ?>" method="POST" action="">
-                                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                                <input type="hidden" name="form" value="tariffs">
-                                <input type="hidden" name="equipment_type" value="<?= htmlspecialchars($type) ?>">
-                                <button type="submit" class="btn btn-primary btn-sm">Saqlash</button>
-                            </form>
-                        </td>
-                    </tr>
+    <div class="banner banner-info"><i data-lucide="info"></i>
+        <div><b>Faol buyurtmalar eski narxda yakunlanadi</b>
+            <span>O'zgarish saqlangan paytdan boshlab yangi buyurtmalarga qo'llanadi va audit jurnaliga yoziladi. Ekonom — soatbay: (narx + jihoz ustamasi) × soat; Tezkor — 6 soatlik, Kun davomida — 12 soatlik paket narxi. Narxni bo'sh qoldirsangiz, o'sha tarif o'chadi. Komissiya — <a href="commission.php">Sozlamalar</a>.</span></div></div>
+
+    <div class="card">
+        <div class="table-responsive"><table class="tariff-table">
+            <thead><tr>
+                <th>Texnika turi</th>
+                <?php foreach ($tiers as $tier => $label): ?>
+                    <th class="text-right"><?= htmlspecialchars($label) ?><small class="sub"><?= isset($packageHours[$tier]) ? $packageHours[$tier] . ' soat paketi · kelish, daq' : "so'm/soat · kelish, daq" ?></small></th>
                 <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
+                <th class="text-right">Min. soat</th><th>Holat</th>
+            </tr></thead>
+            <tbody>
+            <?php foreach ($types as $type):
+                $t = $tariffs[$type] ?? [];
+                $min = isset($t['econom']) ? (int)$t['econom']['min_hours'] : 1;
+                $formId = 'tf_' . $type;
+                $activeTiers = count(array_filter($t, function ($x) { return $x['is_active']; }));
+            ?>
+                <tr data-form="<?= $formId ?>" data-name="<?= htmlspecialchars(equipmentTypeName($type)) ?>">
+                    <td><b><?= htmlspecialchars(equipmentTypeName($type)) ?></b>
+                        <form id="<?= $formId ?>" method="POST" action="" class="tariff-form">
+                            <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                            <input type="hidden" name="form" value="tariffs">
+                            <input type="hidden" name="equipment_type" value="<?= htmlspecialchars($type) ?>">
+                        </form></td>
+                    <?php foreach ($tiers as $tier => $label):
+                        $off = isset($t[$tier]) && !$t[$tier]['is_active']; ?>
+                        <td class="text-right">
+                            <input class="cell-input" form="<?= $formId ?>" type="text" inputmode="numeric" name="price_<?= $tier ?>"
+                                   value="<?= isset($t[$tier]) && $t[$tier]['is_active'] ? (int)($t[$tier]['package_price'] ?? $t[$tier]['price_per_hour']) : '' ?>"
+                                   placeholder="<?= $off ? "o'chirilgan" : '—' ?>" aria-label="<?= htmlspecialchars(equipmentTypeName($type) . ' — ' . $label) ?>">
+                            <input class="cell-input cell-sub" form="<?= $formId ?>" type="text" inputmode="numeric" name="eta_<?= $tier ?>"
+                                   value="<?= isset($t[$tier]['eta_minutes']) ? (int)$t[$tier]['eta_minutes'] : '' ?>"
+                                   placeholder="kelish, daq" title="N daqiqada keladi. Bo'sh — yozuvsiz">
+                        </td>
+                    <?php endforeach; ?>
+                    <td class="text-right"><input class="cell-input" form="<?= $formId ?>" type="number" min="1" max="24" name="min_hours" value="<?= $min ?>" style="width:64px"></td>
+                    <td><span class="badge badge-<?= $activeTiers ? 'success' : 'secondary' ?>"><?= $activeTiers ? 'Faol' : 'Nofaol' ?></span>
+                        <?php if (!$activeTiers): ?><small class="sub">ilovada ko'rinmaydi</small><?php endif; ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table></div>
     </div>
+
+    <div class="unsaved-bar" id="unsavedBar" hidden>
+        <i data-lucide="alert-triangle"></i>
+        <span id="unsavedText"></span>
+        <button type="button" class="link-btn" id="unsavedCancel">Bekor qilish</button>
+        <button type="button" class="btn btn-warning" id="unsavedSave">Saqlash</button>
+    </div>
+    <script>
+    (function () {
+        var rows = Array.prototype.slice.call(document.querySelectorAll('.tariff-table tr[data-form]'));
+        var init = new Map();
+        rows.forEach(function (r) { r.querySelectorAll('input.cell-input').forEach(function (i) { init.set(i, i.value); }); });
+        var bar = document.getElementById('unsavedBar'), txt = document.getElementById('unsavedText');
+        function changed() {
+            return rows.filter(function (r) {
+                return Array.prototype.some.call(r.querySelectorAll('input.cell-input'), function (i) { return i.value !== init.get(i); });
+            });
+        }
+        function fmt(v) { return v === '' ? '—' : Number(v).toLocaleString('ru-RU').replace(/,/g, ' '); }
+        function sync() {
+            var c = changed();
+            rows.forEach(function (r) { r.classList.toggle('row-editing', c.indexOf(r) >= 0); });
+            bar.hidden = !c.length;
+            if (!c.length) return;
+            var first = c[0];
+            var inp = Array.prototype.find.call(first.querySelectorAll('input.cell-input'), function (i) { return i.value !== init.get(i); });
+            txt.textContent = c.length + ' ta qator saqlanmagan · ' + first.dataset.name + ': ' + fmt(init.get(inp)) + ' → ' + fmt(inp.value);
+        }
+        document.querySelector('.tariff-table').addEventListener('input', sync);
+        document.getElementById('unsavedCancel').addEventListener('click', function () { init.forEach(function (v, i) { i.value = v; }); sync(); });
+        window.addEventListener('beforeunload', function (e) { if (changed().length) { e.preventDefault(); e.returnValue = ''; } });
+        document.getElementById('unsavedSave').addEventListener('click', async function () {
+            var c = changed(), btn = this;
+            btn.disabled = true;
+            for (var k = 0; k < c.length; k++) {
+                var r = c[k];
+                var res = await fetch(location.pathname, { method: 'POST', body: new FormData(document.getElementById(r.dataset.form)) });
+                var html = await res.text();
+                var err = html.match(/<div class="alert alert-danger">([^<]*)<\/div>/);
+                if (err) { showNotification(r.dataset.name + ': ' + err[1], 'error'); btn.disabled = false; return; }
+            }
+            c.forEach(function (r) { r.querySelectorAll('input.cell-input').forEach(function (i) { init.set(i, i.value); }); });
+            sessionStorage.setItem('tariffSaved', String(c.length));
+            location.reload();
+        });
+        var saved = sessionStorage.getItem('tariffSaved');
+        if (saved) {
+            sessionStorage.removeItem('tariffSaved');
+            document.addEventListener('DOMContentLoaded', function () { showNotification(saved + " ta tur saqlandi — yangi buyurtmalarga qo'llanadi", 'success'); });
+        }
+    })();
+    </script>
 
     <div class="card mb-3">
         <div class="card-header">
@@ -322,11 +331,11 @@ function money($v) {
                                     <input type="hidden" name="id" value="<?= (int)$a['id'] ?>">
                                     <button type="submit" class="btn btn-sm"><?= $a['is_active'] ? "O'chirish" : 'Yoqish' ?></button>
                                 </form>
-                                <form method="POST" action="" onsubmit="return confirm('Jihozni o\'chirasizmi?')">
+                                <form method="POST" action="">
                                     <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                                     <input type="hidden" name="form" value="attachment_delete">
                                     <input type="hidden" name="id" value="<?= (int)$a['id'] ?>">
-                                    <button type="submit" class="btn btn-danger btn-sm">Olib tashlash</button>
+                                    <button type="submit" class="btn btn-danger-outline btn-sm" name="do" value="1" data-confirm="Jihoz olib tashlansinmi?">Olib tashlash</button>
                                 </form>
                             </td>
                         </tr>

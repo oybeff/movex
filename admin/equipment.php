@@ -28,7 +28,7 @@ requireAdmin();
 requirePagePerm('equipment');
 requireCsrfToken();
 
-$pageTitle = 'Texnika';
+$pageTitle = 'Foydalanuvchilar / Texnika xaritasi';
 $currentPage = 'equipment';
 
 $db = getDbConnection();
@@ -202,6 +202,8 @@ include 'includes/header.php';
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 
 <div class="content">
+    <div class="page-head"><div><h2>Texnika xaritasi</h2><div class="sub">Texnika nuqtasi — egasi qo&#39;shganda tanlagan manzil, jonli joylashuv emas</div></div></div>
+
 
     <div class="stats-grid">
         <div class="stat-card">
@@ -211,7 +213,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format($stats['total']) ?></div>
                     <div class="stat-change"><?= number_format($stats['mapped']) ?> ta xaritada</div>
                 </div>
-                <div class="stat-icon primary">🚜</div>
+                <div class="stat-icon primary"><i data-lucide="tractor"></i></div>
             </div>
         </div>
 
@@ -222,7 +224,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format($stats['available']) ?></div>
                     <div class="stat-change"><?= number_format($stats['busy']) ?> ta band</div>
                 </div>
-                <div class="stat-icon success">✅</div>
+                <div class="stat-icon success"><i data-lucide="check-circle-2"></i></div>
             </div>
         </div>
 
@@ -233,7 +235,7 @@ include 'includes/header.php';
                     <div class="stat-value"><?= number_format(count($deliveryMarkers)) ?></div>
                     <div class="stat-change">buyurtma nuqtasi xaritada</div>
                 </div>
-                <div class="stat-icon primary">📍</div>
+                <div class="stat-icon primary"><i data-lucide="map-pin"></i></div>
             </div>
         </div>
 
@@ -250,7 +252,7 @@ include 'includes/header.php';
                         <?php endif; ?>
                     </div>
                 </div>
-                <div class="stat-icon <?= $stats['no_coords'] > 0 ? 'warning' : 'success' ?>">🧭</div>
+                <div class="stat-icon <?= $stats['no_coords'] > 0 ? 'warning' : 'success' ?>"><i data-lucide="compass"></i></div>
             </div>
         </div>
     </div>
@@ -268,11 +270,11 @@ include 'includes/header.php';
                 </button>
                 <button type="button" class="map-tab" data-mode="equipment"
                         style="padding:6px 14px; font-size:13px; border:none; border-left:1px solid #d1d5db; background:#fff; color:#111; cursor:pointer;">
-                    🚜 Texnika
+                    <i data-lucide="tractor"></i> Texnika
                 </button>
                 <button type="button" class="map-tab" data-mode="delivery"
                         style="padding:6px 14px; font-size:13px; border:none; border-left:1px solid #d1d5db; background:#fff; color:#111; cursor:pointer;">
-                    📍 Buyurtmalar
+                    <i data-lucide="map-pin"></i> Buyurtmalar
                 </button>
             </div>
             <button type="button" id="fit-all" class="btn" style="padding:6px 12px; font-size:13px; margin-left:auto;">
