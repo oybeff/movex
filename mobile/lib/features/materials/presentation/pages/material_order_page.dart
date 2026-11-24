@@ -12,6 +12,7 @@ import '../../../../core/services/material_service.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/material_type_icon.dart';
 import '../../../taxi/data/taxi_geo.dart';
+import '../../../taxi/presentation/pages/address_pick_page.dart';
 import '../../../../core/widgets/h_icon.dart';
 
 /// Material buyurtmasi: miqdor → og'irlik → mashina → yetkazish → jami.
@@ -21,9 +22,10 @@ import '../../../../core/widgets/h_icon.dart';
 /// formula ikki joyda bo'lardi va ular ertami-kechmi ajralib ketardi:
 /// ekranda bir summa, balansdan boshqasi yechilardi.
 ///
-/// Mashinani server tanlaydi (og'irlikka qarab eng kichigi), lekin
-/// foydalanuvchi o'zgartira oladi — u yo'lni va joyni bizdan yaxshiroq
-/// biladi: tor ko'chaga katta mashina kirmasligi mumkin.
+/// Mashinani FAQAT server tanlaydi (og'irlikka qarab eng kichigi).
+/// 24.11.2026 Sherzodbek: mijoz mashina tanlamaydi — faqat miqdorni
+/// (tonna yoki dona) yozadi. Yetkazish nuqtasi — joriy joylashuv,
+/// xohlasa xaritadan boshqasini tanlaydi.
 class MaterialOrderPage extends StatefulWidget {
   const MaterialOrderPage({super.key, required this.product});
 
@@ -36,11 +38,8 @@ class MaterialOrderPage extends StatefulWidget {
 class _MaterialOrderPageState extends State<MaterialOrderPage> {
   final MaterialService _service = MaterialService();
   final _quantityController = TextEditingController();
-  final _addressController = TextEditingController();
   final _commentController = TextEditingController();
 
-  List<DeliveryVehicleModel> _vehicles = [];
-  String? _vehicleCode;
   MaterialQuoteModel? _quote;
 
   /// Serverga har bosilgan raqam uchun so'rov yubormaslik uchun.
@@ -56,7 +55,6 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
         NumberFormatter.formatCurrency(widget.product.minQuantity)
             .replaceAll(' ', '');
     _quantityController.addListener(_onQuantityChanged);
-    _loadVehicles();
     _recalculate();
     _locate();
   }
@@ -64,14 +62,39 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
   /// Куда везти — туда, где сейчас клиент. До 23.11.2026 сюда уходили
   /// координаты САМОГО товара: расстояние 0 км, и «Yo'lkira» всегда 0.
   /// Геолокации нет — точку не выдумываем, доставка не считается.
-  double? _destLat;
-  double? _destLon;
+  TaxiPlace? _dest;
+  bool _locating = true;
+
+  double? get _destLat => _dest?.lat;
+  double? get _destLon => _dest?.lon;
 
   Future<void> _locate() async {
     final here = await TaxiGeo.current();
-    if (!mounted || TaxiGeo.denied) return;
-    _destLat = here.lat;
-    _destLon = here.lon;
+    if (!mounted) return;
+    if (TaxiGeo.denied) {
+      setState(() => _locating = false);
+      return;
+    }
+    setState(() {
+      _dest = here;
+      _locating = false;
+    });
+    _recalculate();
+    final address = await TaxiGeo.addressAt(here);
+    // Пока искали адрес, клиент мог выбрать другую точку — не затираем.
+    if (!mounted || address == null || !identical(_dest, here)) return;
+    setState(() => _dest = here.withAddress(address));
+  }
+
+  Future<void> _pickDest() async {
+    final place = await Navigator.of(context).push<TaxiPlace>(
+      MaterialPageRoute(
+        builder: (_) => AddressPickPage(
+            from: _dest ?? TaxiGeo.tashkent, forSaving: true),
+      ),
+    );
+    if (place == null || !mounted) return;
+    setState(() => _dest = place);
     _recalculate();
   }
 
@@ -80,19 +103,8 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
     _debounce?.cancel();
     _quantityController.removeListener(_onQuantityChanged);
     _quantityController.dispose();
-    _addressController.dispose();
     _commentController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadVehicles() async {
-    try {
-      final vehicles = await _service.getVehicles();
-      if (mounted) setState(() => _vehicles = vehicles);
-    } catch (_) {
-      // Mashinalar ro'yxati bo'lmasa ham buyurtma berish ishlaydi:
-      // serverning o'zi mos mashinani tanlaydi.
-    }
   }
 
   double get _quantity =>
@@ -103,7 +115,13 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
     _debounce = Timer(const Duration(milliseconds: 450), _recalculate);
   }
 
+  /// Номер последнего расчёта. Ответы приходят не по порядку: расчёт
+  /// без точки (при открытии) мог вернуться ПОСЛЕ расчёта с точкой и
+  /// затереть его — на экране стояло «Yo'lkira 0 so'm».
+  int _quoteSeq = 0;
+
   Future<void> _recalculate() async {
+    final seq = ++_quoteSeq;
     if (_quantity <= 0) {
       setState(() {
         _quote = null;
@@ -119,16 +137,15 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
         quantity: _quantity,
         latitude: _destLat,
         longitude: _destLon,
-        vehicleCode: _vehicleCode,
       );
-      if (!mounted) return;
+      if (!mounted || seq != _quoteSeq) return;
       setState(() {
         _quote = quote;
         _error = null;
         _isCalculating = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || seq != _quoteSeq) return;
       setState(() {
         _quote = null;
         // Serverdagi sabab foydalanuvchiga aynan kerak: "eng kam partiya",
@@ -149,16 +166,21 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
 
   Future<void> _submit() async {
     if (_quote == null) return;
+    if (_dest == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('materials.pick_point'.tr())),
+      );
+      return;
+    }
 
     setState(() => _isSending = true);
     try {
       await _service.createOrder(
         productId: widget.product.id,
         quantity: _quantity,
-        address: _addressController.text.trim(),
+        address: _dest!.address ?? '',
         latitude: _destLat,
         longitude: _destLon,
-        vehicleCode: _vehicleCode,
         comment: _commentController.text.trim(),
         deliveryPayment: _cashDelivery ? 'cash' : 'balance',
       );
@@ -332,7 +354,7 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
         ),
       );
 
-  /// Server tanlagan mashina va uni almashtirish imkoni.
+  /// Server tanlagan mashina — faqat ko'rsatiladi, tanlab bo'lmaydi.
   /// Доставку водителю — с Go wallet (заморожена вместе с товаром) или
   /// наличными в руки. Товар — всегда через Go wallet: эскроу.
   bool _cashDelivery = false;
@@ -408,43 +430,11 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
           Text(
             'materials.weight_line'.tr(namedArgs: {
               'weight': NumberFormatter.formatCurrency(quote.weightKg),
-              'vehicle': DeliveryVehicles.label(quote.vehicleCode),
+              'vehicle': quote.vehicleName ?? DeliveryVehicles.label(quote.vehicleCode),
               'trips': '${quote.trips}',
             }),
             style: TextStyle(fontSize: 13, color: Colors.grey[800]),
           ),
-          if (_vehicles.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text('materials.vehicle_change'.tr(),
-                style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final vehicle in _vehicles)
-                  ChoiceChip(
-                    selected: quote.vehicleCode == vehicle.code,
-                    onSelected: (_) {
-                      setState(() => _vehicleCode = vehicle.code);
-                      _recalculate();
-                    },
-                    label: Text(
-                      DeliveryVehicles.label(vehicle.code),
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    selectedColor:
-                        AppColors.primaryGreen.withValues(alpha: 0.18),
-                    backgroundColor: AppColors.background,
-                    side: BorderSide(
-                      color: quote.vehicleCode == vehicle.code
-                          ? AppColors.primaryGreen
-                          : Colors.black12,
-                    ),
-                  ),
-              ],
-            ),
-          ],
         ],
       ),
     );
@@ -530,16 +520,7 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
                 style: const TextStyle(
                     fontSize: 15, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            TextField(
-              controller: _addressController,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                hintText: 'materials.address_hint'.tr(),
-                border: const OutlineInputBorder(),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-            ),
+            _destRow(),
             const SizedBox(height: 10),
             TextField(
               controller: _commentController,
@@ -554,4 +535,50 @@ class _MaterialOrderPageState extends State<MaterialOrderPage> {
           ],
         ),
       );
+
+  Widget _destRow() {
+    final String text;
+    if (_locating) {
+      text = 'materials.locating'.tr();
+    } else if (_dest == null) {
+      text = 'materials.pick_point'.tr();
+    } else {
+      text = (_dest!.address?.isNotEmpty ?? false)
+          ? _dest!.address!
+          : 'materials.current_point'.tr();
+    }
+    return InkWell(
+      onTap: _pickDest,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: _dest == null && !_locating
+                  ? AppColors.error
+                  : Colors.black26),
+        ),
+        child: Row(
+          children: [
+            const HIcon(Icons.location_on_outlined,
+                size: 20, color: AppColors.primaryGreen),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(text,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 14)),
+            ),
+            const SizedBox(width: 8),
+            Text('materials.change_point'.tr(),
+                style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.primaryGreen,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
 }

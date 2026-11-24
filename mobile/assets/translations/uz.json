@@ -1007,6 +1007,10 @@
     "howo": "Howo (25 t)"
   },
   "materials": {
+    "locating": "Joylashuv aniqlanmoqda…",
+    "pick_point": "Yetkazish nuqtasini xaritadan tanlang",
+    "current_point": "Joriy joylashuvingiz",
+    "change_point": "O'zgartirish",
     "title": "Qurilish materiallari",
     "strip_title": "Qurilish materiallari",
     "empty": "Hozircha tovar yo'q",

@@ -110,6 +110,11 @@ class MaterialQuoteModel {
 
   final double weightKg;
   final String vehicleCode;
+
+  /// Название машины из админки (catalog.php). Код вроде `gazel` в
+  /// справочнике приложения может и не быть — на экране было
+  /// `delivery_vehicles.gazel`.
+  final String? vehicleName;
   final int vehicleCapacityKg;
   final int trips;
 
@@ -132,6 +137,7 @@ class MaterialQuoteModel {
     required this.deliveryFee,
     required this.total,
     this.deliveryDistanceKm,
+    this.vehicleName,
   });
 
   double get weightTonnes => weightKg / 1000;
@@ -144,6 +150,7 @@ class MaterialQuoteModel {
       goodsAmount: _toDouble(json['goods_amount']) ?? 0,
       weightKg: _toDouble(json['weight_kg']) ?? 0,
       vehicleCode: json['vehicle_code'] as String? ?? 'labo',
+      vehicleName: json['vehicle_name'] as String?,
       vehicleCapacityKg: json['vehicle_capacity_kg'] as int? ?? 0,
       trips: json['trips'] as int? ?? 1,
       deliveryDistanceKm: _toDouble(json['delivery_distance_km']),

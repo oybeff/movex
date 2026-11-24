@@ -162,7 +162,7 @@ class _DeliverySetupPageState extends State<DeliverySetupPage> {
                       children: [
                         for (final v in _vehicles)
                           ChoiceChip(
-                            label: Text(DeliveryVehicles.label(v.code)),
+                            label: Text(v.name ?? DeliveryVehicles.label(v.code)),
                             selected: _vehicle == v.code,
                             onSelected: (_) => setState(() => _vehicle = v.code),
                             selectedColor: AppPalette.brandSubtle,

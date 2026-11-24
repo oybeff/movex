@@ -61,8 +61,11 @@ class EquipmentPhoto extends StatelessWidget {
   /// остальное почти не меняется.
   final Color background;
 
+  /// front_loader.png — фото «Front end loader 4» с Wikimedia Commons
+  /// (CC0, автор Wikideas1), фон вырезан. В Figma экспорт закрыт.
   static const _photos = {
     'excavator',
+    'front_loader',
     'bulldozer',
     'truck_crane',
     'manipulator',
