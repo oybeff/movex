@@ -109,6 +109,22 @@ $cnt = $db->prepare("SELECT COUNT(*) FROM ($union) t");
 $cnt->execute($allParams);
 $total = (int) $cnt->fetchColumn();
 $pages = max(1, (int) ceil($total / $perPage));
+if (isset($_GET['export'])) {
+    // CSV — joriy filtrlar bo'yicha, 50 000 qatorgacha (Figma E10: katta hajm cheklanadi).
+    $ex = $db->prepare("SELECT * FROM ($union) t ORDER BY created_at DESC LIMIT 50000");
+    $ex->execute($allParams);
+    auditLog('audit_export', 'settings', null, ['period' => $period, 'rows' => $total]);
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="audit_' . date('Y-m-d_Hi') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, ['Vaqt', 'Admin', 'Harakat', 'Obyekt', 'IP', 'Qurilma', "Ma'lumot"]);
+    foreach ($ex as $r) {
+        fputcsv($out, [$r['created_at'], $r['src'] === 'l' ? "Noma'lum" : ($r['full_name'] ?: 'Avto'), auditLabel((string) $r['action']),
+                       $r['entity'] . ($r['entity_id'] !== null ? ' #' . $r['entity_id'] : ''), $r['ip'], uaShort($r['user_agent']), $r['payload']]);
+    }
+    exit;
+}
 $st = $db->prepare("SELECT * FROM ($union) t ORDER BY created_at DESC LIMIT $perPage OFFSET $offset");
 $st->execute($allParams);
 $rows = $st->fetchAll();
@@ -141,6 +157,7 @@ include 'includes/header.php';
 <div class="content">
     <div class="page-head">
         <div><h2>Audit jurnali</h2><div class="sub">Barcha admin harakatlari · o'zgartirib yoki o'chirib bo'lmaydi</div></div>
+        <div class="page-actions"><a class="btn btn-secondary" href="<?= htmlspecialchars(aqs(['export' => 1, 'page' => null])) ?>"><i data-lucide="download"></i> Eksport</a></div>
     </div>
 
     <form class="filters" method="get">
@@ -171,9 +188,9 @@ include 'includes/header.php';
                 $href = $fail ? '' : aqs(['id' => null]) . '&id=' . (int) $r['id'];
                 $link = $fail ? '' : entityLink((string) $r['entity'], $r['entity_id']);
             ?>
-                <tr class="<?= $fail || $r['action'] === 'login_locked' ? 'row-alert' : '' ?>" <?= $href ? 'data-href="' . htmlspecialchars($href) . '"' : '' ?>>
+                <tr class="<?= $fail || $r['action'] === 'login_locked' ? 'audit-fail' : '' ?>" <?= $href ? 'data-href="' . htmlspecialchars($href) . '"' : '' ?>>
                     <td class="num"><?= date('d.m H:i:s', strtotime($r['created_at'])) ?></td>
-                    <td><?php if ($fail): ?><span class="badge badge-danger">Noma'lum</span>
+                    <td><?php if ($fail): ?>Noma'lum<small class="sub">—</small>
                         <?php elseif ($r['full_name']): ?><b><?= htmlspecialchars($r['full_name']) ?></b><small class="sub"><?= ADMIN_ROLES[$r['admin_role']] ?? '' ?></small>
                         <?php else: ?><span class="badge badge-secondary">Avto</span><?php endif; ?></td>
                     <td><b><?= htmlspecialchars(auditLabel((string) $r['action'])) ?></b><?php if ($sub): ?><small class="sub"><?= htmlspecialchars(mb_strimwidth((string) $sub, 0, 80, '…')) ?></small><?php endif; ?></td>
