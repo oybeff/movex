@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         type="text" 
                         id="phone" 
                         name="phone" 
-                        placeholder="+998901234567"
+                        placeholder="998901234567"
                         value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>"
                         required
                         autofocus

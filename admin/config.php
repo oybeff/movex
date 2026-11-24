@@ -217,9 +217,19 @@ function getAdminUser() {
 function adminLogin($phone, $password) {
     $db = getDbConnection();
     
-    // Find admin user by phone
+    // Bazada raqam + belgisiz va bo'shliqsiz: 998901234567. Odam esa
+    // «+998 90 123 45 67» yoki «901234567» deb yozadi — 24.11.2026 gacha
+    // bunday kiritish «parol noto'g'ri» berardi. Harfli login (eski
+    // akkaunt) — o'zgarishsiz qidiriladi.
+    $login = trim((string) $phone);
+    if (preg_match('/^[\d\s()+\-]+$/', $login)) {
+        $login = preg_replace('/\D/', '', $login);
+        if (strlen($login) === 9) {
+            $login = '998' . $login;
+        }
+    }
     $stmt = $db->prepare("SELECT id, full_name, phone, password_hash, role FROM users WHERE phone = ? AND role = 'admin'");
-    $stmt->execute([$phone]);
+    $stmt->execute([$login]);
     $user = $stmt->fetch();
     
     if (!$user) {
