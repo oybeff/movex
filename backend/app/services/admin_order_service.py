@@ -51,6 +51,7 @@ CANCEL_REASONS = {
     "technical": "Texnik nosozlik (ilova / to'lov)",
     "fraud": "Firibgarlik shubhasi",
     "other": "Boshqa sabab",
+    "dispute": "Nizo bo'yicha qaror",
 }
 
 ACTIVE_FREIGHT = ("accepted", "loaded", "arrived")

@@ -41,6 +41,17 @@ function adminNavCounts(PDO $db): array
         // Moderatsiyadagi tovarlar — katalogda ko'rinmaydi
         'materials_pending' => adminCount($db, "SELECT COUNT(*) FROM material_products WHERE status = 'pending'"),
         'problems_open' => adminCount($db, "SELECT COUNT(*) FROM order_problems WHERE status = 'open'"),
+        // Javob kutayotgan yordam chatlari: oxirgi xabar foydalanuvchidan
+        'support_waiting' => adminCount($db, "
+            SELECT COUNT(*) FROM support_threads t
+             WHERE t.status = 'open'
+               AND (SELECT m.is_admin FROM support_messages m WHERE m.thread_id = t.id ORDER BY m.id DESC LIMIT 1) IS FALSE"),
+        // Avto-belgili, hali ko'rilmagan sharhlar (reviews.php bilan bir xil qoida emas — taxminiy, tez)
+        'reviews_flagged' => adminCount($db, "
+            SELECT COUNT(*) FROM reviews r LEFT JOIN equipment e ON e.id = r.equipment_id
+             WHERE NOT r.hidden AND r.moderated_at IS NULL
+               AND (r.user_id = e.owner_id
+                    OR r.comment ~* '(https?://|www\.|t\.me|telegram|instagram|@[a-z0-9_]{3,}|\+?998[ -]?[0-9]{2})')"),
         'problems_late' => adminCount($db, "SELECT COUNT(*) FROM order_problems
                                              WHERE status = 'open' AND created_at < NOW() - INTERVAL '24 hours'"),
         // Tekshirilmagan hujjatlar — haydovchi ishga chiqolmaydi
@@ -69,6 +80,6 @@ function adminNavCounts(PDO $db): array
 /** Qo'ng'iroqchadagi raqam: admin javob berishi kerak bo'lgan hamma narsa. */
 function adminAttentionTotal(array $c): int
 {
-    return $c['problems_open'] + $c['docs_pending'] + $c['payouts_pending']
+    return $c['problems_open'] + $c['docs_pending'] + $c['payouts_pending'] + $c['support_waiting']
          + $c['materials_pending'] + $c['searching_stuck'];
 }

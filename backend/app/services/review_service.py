@@ -31,7 +31,8 @@ def get_reviews(db: Session, skip: int = 0, limit: int = 100, equipment_id: Opti
     Sharhlar ro'yxati. Sharhlar ochiq ma'lumot, lekin odatda muayyan
     texnika bo'yicha kerak bo'ladi.
     """
-    query = db.query(Review)
+    # Admin yashirgan sharhlar (Figma N4) ilovada ko'rinmaydi
+    query = db.query(Review).filter(Review.hidden.is_(False))
     if equipment_id is not None:
         query = query.filter(Review.equipment_id == equipment_id)
     return query.order_by(Review.created_at.desc()).offset(skip).limit(limit).all()
@@ -56,3 +57,36 @@ def delete_review(db: Session, review_id: int):
         db.delete(db_review)
         db.commit()
     return db_review
+
+
+def moderate(db: Session, admin_id: int, review_id: int, hide: bool, reason: Optional[str] = None) -> dict:
+    """
+    Figma N4: admin sharhni yashiradi yoki qoldiradi. Yashirilgan sharh
+    reytingga kirmaydi va ilovada ko'rinmaydi; muallifga xabar boradi.
+    """
+    from datetime import datetime, timezone
+
+    from fastapi import HTTPException
+
+    from app.models.admin_action import AdminAction
+    from app.services import admin_order_service, notification_service
+
+    admin_order_service._admin(db, admin_id)
+    r = db.query(Review).filter(Review.id == review_id).first()
+    if r is None:
+        raise HTTPException(404, "Sharh topilmadi")
+    was_hidden = bool(r.hidden)
+    r.hidden = bool(hide)
+    r.hidden_reason = (reason or None) if hide else None
+    r.moderated_at = datetime.now(timezone.utc)
+    r.moderated_by = admin_id
+    db.add(AdminAction(admin_id=admin_id, action="review_hide" if hide else "review_keep",
+                       entity="review", entity_id=r.id, payload={"reason": reason}))
+    db.commit()
+    if hide and not was_hidden:
+        try:
+            notification_service.create_localized(
+                db, r.user_id, "review_hidden", "review_hidden.title", "review_hidden.body", None, None, None)
+        except Exception:  # noqa: BLE001
+            db.rollback()
+    return {"id": r.id, "hidden": r.hidden}

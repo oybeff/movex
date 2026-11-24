@@ -1,3 +1,4 @@
+import '../../support/presentation/support_pages.dart';
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
@@ -368,6 +369,19 @@ class _DriverOrderPageState extends State<DriverOrderPage> {
               child: IconButton(
                 icon: const HIcon(Icons.arrow_back_rounded, color: AppPalette.textPrimary),
                 onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 16,
+            child: CircleAvatar(
+              backgroundColor: AppPalette.surface,
+              child: IconButton(
+                tooltip: 'dispute.report'.tr(),
+                icon: const HIcon(Icons.report_gmailerrorred_rounded, color: AppPalette.textPrimary),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => OpenDisputePage(kind: 'equipment', orderId: widget.orderId, role: 'performer'))),
               ),
             ),
           ),

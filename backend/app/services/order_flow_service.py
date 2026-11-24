@@ -420,7 +420,7 @@ def executor(db: Session, order: Order) -> dict:
     eq_ids = [r[0] for r in db.query(Equipment.id).filter(Equipment.owner_id == eq.owner_id).all()]
     rating_row = (
         db.query(func.avg(Review.rating), func.count(Review.id))
-        .filter(Review.equipment_id.in_(eq_ids))
+        .filter(Review.equipment_id.in_(eq_ids), Review.hidden.is_(False))
         .first()
     )
     done = (

@@ -1,3 +1,5 @@
+import '../../../core/widgets/h_icon.dart';
+import '../../support/presentation/support_pages.dart';
 import 'package:dio/dio.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -109,6 +111,12 @@ class _DeliveryOrderPageState extends State<DeliveryOrderPage> {
         backgroundColor: AppPalette.surface,
         elevation: 0,
         title: Text('driver.delivery_order'.tr(args: ['${o.id}']), style: AppTypography.h3),
+        actions: [if (!closed) IconButton(
+          tooltip: 'dispute.report'.tr(),
+          icon: const HIcon(Icons.report_gmailerrorred_rounded, color: AppPalette.textPrimary),
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => OpenDisputePage(kind: 'material', orderId: o.id, role: 'performer'))),
+        )],
       ),
       body: RefreshIndicator(
         onRefresh: _reload,

@@ -228,6 +228,8 @@ $attn = [
         $counts['payouts_late'] ? $counts['payouts_late'] . ' tasi 24 soatdan beri kutmoqda' : 'Egalar pulini kutmoqda', $counts['payouts_late'] > 0, 'warn'],
     ['problems.php', 'shield-alert', 'Ochiq nizolar', $counts['problems_open'],
         $counts['problems_late'] ? $counts['problems_late'] . ' tasi 24 soatdan beri javobsiz' : 'Mijoz shikoyatlari', $counts['problems_late'] > 0, 'danger'],
+    ['support.php', 'messages-square', 'Javobsiz yordam chatlari', $counts['support_waiting'], 'Foydalanuvchi javob kutmoqda', false, 'danger'],
+    ['reviews.php', 'star', 'Sharhlar moderatsiyasi', $counts['reviews_flagged'], 'Avto-belgili sharhlar', false, 'warn'],
     ['materials.php', 'brick-wall', 'Tovar moderatsiyasi', $counts['materials_pending'], "Katalogda ko'rinmayapti", false, 'warn'],
     ['requests.php', 'megaphone', 'Taklifsiz zayavkalar', $counts['requests_no_offers'], 'Bironta ega javob bermagan', false, 'warn'],
     ['equipment.php', 'map-pin-off', 'Joylashuvsiz texnika', $counts['equipment_no_coords'], "Xaritada va qidiruvda yo'q", false, 'secondary'],

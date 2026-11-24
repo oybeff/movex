@@ -254,7 +254,7 @@ $cStats = one($db, "SELECT COUNT(*) FILTER (WHERE kind <> 'request') AS n, COUNT
 $perf = $row['perf_id'] ? one($db, 'SELECT id, full_name, phone, is_blocked, is_frozen FROM users WHERE id = ?', [$row['perf_id']]) : [];
 $pStats = $perf ? one($db, "SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE st = 'done') AS ok
                              FROM " . ordersUnionSql() . " WHERE u.perf_id = ?", [$perf['id']]) : [];
-$rating = $perf ? one($db, 'SELECT ROUND(AVG(r.rating)::numeric, 1) AS r, COUNT(*) AS n FROM reviews r JOIN equipment e ON e.id = r.equipment_id WHERE e.owner_id = ?', [$perf['id']]) : [];
+$rating = $perf ? one($db, 'SELECT ROUND(AVG(r.rating)::numeric, 1) AS r, COUNT(*) AS n FROM reviews r JOIN equipment e ON e.id = r.equipment_id WHERE e.owner_id = ? AND NOT r.hidden', [$perf['id']]) : [];
 
 // Ijrochilar (O4) — faqat ijrochisi bor turlar
 $cand = null;

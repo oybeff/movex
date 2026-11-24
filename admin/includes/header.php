@@ -23,11 +23,13 @@ $navSections = [
         ['listings', 'listings.php', 'newspaper', "E'lonlar", $navCounts['listings_taken'], ''],
         ['materials', 'materials.php', 'brick-wall', 'Materiallar', $navCounts['materials_pending'], 'warn'],
         ['problems', 'problems.php', 'shield-alert', 'Nizolar', $navCounts['problems_open'], 'danger'],
+        ['support', 'support.php', 'messages-square', 'Yordam chatlari', $navCounts['support_waiting'], 'danger'],
     ],
     'Foydalanuvchilar' => [
         ['users', 'users.php', 'users', 'Mijozlar', null, ''],
         ['drivers', 'drivers.php', 'file-check-2', 'Hujjatlar tekshiruvi', $navCounts['docs_pending'], 'warn'],
         ['equipment', 'equipment.php', 'truck', 'Texnika', $navCounts['equipment_no_coords'], 'warn'],
+        ['reviews', 'reviews.php', 'star', 'Sharhlar', $navCounts['reviews_flagged'], 'warn'],
     ],
     'Moliya' => [
         ['balance', 'balance.php', 'credit-card', "To'lovlar", null, ''],

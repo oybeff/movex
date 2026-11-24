@@ -1,3 +1,5 @@
+import '../../../support/presentation/support_pages.dart';
+import '../../../../core/widgets/h_icon.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -111,7 +113,6 @@ class _HelpPageState extends State<HelpPage> {
 
   @override
   Widget build(BuildContext context) {
-    final chat = _find(['telegram', 'whatsapp', 'sms']);
     final phone = _find(['phone']);
     final q = _query.trim().toLowerCase();
     final faq = _faq.where((k) {
@@ -157,6 +158,18 @@ class _HelpPageState extends State<HelpPage> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  Material(
+                    color: AppPalette.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    child: ListTile(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                      leading: const HIcon(Icons.gavel_rounded, color: AppPalette.brand),
+                      title: Text('dispute.mine'.tr(), style: AppTypography.bodyMedium),
+                      trailing: const HIcon(Icons.chevron_right_rounded, color: AppPalette.textSecondary),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DisputesPage())),
+                    ),
+                  ),
                   if (faq.isNotEmpty) const SizedBox(height: 16),
                   if (faq.isNotEmpty) Row(
                     children: [
@@ -165,7 +178,8 @@ class _HelpPageState extends State<HelpPage> {
                         bg: AppPalette.brand,
                         title: 'taxi.help_chat'.tr(),
                         sub: 'taxi.help_chat_sub'.tr(),
-                        onTap: () => _launch(chat),
+                        // 24.11.2026: chat — ilova ichida (admin paneldan javob beriladi)
+                        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportChatPage())),
                       ),
                       const SizedBox(width: 10),
                       _contact(
@@ -185,7 +199,10 @@ class _HelpPageState extends State<HelpPage> {
                       body: 'taxi.help_nothing_body'.tr(),
                     ),
                     const SizedBox(height: 24),
-                    ElevatedButton(onPressed: () => _launch(chat), child: Text('taxi.write_operator'.tr())),
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SupportChatPage())),
+                      child: Text('taxi.write_operator'.tr()),
+                    ),
                   ] else ...[
                   const SizedBox(height: 16),
                   GroupLabel('taxi.faq_title'.tr()),

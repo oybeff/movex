@@ -12,7 +12,7 @@
  * stuck   — 10+ daqiqa ijrochi qidirilmoqda (dashboard banneri bilan bir xil qoida).
  */
 
-function ordersUnionSql(): string
+function ordersUnionSql(string $alias = 'u'): string
 {
     return "(
     SELECT 'equipment'::text AS kind, o.id, o.created_at,
@@ -25,7 +25,7 @@ function ordersUnionSql(): string
                 WHEN o.status = 'completed' THEN 'done' ELSE 'cancelled' END AS st,
            o.status AS raw, COALESCE(o.payment_method, 'balance') AS payment, o.total_amount AS amount,
            o.created_at AS wait_since, o.delay_minutes AS delay,
-           EXISTS (SELECT 1 FROM order_problems p WHERE p.order_id = o.id AND p.status = 'open') AS dispute,
+           EXISTS (SELECT 1 FROM order_problems op WHERE op.kind = 'equipment' AND op.order_id = o.id AND op.status = 'open') AS dispute,
            false AS stuck
       FROM orders o
       JOIN users cu ON cu.id = o.user_id
@@ -51,7 +51,8 @@ function ordersUnionSql(): string
            CASE f.status WHEN 'searching' THEN 'searching' WHEN 'accepted' THEN 'assigned'
                 WHEN 'done' THEN 'done' WHEN 'cancelled' THEN 'cancelled' ELSE 'progress' END,
            f.status, f.payment_method, f.price,
-           f.created_at, NULL, false,
+           f.created_at, NULL,
+           EXISTS (SELECT 1 FROM order_problems op WHERE op.kind = 'freight' AND op.order_id = f.id AND op.status = 'open'),
            (f.status = 'searching' AND f.created_at < NOW() - INTERVAL '10 minutes')
       FROM freight_orders f
       JOIN users cu ON cu.id = f.client_id
@@ -70,7 +71,8 @@ function ordersUnionSql(): string
                 ELSE 'progress' END,
            CASE WHEN m.status = 'confirmed' AND m.dispatch = 'driver' THEN 'd_' || COALESCE(m.delivery_status, '') ELSE m.status END,
            COALESCE(m.delivery_payment, 'balance'), m.total_amount,
-           CASE WHEN m.status = 'pending' THEN m.created_at ELSE m.updated_at END, NULL, false,
+           CASE WHEN m.status = 'pending' THEN m.created_at ELSE m.updated_at END, NULL,
+           EXISTS (SELECT 1 FROM order_problems op WHERE op.kind = 'material' AND op.order_id = m.id AND op.status = 'open'),
            (m.status = 'confirmed' AND m.delivery_status = 'searching' AND m.updated_at < NOW() - INTERVAL '10 minutes')
       FROM material_orders m
       JOIN users cu ON cu.id = m.buyer_id
@@ -78,7 +80,7 @@ function ordersUnionSql(): string
       LEFT JOIN users sl ON sl.id = m.seller_id
       LEFT JOIN users dr ON dr.id = m.driver_id
       LEFT JOIN delivery_driver_profiles dp ON dp.user_id = m.driver_id
-) u";
+) " . $alias;
 }
 
 const ORDER_TABS = [

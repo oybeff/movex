@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../data/freight_api.dart';
+import '../../support/presentation/support_pages.dart';
 import '../../../core/widgets/h_icon.dart';
 
 /// Заказы «Yuk tashish» клиента: статус, кто везёт, отмена до погрузки,
@@ -168,6 +169,16 @@ class _FreightOrdersPageState extends State<FreightOrdersPage> {
               child: Text('freight.finish'.tr()),
             ),
           ],
+          if (o.status != 'searching' && o.status != 'cancelled')
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => OpenDisputePage(kind: 'freight', orderId: o.id))),
+                icon: const HIcon(Icons.report_gmailerrorred_rounded, size: 18),
+                label: Text('dispute.report'.tr()),
+              ),
+            ),
         ],
       ),
     );

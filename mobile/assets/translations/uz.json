@@ -1955,5 +1955,40 @@
     "min_order": "Minimal buyurtma",
     "total": "Jami",
     "confirm": "Buyurtmani tasdiqlash"
+  },
+  "dispute": {
+    "report": "Muammo bor",
+    "mine": "Mening nizolarim",
+    "none": "Hozircha nizo yo'q",
+    "title_n": "Nizo #{}",
+    "order_n": "Buyurtma #{}",
+    "badge_open": "Ko'rib chiqilmoqda",
+    "badge_done": "Hal qilindi",
+    "status_open": "MoveX GO ko'rib chiqmoqda. Javob shu yerda keladi — birinchi javob odatda 1 soat ichida.",
+    "how_it_works": "Nizo ochilgach MoveX GO ikkala tomonni eshitadi va 48 soat ichida qaror chiqaradi. Pul qaror chiqquncha joyida turadi.",
+    "wait_admin": "Xabaringiz qabul qilindi. Qo'llab-quvvatlash xizmati shu yerda yozadi.",
+    "closed": "Nizo yopilgan. Savol bo'lsa — Yordam chatiga yozing.",
+    "resolved_client": "Qaror: mijoz foydasiga. Buyurtma bekor qilindi, {} qaytarildi.",
+    "resolved_partial": "Qaror: qisman. Mijozga {} qaytarildi, qolgani ijrochiga o'tdi.",
+    "resolved_performer": "Qaror: ijrochi foydasiga. Buyurtma yakunlandi.",
+    "resolved_close": "Nizo yopildi, pul harakatlanmadi.",
+    "reason_not_arrived": "Ijrochi kelmadi",
+    "reason_wrong_equipment": "Boshqa texnika keldi yoki nosoz",
+    "reason_poor_quality": "Ish sifatsiz yoki to'liq bajarilmadi",
+    "reason_price_differs": "Narx boshqacha",
+    "reason_damaged": "Yuk yoki tovar shikastlangan",
+    "reason_wrong_quantity": "Miqdor mos emas",
+    "reason_client_no_pay": "Mijoz to'lamadi",
+    "reason_client_absent": "Mijoz joyida yo'q",
+    "reason_other": "Boshqa"
+  },
+  "support": {
+    "title": "Yordam chati",
+    "empty": "Savolingizni yozing — MoveX GO qo'llab-quvvatlash xizmati shu yerda javob beradi.",
+    "team": "MoveX GO yordam",
+    "not_sent": "Yuborilmadi. Internetni tekshirib, qayta urinib ko'ring",
+    "attach": "Rasm qo'shish",
+    "write_hint": "Xabar yozing…",
+    "send": "Yuborish"
   }
 }

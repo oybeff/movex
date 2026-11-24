@@ -440,6 +440,23 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "Buyurtma #{order_number} boshqa ijrochiga berildi",
         "ru": "Заказ #{order_number} передан другому исполнителю",
     },
+    "dispute_message.title": {"uz": "Nizo bo'yicha yangi xabar", "ru": "Новое сообщение по спору"},
+    "dispute_message.body": {
+        "uz": "Buyurtma #{order_number}: MoveX GO qo'llab-quvvatlash xizmati yozdi",
+        "ru": "Заказ #{order_number}: вам написала поддержка MoveX GO",
+    },
+    "dispute_resolved.title": {"uz": "Nizo bo'yicha qaror chiqdi", "ru": "По спору принято решение"},
+    "dispute_resolved.body": {
+        "uz": "Buyurtma #{order_number}: qarorni ilovada ko'ring",
+        "ru": "Заказ #{order_number}: решение — в приложении",
+    },
+    "support_reply.title": {"uz": "Yordam xizmati javob berdi", "ru": "Ответ поддержки"},
+    "support_reply.body": {"uz": "{text}", "ru": "{text}"},
+    "review_hidden.title": {"uz": "Sharhingiz yashirildi", "ru": "Ваш отзыв скрыт"},
+    "review_hidden.body": {
+        "uz": "Sharhingiz qoidalarga mos kelmadi va boshqalarga ko'rsatilmaydi",
+        "ru": "Отзыв не соответствует правилам и не показывается другим",
+    },
     "order_assigned.title": {"uz": "Sizga buyurtma tayinlandi", "ru": "Вам назначен заказ"},
     "order_assigned.body": {
         "uz": "Buyurtma #{order_number} sizga berildi — ilovada oching",

@@ -9,6 +9,7 @@ import '../../../../core/services/material_service.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/utils/number_formatter.dart';
 import '../../../../core/widgets/h_icon.dart';
+import '../../../support/presentation/support_pages.dart';
 
 /// Заказы стройматериалов: у клиента — свои покупки, у продавца
 /// ([asSeller]) — пришедшие заказы.
@@ -224,6 +225,18 @@ class _MaterialOrdersPageState extends State<MaterialOrdersPage> {
     );
   }
 
+  /// «Muammo bor» — nizo (xaridor: client, sotuvchi: performer)
+  Widget _disputeButton(MaterialOrderModel o) => Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => OpenDisputePage(
+                  kind: 'material', orderId: o.id, role: widget.asSeller ? 'performer' : 'client'))),
+          icon: const HIcon(Icons.report_gmailerrorred_rounded, size: 18),
+          label: Text('dispute.report'.tr()),
+        ),
+      );
+
   List<Widget> _actions(MaterialOrderModel o, bool busy) {
     final out = <Widget>[];
     if (widget.asSeller) {
@@ -252,7 +265,7 @@ class _MaterialOrdersPageState extends State<MaterialOrdersPage> {
         out.add(Text('material_orders.seller_driver_coming'.tr(),
             style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary)));
       }
-      return out;
+      return [...out, if (o.status == 'confirmed' || o.status == 'delivered') _disputeButton(o)];
     }
     if (o.onTheWay) {
       if (o.cashDelivery) {
@@ -274,7 +287,7 @@ class _MaterialOrdersPageState extends State<MaterialOrdersPage> {
         child: Text('material_orders.cancel'.tr()),
       ));
     }
-    return out;
+    return [...out, if (o.status == 'confirmed' || o.status == 'delivered') _disputeButton(o)];
   }
 
   Widget _row(String k, String v, {bool bold = false}) => Padding(

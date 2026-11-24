@@ -28,7 +28,7 @@ import '../../../../core/services/permission_service.dart';
 import 'package:dio/dio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'problem_page.dart';
+import '../../../support/presentation/support_pages.dart';
 import '../../data/card_api.dart';
 import 'taxi_chat_page.dart';
 import 'taxi_profile_page.dart';
@@ -745,7 +745,7 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     final id = _order?['id'] as int?;
     if (id == null) return;
     final sent = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => ProblemPage(orderId: id)),
+      MaterialPageRoute(builder: (_) => OpenDisputePage(kind: 'equipment', orderId: id)),
     );
     if (sent == true) {
       try {

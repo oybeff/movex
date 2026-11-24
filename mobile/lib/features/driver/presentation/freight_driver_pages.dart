@@ -1,3 +1,5 @@
+import '../../../core/widgets/h_icon.dart';
+import '../../support/presentation/support_pages.dart';
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -199,6 +201,12 @@ class _FreightDriverOrderPageState extends State<FreightDriverOrderPage> {
         backgroundColor: AppPalette.surface,
         elevation: 0,
         title: Text('driver.freight_order'.tr(args: ['${o.id}']), style: AppTypography.h3),
+        actions: [if (o.status != 'cancelled') IconButton(
+          tooltip: 'dispute.report'.tr(),
+          icon: const HIcon(Icons.report_gmailerrorred_rounded, color: AppPalette.textPrimary),
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => OpenDisputePage(kind: 'freight', orderId: o.id, role: 'performer'))),
+        )],
       ),
       body: RefreshIndicator(
         onRefresh: _reload,

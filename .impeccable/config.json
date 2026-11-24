@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-11-24T08:52:43.365Z",
+        "reason": "MoveX GO design system: Figma Admin panel and mobile app use Inter (app_tokens/translations icons rendered in Inter Bold)"
+      }
+    ]
+  }
+}

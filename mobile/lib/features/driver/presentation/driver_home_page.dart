@@ -1,3 +1,4 @@
+import '../../support/presentation/support_pages.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -170,6 +171,8 @@ class _DriverProfileTabState extends State<DriverProfileTab> {
             _group([
               _item(Icons.account_balance_wallet_outlined, 'driver.withdraw'.tr(), () => _push(const DriverPayoutPage())),
               _item(Icons.credit_card_rounded, 'driver.my_cards'.tr(), () => _push(const DriverCardsPage())),
+              _item(Icons.support_agent_rounded, 'support.title'.tr(), () => _push(const SupportChatPage())),
+              _item(Icons.gavel_rounded, 'dispute.mine'.tr(), () => _push(const DisputesPage())),
               _item(Icons.notifications_none_rounded, 'driver.notifications'.tr(), () => context.push('/notifications')),
               _item(Icons.language_rounded, 'driver.settings'.tr(), () => context.push('/settings')),
               _item(Icons.logout_rounded, 'driver.logout'.tr(), _logout, danger: true),
