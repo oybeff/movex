@@ -142,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$rows = $db->query('SELECT equipment_type, tier, price_per_hour, min_hours, eta_minutes, package_hours, package_price FROM tariffs')->fetchAll();
+$rows = $db->query('SELECT equipment_type, tier, price_per_hour, min_hours, eta_minutes, package_hours, package_price, is_active FROM tariffs')->fetchAll();
 $tariffs = [];
 foreach ($rows as $r) {
     $tariffs[$r['equipment_type']][$r['tier']] = $r;
@@ -233,8 +233,13 @@ function money($v) {
                             <td>
                                 <input form="<?= $formId ?>" type="text" inputmode="numeric"
                                        name="price_<?= $tier ?>" style="width:130px"
-                                       value="<?= isset($t[$tier]) ? (int)($t[$tier]['package_price'] ?? $t[$tier]['price_per_hour']) : '' ?>"
-                                       placeholder="—">
+                                       value="<?= isset($t[$tier]) && $t[$tier]['is_active'] ? (int)($t[$tier]['package_price'] ?? $t[$tier]['price_per_hour']) : '' ?>"
+                                       placeholder="<?= isset($t[$tier]) && !$t[$tier]['is_active'] ? "o'chirilgan" : '—' ?>">
+                                <?php if (isset($t[$tier]) && !$t[$tier]['is_active']): ?>
+                                    <!-- O'chirilgan tarif eski narxini formaga qo'ymaydi: aks holda boshqa
+                                         narxni saqlaganda u noto'g'ri narx bilan qayta yoqilardi (24.11.2026). -->
+                                    <br><small style="color:#b45309">o'chirilgan<?= isset($packageHours[$tier]) ? ' — ' . $packageHours[$tier] . ' soatlik paket narxini kiriting' : '' ?></small>
+                                <?php endif; ?>
                                 <br>
                                 <input form="<?= $formId ?>" type="text" inputmode="numeric"
                                        name="eta_<?= $tier ?>" style="width:130px;margin-top:4px"
