@@ -220,7 +220,9 @@ const OTP_RESEND_SECONDS = 60;
 const TRUST_COOKIE = 'movex_admin_trust';
 const TRUST_DAYS = 30;
 const IDLE_MINUTES = 30;
-define('ADMIN_SMS_2FA_OFF', strtolower((string) ($GLOBALS['movexEnv']['ADMIN_SMS_2FA'] ?? 'true')) === 'false');
+// SMS-kod bilan kirish egasining qarori bilan O'CHIRILGAN (25.11.2026): kirish —
+// telefon + parol. Yoqish kerak bo'lsa: backend/.env da ADMIN_SMS_2FA=true.
+define('ADMIN_SMS_2FA_OFF', strtolower((string) ($GLOBALS['movexEnv']['ADMIN_SMS_2FA'] ?? 'false')) !== 'true');
 
 function normalizeAdminLogin(string $login): string {
     $login = trim($login);

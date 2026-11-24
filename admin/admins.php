@@ -191,7 +191,7 @@ include 'includes/header.php';
                             </form>
                         <?php endif; ?>
                     </td>
-                    <td><span class="badge badge-success"><i data-lucide="shield-check"></i> SMS</span>
+                    <td><?= ADMIN_SMS_2FA_OFF ? '<span class="badge badge-secondary">Faqat parol</span>' : '<span class="badge badge-success"><i data-lucide="shield-check"></i> SMS</span>' ?>
                         <?php if ($a['devices']): ?><small class="sub"><?= (int) $a['devices'] ?> ta eslab qolingan qurilma</small><?php endif; ?></td>
                     <td><?= $a['last_login_at'] ? lastSeenText($a['last_login_at']) : '<span class="text-muted">Kirmagan</span>' ?>
                         <?php if ($a['last_ua'] || $a['last_ip']): ?><small class="sub"><?= htmlspecialchars(uaShort($a['last_ua'])) ?> · <span class="num"><?= htmlspecialchars($a['last_ip'] ?: '—') ?></span></small><?php endif; ?>

@@ -301,7 +301,7 @@ $maskedPhone = $pending ? maskAdminPhone($pending['login']) : '';
                 </div>
                 <button class="btn btn-primary btn-block btn-lg" type="submit">Kirish</button>
             </form>
-            <p class="auth-note"><i data-lucide="shield"></i><span>Kirish 2 bosqichli: parol + SMS kod. Ro'yxatdan o'tish yo'q — faqat taklif orqali.</span></p>
+            <p class="auth-note"><i data-lucide="shield"></i><span><?= ADMIN_SMS_2FA_OFF ? '' : 'Kirish 2 bosqichli: parol + SMS kod. ' ?>Ro'yxatdan o'tish yo'q — faqat taklif orqali. 5 ta xato urinish — 15 daqiqa blok.</span></p>
         <?php endif; ?>
         </div>
     </main>
