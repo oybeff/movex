@@ -48,6 +48,9 @@ class Equipment(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    # Admin P4 (T1/T2): kim va qachon ko'rib chiqdi — faqat admin navbati uchun
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    reviewed_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     photos = relationship("EquipmentPhoto", back_populates="equipment", cascade="all, delete-orphan")
 

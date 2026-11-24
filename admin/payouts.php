@@ -71,309 +71,295 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['req
     }
 }
 
-// Pagination va filtrlar
-$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-$perPage = ITEMS_PER_PAGE;
-$offset = ($page - 1) * $perPage;
+// ----------------------------------------------------------------- F2 · ro'yxat (Figma «Admin panel» 06)
+require_once __DIR__ . '/includes/user_lib.php';
 
-$statusFilter = $_GET['status'] ?? 'pending';
-$searchQuery = $_GET['search'] ?? '';
-
-$whereConditions = [];
+$tab = $_GET['tab'] ?? 'pending';
+$q = trim((string) ($_GET['q'] ?? ''));
+$tabWhere = [
+    'pending' => "pr.status = 'pending' AND pr.rahmat_uuid IS NULL",
+    'sent' => "pr.status = 'pending' AND pr.rahmat_uuid IS NOT NULL",
+    'paid' => "pr.status = 'paid'",
+    'bank' => "pr.status = 'rejected' AND pr.rahmat_error IS NOT NULL",
+    'rejected' => "pr.status = 'rejected' AND pr.rahmat_error IS NULL",
+    'all' => 'TRUE',
+];
+$tabNames = ['pending' => 'Kutilmoqda', 'sent' => 'Bankka yuborilgan', 'paid' => 'Bajarildi',
+             'bank' => 'Bank rad etdi', 'rejected' => 'Rad etilgan', 'all' => 'Hammasi'];
+if (!isset($tabWhere[$tab])) {
+    $tab = 'pending';
+}
+$counts = [];
+foreach ($tabWhere as $k => $w) {
+    $counts[$k] = (int) $db->query("SELECT COUNT(*) FROM payout_requests pr WHERE $w")->fetchColumn();
+}
+$where = [$tabWhere[$tab]];
 $params = [];
+if ($q !== '') {
+    $digits = preg_replace('/\D/', '', $q);
+    $c = 'u.full_name ILIKE ?';
+    $params[] = '%' . $q . '%';
+    if ($digits !== '') {
+        $c .= ' OR u.phone LIKE ? OR pr.id::text = ?';
+        $params[] = '%' . $digits . '%';
+        $params[] = $digits;
+    }
+    $where[] = '(' . $c . ')';
+}
+$selectSql = "SELECT pr.*, u.full_name, u.phone, u.is_blocked, u.is_frozen, u.role,
+                   b.balance, b.frozen_balance, b.bonus_balance,
+                   (SELECT COUNT(*) FROM payout_requests x WHERE x.user_id = pr.user_id AND x.created_at::date = pr.created_at::date) AS same_day,
+                   (SELECT COUNT(*) FROM driver_documents d WHERE d.user_id = pr.user_id) AS docs,
+                   (SELECT COUNT(*) FROM driver_documents d WHERE d.user_id = pr.user_id AND d.status <> 'approved') AS docs_bad,
+                   a.full_name AS processed_name
+              FROM payout_requests pr
+              JOIN users u ON u.id = pr.user_id
+              LEFT JOIN balances b ON b.user_id = pr.user_id
+              LEFT JOIN users a ON a.id = pr.processed_by";
+$listSql = $selectSql . ' WHERE ' . implode(' AND ', $where);
 
-if ($statusFilter !== 'all') {
-    $whereConditions[] = "pr.status = ?";
-    $params[] = $statusFilter;
+if (($_GET['export'] ?? '') === 'csv') {
+    $st = $db->prepare($listSql . ' ORDER BY pr.created_at DESC LIMIT 50000');
+    $st->execute($params);
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="pul-yechish-' . date('Y-m-d') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, ['ID', 'Sana', 'Haydovchi', 'Telefon', "So'ralgan", 'Ulush', "O'tkaziladi", 'Karta', 'Holat', 'Shlyuz', 'Xato']);
+    foreach ($st as $r) {
+        fputcsv($out, [$r['id'], date('d.m.Y H:i', strtotime($r['created_at'])), $r['full_name'], $r['phone'], (int) $r['amount'],
+                       (int) $r['commission'], (int) $r['payout_amount'], '**** ' . substr(preg_replace('/\D/', '', $r['card_number']), -4),
+                       $r['status'], $r['rahmat_status'], $r['rahmat_error']]);
+    }
+    fclose($out);
+    exit;
 }
 
-if (!empty($searchQuery)) {
-    $whereConditions[] = "(u.full_name ILIKE ? OR u.phone ILIKE ?)";
-    $params[] = "%$searchQuery%";
-    $params[] = "%$searchQuery%";
+$perPage = 30;
+$total = $db->prepare("SELECT COUNT(*) FROM ($listSql) x");
+$total->execute($params);
+$total = (int) $total->fetchColumn();
+$pages = max(1, (int) ceil($total / $perPage));
+$page = min($pages, max(1, (int) ($_GET['page'] ?? 1)));
+$offset = ($page - 1) * $perPage;
+$st = $db->prepare($listSql . ' ORDER BY pr.created_at ' . ($tab === 'pending' ? 'ASC' : 'DESC') . " LIMIT $perPage OFFSET $offset");
+$st->execute($params);
+$requests = $st->fetchAll();
+
+const BIG_PAYOUT = 5000000;
+
+/**
+ * Avtomatik tekshiruvlar (F2/F4): [[matn, 'danger'|'warning'], ...].
+ * Qizil — o'tkazishdan oldin albatta tekshirish kerak. Ikkinchi admin
+ * tasdig'i (4-eyes) yo'q — egasi qarori (24.11.2026), faqat belgi.
+ */
+function payoutChecks(array $r): array
+{
+    $out = [];
+    if ($r['is_blocked']) $out[] = ['Akkaunt bloklangan', 'danger'];
+    if ($r['is_frozen']) $out[] = ['Akkaunt muzlatilgan', 'danger'];
+    if ((int) $r['docs'] > 0 && (int) $r['docs_bad'] > 0) $out[] = ['Hujjatlar tasdiqlanmagan', 'danger'];
+    if ((int) $r['same_day'] > 3) $out[] = ['Kunlik limit: ' . (int) $r['same_day'] . "-so'rov", 'danger'];
+    if ($r['status'] === 'pending' && (float) $r['balance'] < (float) $r['amount']) $out[] = ['Balans yetmaydi', 'danger'];
+    $holder = mb_strtolower(trim((string) $r['card_holder']));
+    if ($holder !== '') {
+        $hit = false;
+        foreach (preg_split('/\s+/', mb_strtolower((string) $r['full_name'])) as $w) {
+            if (mb_strlen($w) >= 3 && mb_strpos($holder, mb_substr($w, 0, 4)) !== false) {
+                $hit = true;
+            }
+        }
+        if (!$hit) $out[] = ['Karta egasi ismi mos kelmaydi?', 'warning'];
+    }
+    if ((float) $r['amount'] >= BIG_PAYOUT) $out[] = ['Katta summa (5 mln dan ortiq)', 'warning'];
+    return $out;
 }
 
-$whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
+function pqs(array $over = []): string
+{
+    $p = array_filter(array_merge($_GET, $over), function ($v) { return $v !== '' && $v !== null; });
+    unset($p['export']);
+    return '?' . http_build_query($p);
+}
 
-$countQuery = "
-    SELECT COUNT(*) as total
-    FROM payout_requests pr
-    JOIN users u ON pr.user_id = u.id
-    $whereClause
-";
-$countStmt = $db->prepare($countQuery);
-$countStmt->execute($params);
-$totalRecords = $countStmt->fetch()['total'];
-$totalPages = max(1, ceil($totalRecords / $perPage));
+function hasDanger(array $checks): bool
+{
+    foreach ($checks as $c) {
+        if ($c[1] === 'danger') return true;
+    }
+    return false;
+}
 
-$query = "
-    SELECT
-        pr.id, pr.amount, pr.commission, pr.payout_amount,
-        pr.status, pr.card_number, pr.card_holder,
-        pr.rahmat_uuid, pr.rahmat_status, pr.rahmat_receipt_url, pr.rahmat_error,
-        pr.comment, pr.admin_comment, pr.created_at, pr.processed_at,
-        u.full_name, u.phone,
-        b.balance, b.frozen_balance
-    FROM payout_requests pr
-    JOIN users u ON pr.user_id = u.id
-    LEFT JOIN balances b ON b.user_id = pr.user_id
-    $whereClause
-    ORDER BY pr.created_at DESC
-    LIMIT $perPage OFFSET $offset
-";
-$stmt = $db->prepare($query);
-$stmt->execute($params);
-$requests = $stmt->fetchAll();
-
-// Statistika
-$stats = $db->query("
-    SELECT
-        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count,
-        COALESCE(SUM(CASE WHEN status = 'pending' THEN payout_amount END), 0) as pending_amount,
-        COALESCE(SUM(CASE WHEN status = 'paid' THEN payout_amount END), 0) as paid_amount,
-        COALESCE(SUM(CASE WHEN status = 'paid' AND processed_at >= NOW() - INTERVAL '30 days'
-                          THEN payout_amount END), 0) as paid_month,
-        COALESCE(SUM(CASE WHEN status = 'paid' THEN commission END), 0) as commission_total
-    FROM payout_requests
-")->fetch();
+// ----------------------------------------------------------------- F3 · tafsilot
+$detail = null;
+if (isset($_GET['id'])) {
+    $d = $db->prepare($selectSql . ' WHERE pr.id = ?');
+    $d->execute([(int) $_GET['id']]);
+    $detail = $d->fetch() ?: null;
+}
+$autoRow = $db->query("SELECT value #>> '{}' FROM app_settings WHERE key = 'payout_auto_enabled'")->fetchColumn();
+$auto = $autoRow === '1';
 
 include 'includes/header.php';
 ?>
-
 <div class="content">
     <?php if ($message): ?>
-        <div class="alert alert-<?= $messageType === 'success' ? 'success' : 'error' ?>">
-            <?= htmlspecialchars($message) ?>
-        </div>
+        <div class="alert alert-<?= $messageType === 'success' ? 'success' : 'error' ?>"><?= htmlspecialchars($message) ?></div>
     <?php endif; ?>
 
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-header">
-                <div>
-                    <div class="stat-title">Kutilmoqda</div>
-                    <div class="stat-value"><?= number_format($stats['pending_count']) ?></div>
-                    <div class="stat-change">
-                        <?= number_format($stats['pending_amount'], 0) ?> so'm kartaga
-                    </div>
-                </div>
-                <div class="stat-icon warning">⏳</div>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-header">
-                <div>
-                    <div class="stat-title">Oxirgi 30 kun</div>
-                    <div class="stat-value"><?= number_format($stats['paid_month'], 0) ?></div>
-                    <div class="stat-change">so'm kartalarga o'tkazilgan</div>
-                </div>
-                <div class="stat-icon primary">📅</div>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-header">
-                <div>
-                    <div class="stat-title">Jami o'tkazilgan</div>
-                    <div class="stat-value"><?= number_format($stats['paid_amount'], 0) ?></div>
-                    <div class="stat-change">so'm</div>
-                </div>
-                <div class="stat-icon success">✅</div>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-header">
-                <div>
-                    <div class="stat-title">Ushlangan ulush</div>
-                    <div class="stat-value"><?= number_format($stats['commission_total'], 0) ?></div>
-                    <div class="stat-change">so'm — <a href="commission.php">sozlash</a></div>
-                </div>
-                <div class="stat-icon primary">💳</div>
-            </div>
+    <div class="page-head">
+        <div><h2>Pul yechish so'rovlari</h2>
+            <div class="sub">Haydovchi ilovasi → «Pul yechish» · Multicard orqali kartaga · ulush ariza summasidan ushlanadi</div></div>
+        <div class="page-actions">
+            <a class="btn btn-secondary btn-sm" href="commission.php"><i data-lucide="sliders-horizontal"></i> Qoidalar</a>
+            <?php if ($total > 0): ?><a class="btn btn-secondary btn-sm" href="<?= htmlspecialchars(pqs(['export' => 'csv'])) ?>"><i data-lucide="download"></i> Eksport</a><?php endif; ?>
         </div>
     </div>
 
-    <div class="card mb-3">
+    <div class="alert alert-info"><i data-lucide="info"></i>
+        <div><b>Avtomatik rejim <?= $auto ? 'yoqilgan' : "o'chirilgan" ?>.</b>
+            <?= $auto ? "So'rov yaratilishi bilan pul kartaga yuboriladi." : "Har bir so'rovni admin «Kartaga o'tkazish» bilan yuboradi." ?>
+            Natija noma'lum bo'lsa qayta yuborish MAN — faqat «Holatni tekshirish».</div>
+    </div>
+
+    <?php if ($detail):
+        $checks = payoutChecks($detail);
+        $bankErr = $detail['status'] === 'rejected' && $detail['rahmat_error'];
+        $digitsD = preg_replace('/\D/', '', $detail['card_number']);
+    ?>
+    <div class="card" id="detail">
+        <div class="card-header"><div><div class="card-title">W-<?= (int) $detail['id'] ?> · <?= moneyFmt($detail['amount']) ?> so'm</div>
+            <div class="text-muted" style="font-size:12.5px"><?= htmlspecialchars($detail['full_name']) ?> · •••• <?= htmlspecialchars(substr($digitsD, -4)) ?><?= $detail['card_holder'] ? ' · ' . htmlspecialchars($detail['card_holder']) : '' ?></div></div>
+            <a class="icon-btn" href="<?= htmlspecialchars(pqs(['id' => null])) ?>" aria-label="Yopish"><i data-lucide="x"></i></a></div>
         <div class="card-body">
-            <form method="GET" action="" class="d-flex gap-2" style="align-items: flex-end; flex-wrap: wrap;">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="status">Holat</label>
-                    <select id="status" name="status">
-                        <?php foreach (['pending' => 'Kutilmoqda', 'paid' => 'To\'langan',
-                                        'rejected' => 'Rad etilgan', 'all' => 'Hammasi'] as $value => $label): ?>
-                            <option value="<?= $value ?>" <?= $statusFilter === $value ? 'selected' : '' ?>>
-                                <?= $label ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+            <?php if ($bankErr): ?>
+                <div class="banner danger"><i data-lucide="triangle-alert"></i><div><b>Bank rad etdi: <?= htmlspecialchars($detail['rahmat_error']) ?></b>
+                    <div class="sub">Ko'p hollarda karta bloklangan yoki onlayn o'tkazmalar o'chirilgan. Pul haydovchi balansida qoldi (muzlatish yechildi).</div></div></div>
+            <?php endif; ?>
+            <ul class="timeline">
+                <li class="done"><span class="dot"><i data-lucide="check"></i></span><div><div class="t">So'rov yaratildi</div>
+                    <div class="s">Haydovchi ilovasi · ulush <?= moneyFmt($detail['commission']) ?> · kartaga <?= moneyFmt($detail['payout_amount']) ?></div></div>
+                    <span class="time"><?= date('d.m H:i', strtotime($detail['created_at'])) ?></span></li>
+                <li class="<?= hasDanger($checks) ? 'bad' : 'done' ?>"><span class="dot"><?= hasDanger($checks) ? '' : '<i data-lucide="check"></i>' ?></span>
+                    <div><div class="t">Avtomatik tekshiruvlar</div>
+                    <div class="s"><?= $checks ? htmlspecialchars(implode(' · ', array_map(function ($c) { return $c[0]; }, $checks))) : 'Hujjatlar ✓ · balans ✓ · kunlik limit ✓' ?></div></div></li>
+                <li class="<?= $detail['rahmat_uuid'] ? 'done' : ($detail['status'] === 'pending' ? 'now' : 'todo') ?>"><span class="dot"><?= $detail['rahmat_uuid'] ? '<i data-lucide="check"></i>' : '' ?></span>
+                    <div><div class="t">Bankka yuborildi</div><div class="s"><?= $detail['rahmat_uuid'] ? 'Multicard · ref ' . htmlspecialchars(substr($detail['rahmat_uuid'], 0, 12)) . ($detail['rahmat_status'] ? ' · ' . htmlspecialchars($detail['rahmat_status']) : '') : 'hali yuborilmagan' ?></div></div></li>
+                <?php if ($detail['status'] === 'paid'): ?>
+                    <li class="done"><span class="dot"><i data-lucide="check"></i></span><div><div class="t">Kartaga tushdi</div>
+                        <div class="s"><?= $detail['processed_name'] ? htmlspecialchars($detail['processed_name']) . ' · ' : '' ?><?php if ($detail['rahmat_receipt_url']): ?><a href="<?= htmlspecialchars($detail['rahmat_receipt_url']) ?>" target="_blank" rel="noopener">chek</a><?php endif; ?></div></div>
+                        <span class="time"><?= $detail['processed_at'] ? date('d.m H:i', strtotime($detail['processed_at'])) : '' ?></span></li>
+                <?php elseif ($detail['status'] === 'rejected'): ?>
+                    <li class="bad"><span class="dot"></span><div><div class="t" style="color:var(--red-500)"><?= $bankErr ? 'Bank rad etdi' : 'Admin rad etdi' ?></div>
+                        <div class="s"><?= htmlspecialchars($bankErr ? $detail['rahmat_error'] : ($detail['admin_comment'] ?: 'sabab yozilmagan')) ?></div></div>
+                        <span class="time"><?= $detail['processed_at'] ? date('d.m H:i', strtotime($detail['processed_at'])) : '' ?></span></li>
+                    <li class="done"><span class="dot"><i data-lucide="check"></i></span><div><div class="t">Balansga qaytarildi</div>
+                        <div class="s">+ <?= moneyFmt($detail['amount']) ?> so'm muzlatishdan chiqdi · haydovchiga bildirishnoma</div></div></li>
+                <?php endif; ?>
+            </ul>
+            <?php if ($bankErr): ?>
+                <div class="form-section">Keyingi qadam</div>
+                <div class="pay-rows">
+                    <div class="r"><span>Qayta yuborish</span><b>haydovchi yangi so'rov beradi (karta bank bilan hal qilingach)</b></div>
+                    <div class="r"><span>Shu kundagi so'rovlar</span><b><?= (int) $detail['same_day'] ?></b></div>
                 </div>
-
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="search">Qidirish</label>
-                    <input type="text" id="search" name="search"
-                           placeholder="Ism yoki telefon..."
-                           value="<?= htmlspecialchars($searchQuery) ?>">
-                </div>
-
-                <button type="submit" class="btn btn-primary">Filtrlash</button>
-                <a href="payouts.php" class="btn">Tozalash</a>
-            </form>
+            <?php endif; ?>
+            <div class="d-flex gap-1 mt-2">
+                <a class="btn btn-secondary btn-sm" href="user.php?id=<?= (int) $detail['user_id'] ?>"><i data-lucide="message-square"></i> Haydovchiga yozish</a>
+                <?php if ($detail['status'] === 'pending' && ($detail['rahmat_uuid'] || $detail['rahmat_error'])): ?>
+                    <form method="post"><input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                        <input type="hidden" name="request_id" value="<?= (int) $detail['id'] ?>">
+                        <button class="btn btn-primary btn-sm" type="submit" name="action" value="sync"><i data-lucide="refresh-cw"></i> Holatni tekshirish</button></form>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
+    <?php endif; ?>
+
+    <div class="tabs">
+        <?php foreach ($tabNames as $k => $label): ?>
+            <a href="<?= htmlspecialchars(pqs(['tab' => $k, 'page' => null, 'id' => null])) ?>" class="<?= $tab === $k ? 'active' : '' ?>">
+                <?= $label ?> <span class="nav-count <?= $k === 'bank' && $counts[$k] ? 'danger' : '' ?>"><?= number_format($counts[$k], 0, '.', ' ') ?></span></a>
+        <?php endforeach; ?>
+    </div>
+
+    <form class="filters" method="get">
+        <input type="hidden" name="tab" value="<?= htmlspecialchars($tab) ?>">
+        <div class="filter-search"><i data-lucide="search"></i>
+            <input type="search" name="q" value="<?= htmlspecialchars($q) ?>" placeholder="Ism, telefon yoki so'rov raqami"></div>
+        <button class="btn btn-secondary btn-sm" type="submit">Qidirish</button>
+    </form>
 
     <div class="card">
-        <div class="card-body" style="overflow-x: auto;">
-            <?php if (empty($requests)): ?>
-                <p style="padding: 24px; text-align: center; color: #6b7280;">
-                    Arizalar yo'q
-                </p>
-            <?php else: ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Texnika egasi</th>
-                        <th>Balansidan</th>
-                        <th>Kartaga o'tkaziladi</th>
-                        <th>Karta</th>
-                        <th>Balans</th>
-                        <th>Sana</th>
-                        <th>Holat</th>
-                        <th>Amal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php foreach ($requests as $r): ?>
-                    <tr>
-                        <td><?= (int) $r['id'] ?></td>
-                        <td>
-                            <?= htmlspecialchars($r['full_name']) ?><br>
-                            <small style="color:#6b7280;"><?= htmlspecialchars($r['phone']) ?></small>
-                        </td>
-                        <td>
-                            <?= number_format($r['amount'], 0) ?> so'm
-                            <?php if ((float)$r['commission'] > 0): ?>
-                                <br><small style="color:#6b7280;">
-                                    ulush: <?= number_format($r['commission'], 0) ?> so'm
-                                </small>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <!-- Kartaga aynan shu summa o'tkaziladi. Ulush ariza
-                                 summasining ichidan ushlanadi, shuning uchun bu
-                                 raqam yuqoridagidan kichik bo'lishi normal. -->
-                            <strong style="font-size:15px;">
-                                <?= number_format($r['payout_amount'], 0) ?>
-                            </strong> so'm
-                        </td>
-                        <td>
-                            <?php
-                            // To'liq raqam faqat shu yerda ko'rsatiladi — pulni
-                            // o'tkazish uchun kerak. API'da u hech qachon
-                            // to'liq qaytmaydi.
-                            $digits = preg_replace('/\D/', '', $r['card_number']);
-                            $pretty = trim(chunk_split($digits, 4, ' '));
-                            ?>
-                            <code><?= htmlspecialchars($pretty) ?></code>
-                            <?php if (!empty($r['card_holder'])): ?>
-                                <br><small style="color:#6b7280;"><?= htmlspecialchars($r['card_holder']) ?></small>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <?= number_format($r['balance'] ?? 0, 0) ?><br>
-                            <small style="color:#6b7280;">
-                                muzlatilgan: <?= number_format($r['frozen_balance'] ?? 0, 0) ?>
-                            </small>
-                        </td>
-                        <td><?= date('d.m.Y H:i', strtotime($r['created_at'])) ?></td>
-                        <td>
-                            <?php
-                            $badges = [
-                                'pending'  => ['warning', 'Kutilmoqda'],
-                                'paid'     => ['success', 'To\'langan'],
-                                'rejected' => ['error', 'Rad etilgan'],
-                            ];
-                            [$badgeClass, $badgeText] = $badges[$r['status']] ?? ['', $r['status']];
-                            ?>
-                            <span class="badge badge-<?= $badgeClass ?>"><?= $badgeText ?></span>
-                            <?php if (!empty($r['rahmat_status'])): ?>
-                                <!-- Shlyuzning o'z holati. Bizning holatdan
-                                     alohida ko'rsatiladi: 'progress' — pul
-                                     yo'lda, 'draft' — hali yo'lga chiqmagan,
-                                     bizda esa ikkalasi 'pending'. -->
-                                <br><small style="color:#6b7280;">
-                                    shlyuz: <?= htmlspecialchars($r['rahmat_status']) ?>
-                                </small>
-                            <?php endif; ?>
-                            <?php if (!empty($r['rahmat_receipt_url'])): ?>
-                                <br><small>
-                                    <a href="<?= htmlspecialchars($r['rahmat_receipt_url']) ?>"
-                                       target="_blank" rel="noopener">chek</a>
-                                </small>
-                            <?php endif; ?>
-                            <?php if (!empty($r['rahmat_error'])): ?>
-                                <br><small style="color:var(--error-color,#dc2626);">
-                                    <?= htmlspecialchars($r['rahmat_error']) ?>
-                                </small>
-                            <?php endif; ?>
-                            <?php if (!empty($r['admin_comment'])): ?>
-                                <br><small style="color:#6b7280;"><?= htmlspecialchars($r['admin_comment']) ?></small>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <?php if ($r['status'] === 'pending'): ?>
-                                <form method="POST" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-                                    <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                                    <input type="hidden" name="request_id" value="<?= (int) $r['id'] ?>">
-                                    <input type="text" name="admin_comment" placeholder="Izoh"
-                                           style="width:120px; padding:4px 8px; font-size:13px;">
-                                    <!-- Tugma pulni HOZIR jo'natadi. Ilgari u
-                                         "men qo'lda o'tkazdim" degani edi,
-                                         shuning uchun matni ham o'zgardi. -->
-                                    <button type="submit" name="action" value="paid"
-                                            class="btn btn-primary" style="padding:4px 10px; font-size:13px;"
-                                            onclick="return confirm('Kartaga <?= number_format($r['payout_amount'], 0, '.', ' ') ?> so\'m HOZIR o\'tkaziladi. Egasining balansidan <?= number_format($r['amount'], 0, '.', ' ') ?> so\'m yechiladi. Davom etasizmi?')">
-                                        Kartaga o'tkazish
-                                    </button>
-                                    <button type="submit" name="action" value="rejected"
-                                            class="btn" style="padding:4px 10px; font-size:13px;"
-                                            onclick="return confirm('Arizani rad etasizmi?')">
-                                        Rad etish
-                                    </button>
-                                    <?php if (!empty($r['rahmat_uuid']) || !empty($r['rahmat_error'])): ?>
-                                        <!-- O'tkazma boshlangan, lekin natija
-                                             aniq emas. Qayta jo'natish MAN
-                                             ETILGAN — holatni so'raymiz. -->
-                                        <button type="submit" name="action" value="sync"
-                                                class="btn" style="padding:4px 10px; font-size:13px;">
-                                            Holatni tekshirish
-                                        </button>
-                                    <?php endif; ?>
-                                </form>
-                            <?php else: ?>
-                                <small style="color:#6b7280;">
-                                    <?= $r['processed_at'] ? date('d.m.Y H:i', strtotime($r['processed_at'])) : '—' ?>
-                                </small>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-            <?php endif; ?>
-        </div>
+        <?php if (!$requests): ?>
+            <div class="empty-state"><i data-lucide="banknote"></i><div><b>So'rov yo'q</b></div></div>
+        <?php else: ?>
+        <div class="table-responsive"><table>
+            <thead><tr><th>So'rov</th><th>Haydovchi / karta</th><th class="text-right">So'ralgan</th><th class="text-right">Ulush</th>
+                <th class="text-right">O'tkaziladi</th><th>Holat / tekshiruv</th><th style="width:240px"></th></tr></thead>
+            <tbody>
+            <?php foreach ($requests as $r):
+                $checks = $r['status'] === 'pending' ? payoutChecks($r) : [];
+                $bad = hasDanger($checks);
+                $digits = preg_replace('/\D/', '', $r['card_number']);
+                $badges = ['pending' => [$r['rahmat_uuid'] ? 'info' : 'warning', $r['rahmat_uuid'] ? 'Bankda · ' . ($r['rahmat_status'] ?: 'kutilmoqda') : 'Kutilmoqda'],
+                           'paid' => ['success', 'Bajarildi'],
+                           'rejected' => ['danger', $r['rahmat_error'] ? 'Bank rad etdi' : 'Rad etilgan']];
+                [$bc, $bt] = $badges[$r['status']] ?? ['secondary', $r['status']];
+            ?>
+                <tr class="<?= $bad || ($r['status'] === 'rejected' && $r['rahmat_error']) ? 'row-alert' : '' ?>">
+                    <td><a href="<?= htmlspecialchars(pqs(['id' => (int) $r['id']])) ?>#detail"><b>W-<?= (int) $r['id'] ?></b></a><span class="sub"><?= date('d.m H:i', strtotime($r['created_at'])) ?></span></td>
+                    <td><div class="person" style="margin:0"><div class="user-avatar"><?= htmlspecialchars(initials($r['full_name'])) ?></div>
+                        <div><a href="user.php?id=<?= (int) $r['user_id'] ?>"><b><?= htmlspecialchars($r['full_name']) ?></b></a>
+                        <small class="num" title="<?= htmlspecialchars(trim(chunk_split($digits, 4, ' '))) ?>">•••• <?= htmlspecialchars(substr($digits, -4)) ?><?= $r['card_holder'] ? ' · ' . htmlspecialchars($r['card_holder']) : '' ?></small></div></div></td>
+                    <td class="text-right num"><?= moneyFmt($r['amount']) ?></td>
+                    <td class="text-right num text-muted"><?= (float) $r['commission'] > 0 ? '− ' . moneyFmt($r['commission']) : '0' ?></td>
+                    <td class="text-right num"><b><?= moneyFmt($r['payout_amount']) ?></b></td>
+                    <td><span class="badge badge-<?= $bc ?>"><?= htmlspecialchars($bt) ?></span>
+                        <?php foreach ($checks as $chk): ?><span class="sub <?= $chk[1] === 'danger' ? 'text-danger' : 'text-warning' ?>">● <?= htmlspecialchars($chk[0]) ?></span><?php endforeach; ?>
+                        <?php if ($r['status'] !== 'pending' && $r['rahmat_error']): ?><span class="sub text-danger"><?= htmlspecialchars($r['rahmat_error']) ?></span><?php endif; ?>
+                        <?php if ($r['admin_comment']): ?><span class="sub"><?= htmlspecialchars($r['admin_comment']) ?></span><?php endif; ?>
+                    </td>
+                    <td>
+                        <?php if ($r['status'] === 'pending'): ?>
+                            <form method="POST" class="d-flex gap-1" style="flex-wrap:wrap">
+                                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                                <input type="hidden" name="request_id" value="<?= (int) $r['id'] ?>">
+                                <input type="hidden" name="admin_comment" value="">
+                                <?php if ($r['rahmat_uuid'] || $r['rahmat_error']): ?>
+                                    <button type="submit" name="action" value="sync" class="btn btn-secondary btn-sm">Holatni tekshirish</button>
+                                <?php else: ?>
+                                    <button type="submit" name="action" value="paid" class="btn btn-primary btn-sm"
+                                        data-confirm="<?= htmlspecialchars(($bad ? "DIQQAT: tekshiruvda muammo bor!\n" : '') . 'Kartaga ' . moneyFmt($r['payout_amount']) . " so'm HOZIR o'tkaziladi. Balansdan " . moneyFmt($r['amount']) . " so'm yechiladi. Davom etasizmi?") ?>">Kartaga o'tkazish</button>
+                                    <button type="submit" name="action" value="rejected" class="btn btn-sm" data-reject="1">Rad etish</button>
+                                <?php endif; ?>
+                            </form>
+                        <?php else: ?>
+                            <a class="btn btn-ghost btn-sm" href="<?= htmlspecialchars(pqs(['id' => (int) $r['id']])) ?>#detail">Tafsilot</a>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table></div>
+        <div class="table-foot"><span class="text-muted"><?= $offset + 1 ?>–<?= $offset + count($requests) ?> / <?= $total ?> ta</span>
+            <div class="pagination" style="padding:0">
+                <?php for ($i = max(1, $page - 2); $i <= min($pages, $page + 2); $i++): ?>
+                    <?= $i === $page ? '<span class="active">' . $i . '</span>' : '<a href="' . htmlspecialchars(pqs(['page' => $i])) . '">' . $i . '</a>' ?>
+                <?php endfor; ?>
+            </div></div>
+        <?php endif; ?>
     </div>
-
-    <?php if ($totalPages > 1): ?>
-    <div class="pagination">
-        <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-            <a href="?page=<?= $i ?>&status=<?= urlencode($statusFilter) ?>&search=<?= urlencode($searchQuery) ?>"
-               class="<?= $i === $page ? 'active' : '' ?>"><?= $i ?></a>
-        <?php endfor; ?>
-    </div>
-    <?php endif; ?>
 </div>
-
+<style>.text-warning { color: var(--yellow-700); } .text-danger { color: var(--red-500); }</style>
+<script>
+document.querySelectorAll('[data-confirm]').forEach(b => b.addEventListener('click', e => {
+    if (!confirm(b.dataset.confirm)) e.preventDefault();
+}));
+document.querySelectorAll('[data-reject]').forEach(b => b.addEventListener('click', e => {
+    const c = prompt("Rad etish sababi (haydovchi ko'radi):");
+    if (c === null) { e.preventDefault(); return; }
+    b.form.admin_comment.value = c;
+}));
+</script>
 <?php include 'includes/footer.php'; ?>

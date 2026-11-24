@@ -130,7 +130,8 @@ finally:
 
 balance_php = os.path.join(BACKEND_DIR, "..", "admin", "balance.php")
 with open(balance_php, encoding="utf-8") as handle:
-    labels = set(re.findall(r"'(\w+)'\s*=>\s*'[^']*'", handle.read()))
+    # Подпись может быть и в двойных кавычках: "To'ldirish" — с апострофом
+    labels = set(re.findall(r"'(\w+)'\s*=>\s*(?:'[^']*'|\"[^\"]*\")", handle.read()))
 
 missing_labels = sorted(db_types - labels)
 check("у каждого типа транзакции есть подпись в админке",

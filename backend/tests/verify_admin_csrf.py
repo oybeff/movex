@@ -113,7 +113,8 @@ head("4. ОПАСНЫЕ ДЕЙСТВИЯ ПРИКРЫТЫ")
 
 # Bu amallar orqaga qaytmaydi yoki pulga tegadi.
 dangerous = {
-    "users.php": ["'delete'", "'set_password'", "'set_role'", "'block'"],
+    # Admin P4: amallar profilga (user.php) ko'chdi; qattiq o'chirish olib tashlandi
+    "user.php": ["'set_password'", "'set_role'", "'block'", "'unblock'", "'cash_topup'"],
     "payouts.php": ["'paid'", "'rejected'"],  # 'paid' = pul haqiqatan yechildi
     "backup.php": ["'restore_backup'", "'delete_backup'"],
 }
