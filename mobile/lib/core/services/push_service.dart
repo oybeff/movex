@@ -51,7 +51,7 @@ class PushService {
     try {
       await Firebase.initializeApp();
       await _local.initialize(
-        settings: const InitializationSettings(
+        const InitializationSettings(
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
           iOS: DarwinInitializationSettings(),
         ),
@@ -126,10 +126,10 @@ class PushService {
     // Водитель: экран входящего заказа и так откроется опросом —
     // всё равно показываем, звук важнее.
     _local.show(
-      id: m.hashCode,
-      title: n.title,
-      body: n.body,
-      notificationDetails: NotificationDetails(
+      m.hashCode,
+      n.title,
+      n.body,
+      NotificationDetails(
         android: AndroidNotificationDetails(
           _channel.id,
           _channel.name,
