@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.12+18
+version: 1.0.13+19
 
 environment:
   sdk: ^3.8.1
@@ -163,6 +163,8 @@ flutter:
       # Onboarding ekranlaridagi telefon maketlari — ikkinchi maketning
       # o'z ekranlari (mijoz fayli, «Buyurtma oqimi»), 375×812.
       - assets/onboarding/
+      # Shorebird (обновления по воздуху): app_id клиента и водителя.
+      - shorebird.yaml
 
   # Inter — шрифт интерфейса. В макете Figma стоит SF Pro, но это системный
   # шрифт iOS: на Android его нет, там подставился бы Roboto, и вид разошёлся
