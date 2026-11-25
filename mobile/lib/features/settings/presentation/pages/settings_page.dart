@@ -1,3 +1,4 @@
+import 'package:movex_go/core/services/push_service.dart';
 import 'package:movex_go/core/app_flavor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -455,6 +456,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
 
     if (result == true) {
+      await PushService.instance.unregister();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('token');
       await prefs.remove('role');

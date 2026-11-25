@@ -31,19 +31,10 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase olib tashlandi: firebase_core va firebase_auth pubspec da bor edi,
-  # lekin lib/ da bir marta ham ishlatilmagan, google-services plagini ham
-  # ulanmagan — ya'ni ular hech narsa qilmasdan iOS uchun og'ir native
-  # podlarni tortib kelardi.
-  #
-  # Push xabarnomalar kerak bo'lganda qaytarish tartibi:
-  #   1. Firebase loyihasini yarating, google-services.json (Android) va
-  #      GoogleService-Info.plist (iOS) fayllarini qo'shing;
-  #   2. android/app/build.gradle.kts ga com.google.gms.google-services
-  #      plaginini qo'shing;
-  #   3. firebase_core va firebase_messaging ni shu yerga qaytaring;
-  #   4. qurilma tokenini serverga yuboring: POST /notifications/devices
-  #      (backend tayyor, docs/backend/NOTIFICATIONS.md ga qarang).
+  # Push (FCM) — 25.11.2026: firebase_core + firebase_messaging, на открытом
+  # приложении рисует flutter_local_notifications. Конфиг —
+  # android/app/google-services.json (в git НЕ лежит, проект movexgo-31c77),
+  # код — lib/core/services/push_service.dart.
 
   # Для работы с состоянием
   provider: ^6.1.5
@@ -89,6 +80,9 @@ dependencies:
   # image_picker_for_web o'zi tortiladi.
   image_picker: ^1.1.2
   hugeicons: ^4.4.0
+  firebase_core: ^5.2.0
+  firebase_messaging: ^17.1.0
+  flutter_local_notifications: ^23.0.4
 
 
 # Yamoqlangan bog'liqliklar.

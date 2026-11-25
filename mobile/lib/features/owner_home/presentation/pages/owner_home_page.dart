@@ -1,3 +1,4 @@
+import 'package:movex_go/core/services/push_service.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -54,6 +55,8 @@ class _OwnerHomePageState extends State<OwnerHomePage> with WidgetsBindingObserv
   @override
   void initState() {
     super.initState();
+    // Вошёл — отдать серверу токен push (раз на токен и аккаунт).
+    PushService.instance.syncToken();
     WidgetsBinding.instance.addObserver(this);
     _startPolling();
   }

@@ -23,6 +23,8 @@ plugins {
     // gradle-wrapper.properties da 8.14.3 turibdi.
     id("com.android.application") version "8.11.1" apply false
     id("org.jetbrains.kotlin.android") version "2.2.20" apply false
+    // Push (FCM): читает android/app/google-services.json (оба flavor).
+    id("com.google.gms.google-services") version "4.4.2" apply false
 }
 
 include(":app")

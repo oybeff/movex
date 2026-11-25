@@ -135,7 +135,14 @@ def _send_to_token(access_token: str, device_token: str, title: str,
             "notification": {"title": title, "body": body or ""},
             # data — faqat matn qiymatlari, FCM boshqasini qabul qilmaydi
             "data": {k: str(v) for k, v in data.items() if v is not None},
-            "android": {"priority": "high"},
+            # channel_id — канал, который приложение создаёт при старте
+            # (push_service.dart): с ним уведомление всплывает поверх
+            # экрана и звучит. Нет канала (старая сборка) — Android кладёт
+            # в канал по умолчанию, push всё равно доходит.
+            "android": {
+                "priority": "high",
+                "notification": {"channel_id": "movex_orders", "sound": "default"},
+            },
             "apns": {"headers": {"apns-priority": "10"}},
         }
     }

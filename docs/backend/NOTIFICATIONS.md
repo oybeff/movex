@@ -57,106 +57,39 @@ DELETE /notifications/devices          снять токен (при выход�
 
 ## Push
 
-Серверная часть **написана полностью** — `services/push_service.py`, Firebase
-Cloud Messaging HTTP v1. Отправка подключена к `notification_service.create`,
-то есть работает для всех событий из таблицы выше сразу.
+**Работает с 25.11.2026 (Android).** Firebase-проект `movexgo-31c77`,
+в нём два Android-приложения: `uz.movexgo.app` (клиент) и
+`uz.movexgo.driver` (MoveX GO Driver). Один `google-services.json` на
+оба flavor — `mobile/android/app/google-services.json`, в git НЕ лежит
+(есть на машине разработки и на сервере сборки `/opt/movex-build`).
 
-Пока не заданы ключи, `push_service` молчит: пишет одну строку в лог и
-возвращает 0. Ничего не ломается, уведомления видны в ленте приложения как
-и раньше.
+Сервер: `services/push_service.py` (FCM HTTP v1), ключ сервисного аккаунта
+`/opt/movex/secrets/fcm-service-account.json` (600, владелец `movex`),
+в `.env` — `FCM_PROJECT_ID=movexgo-31c77` и `FCM_CREDENTIALS_FILE`.
+Push уходит на КАЖДОЕ уведомление ленты (`notification_service.create`),
+канал Android `movex_orders` (всплывает и звучит).
 
-### Что нужно от вас
+Водителям «Yuk mashinam» с 25.11.2026 приходят ещё два типа — раньше они
+узнавали о работе, только открыв приложение:
 
-Проект Firebase может создать только владелец аккаунта Google — у меня нет
-и не должно быть доступа к вашей учётной записи.
+| Событие | Кому | Тип |
+|---|---|---|
+| Продавец подтвердил заказ материалов (доставка ищет водителя), прежний водитель отказался, админ снял водителя | онлайн-водителям с той же машиной, категорией и в радиусе от склада | `delivery_job` |
+| Клиент создал перевозку, водитель отказался, админ снял водителя | онлайн-водителям с той же машиной и кузовом в радиусе от точки А | `freight_job` |
 
-**1. Создать проект.** [console.firebase.google.com](https://console.firebase.google.com)
-→ Add project. Имя любое, например `movex-go`. Google Analytics можно
-выключить.
+Отбор — те же `_matches`, что в `incoming()`: push не зовёт к заказу,
+которого водитель в списке не увидит. Тарифные/быстрые заказы техники
+владельцам уходили и раньше (`quick_request`).
 
-**2. Добавить два приложения** с идентификатором `uz.movexgo.app`:
-- Android → скачать `google-services.json`
-- iOS → скачать `GoogleService-Info.plist`
+Приложение: `lib/core/services/push_service.dart` — токен отдаётся
+серверу с главных экранов (`syncToken`), при выходе снимается
+(`unregister`, ДО удаления токена входа). На открытом приложении
+уведомление рисует `flutter_local_notifications`. Нажатие: водитель —
+главная водителя, клиент — лента.
 
-**3. Скачать ключ сервисного аккаунта.** Настройки проекта (шестерёнка) →
-Service accounts → Generate new private key. Скачается JSON.
+iOS не подключён: нужен APNs-ключ из платного Apple Developer и сборка
+на Mac (`GoogleService-Info.plist` в `ios/Runner/`).
 
-**Этот файл — полный доступ к отправке push от имени проекта. Не присылайте
-его мне в чат и не коммитьте в git.** Положите на сервер:
-
-```bash
-scp firebase-key.json root@СЕРВЕР:/opt/movex_go/firebase-key.json
-ssh root@СЕРВЕР 'chmod 600 /opt/movex_go/firebase-key.json'
-```
-
-**4. Прописать в `/opt/movex_go/.env`:**
-
-```
-FCM_PROJECT_ID=movex-go-12345
-FCM_CREDENTIALS_FILE=/opt/movex_go/firebase-key.json
-```
-
-`FCM_PROJECT_ID` — поле `project_id` из того же JSON.
-
-**5. Перезапустить сервис:**
-
-```bash
-systemctl restart movex-go
-journalctl -u movex-go -n 20 | grep -i fcm
-```
-
-Если в логе нет строки «Push yuborilmaydi: FCM sozlanmagan» — ключи
-подхватились.
-
-**6. Для iOS дополнительно**: APNs-ключ (.p8) из Apple Developer загрузить в
-Firebase Console → Cloud Messaging, и включить Push Notifications в Xcode.
-Без этого push будет работать только на Android.
-
-### Что останется сделать в мобилке
-
-Когда файлы из шага 2 будут на месте:
-
-1. Положить `google-services.json` → `mobile/android/app/`,
-   `GoogleService-Info.plist` → `mobile/ios/Runner/`.
-2. В `mobile/pubspec.yaml` вернуть:
-   ```yaml
-   firebase_core: ^3.6.0
-   firebase_messaging: ^15.1.3
-   ```
-3. В `mobile/android/settings.gradle.kts` — плагин
-   `com.google.gms.google-services`.
-4. В `main()` после `Firebase.initializeApp()`:
-   ```dart
-   final messaging = FirebaseMessaging.instance;
-   await messaging.requestPermission();
-   final token = await messaging.getToken();
-   if (token != null) {
-     await NotificationService().registerDevice(
-       token, Platform.isIOS ? 'ios' : 'android');
-   }
-   ```
-   При выходе из аккаунта — `unregisterDevice(token)`, иначе push продолжит
-   приходить прежнему владельцу телефона.
-
-Эти шаги не сделаны заранее намеренно: `google-services.json` нужен уже во
-время сборки Android, и без него сборка падает с невнятной ошибкой.
-
-### Как устроена отправка
-
-Токен доступа получается по стандартной схеме сервисного аккаунта: JWT,
-подписанный ключом (RS256), меняется на access token, который живёт час и
-кэшируется в памяти. Отдельная библиотека `google-auth` не нужна —
-`python-jose` в проекте уже есть.
-
-Два правила, заложенные в код:
-
-- **Push никогда не ломает основное действие.** Заказ создан, а push не ушёл
-  — это не повод откатывать заказ. Все ошибки проглатываются и попадают
-  только в лог.
-- **Мёртвые токены удаляются.** На ответ 404 `UNREGISTERED` (приложение
-  удалили) или 400 `INVALID_ARGUMENT` запись из `device_tokens` стирается,
-  иначе на каждое уведомление уходил бы бесполезный запрос.
-
-Уведомления, создаваемые пачкой (заявка уходит сразу нескольким владельцам),
-шлют push через `notification_service.send_pending` — уже после `commit`.
-Иначе push ушёл бы о записи, которой ещё нет в базе.
+Проверка доставки: `tests/verify_freight.py` и
+`tests/verify_material_delivery.py` смотрят, что уведомление создано
+нужным водителям и не создано лишним.

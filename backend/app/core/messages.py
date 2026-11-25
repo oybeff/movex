@@ -385,6 +385,22 @@ MESSAGES: Dict[str, Dict[str, str]] = {
         "uz": "Buyurtma #{order_number} yopildi",
         "ru": "Заказ #{order_number} закрыт",
     },
+    "delivery_job.title": {
+        "uz": "Yangi yetkazish: {fee} so'm",
+        "ru": "Новая доставка: {fee} сум",
+    },
+    "delivery_job.body": {
+        "uz": "{title}, {quantity} {unit}. Kim birinchi olsa — o'shaniki.",
+        "ru": "{title}, {quantity} {unit}. Кто первый возьмёт — тому и заказ.",
+    },
+    "freight_job.title": {
+        "uz": "Yangi yuk: {fee} so'm",
+        "ru": "Новый груз: {fee} сум",
+    },
+    "freight_job.body": {
+        "uz": "{route}. Kim birinchi olsa — o'shaniki.",
+        "ru": "{route}. Кто первый возьмёт — тому и заказ.",
+    },
     "material_driver_found.title": {
         "uz": "Haydovchi topildi",
         "ru": "Водитель найден",

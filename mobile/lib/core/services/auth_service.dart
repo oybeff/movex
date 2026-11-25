@@ -1,3 +1,4 @@
+import 'package:movex_go/core/services/push_service.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../network/dio_client.dart';
@@ -67,6 +68,7 @@ class AuthService {
 
   /// Logout qilish
   Future<void> logout() async {
+    await PushService.instance.unregister();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('token_type');

@@ -380,6 +380,8 @@ def reassign(db: Session, kind: str, order_id: int, admin_id: int,
         if target_user_id is not None:
             _notify(db, target_user_id, "order_assigned", "order_assigned", o.id)
             _notify(db, o.client_id, "freight_driver_found", "freight_driver_found", o.id)
+        else:
+            freight_service.notify_new_job(db, o)
         status = o.status
 
     elif kind == "material":
@@ -407,6 +409,8 @@ def reassign(db: Session, kind: str, order_id: int, admin_id: int,
         if target_user_id is not None:
             _notify(db, target_user_id, "order_assigned", "order_assigned", o.id)
             _notify(db, o.buyer_id, "material_driver_found", "material_driver_found", o.id)
+        else:
+            delivery_service.notify_new_job(db, o)
         status = o.delivery_status
 
     else:  # equipment

@@ -25,6 +25,7 @@
   (как в тарифном заказе за наличные: не хватает — 402) и списывается
   при завершении.
 """
+import logging
 from datetime import datetime, timezone
 from decimal import ROUND_CEILING, Decimal
 from typing import List, Optional
@@ -46,6 +47,8 @@ from app.models.material import MaterialOrder, MaterialProduct
 from app.models.user import User
 from app.services import notification_service, pricing_service
 from app.services.balance_service import get_or_create_balance
+
+logger = logging.getLogger(__name__)
 
 #: Тип товара (material_types.py) → категория водителя (ТЗ). Тип без
 #: категории (арматура, доски…) уходит всем водителям с нужной машиной.
@@ -291,6 +294,61 @@ def incoming(db: Session, user: User) -> List[dict]:
     return out
 
 
+_UNIT_LABEL = {
+    "piece": {"uz": "dona", "ru": "шт."},
+    "bag": {"uz": "qop", "ru": "меш."},
+    "tonne": {"uz": "t", "ru": "т"},
+    "m3": {"uz": "m³", "ru": "м³"},
+}
+
+
+def money(v) -> str:
+    return f"{int(_dec(v)):,}".replace(",", " ")
+
+
+def notify_new_job(db: Session, order: MaterialOrder) -> None:
+    """
+    Push водителям: заказ перешёл в поиск. Те же правила, что в incoming()
+    — онлайн, та же машина, категория с минимумом, радиус от склада; иначе
+    push звал бы к заказу, которого водитель в списке не увидит.
+    Ошибки глотаются: без push заказ всё равно виден в приложении.
+    """
+    try:
+        product = db.query(MaterialProduct).filter(MaterialProduct.id == order.product_id).first()
+        if product is None or order.delivery_status != "searching":
+            return
+        radius = radius_km(db)
+        profiles = (
+            db.query(DeliveryDriverProfile)
+            .filter(DeliveryDriverProfile.is_online.is_(True),
+                    DeliveryDriverProfile.vehicle_code == order.vehicle_code)
+            .all()
+        )
+        created = []
+        for p in profiles:
+            mins = {
+                c.category_code: c.min_quantity
+                for c in db.query(DeliveryDriverCategory).filter(DeliveryDriverCategory.user_id == p.user_id)
+            }
+            if _matches(db, order, product, p, mins, radius) is None:
+                continue
+            vehicle = db.query(DeliveryVehicleRow).filter(DeliveryVehicleRow.code == p.vehicle_code).first()
+            lang = notification_service.user_language(db, p.user_id)
+            created.append(notification_service.create_localized(
+                db, p.user_id, "delivery_job", "delivery_job.title", "delivery_job.body",
+                None, None, None, commit=False, language=lang,
+                fee=money(_driver_fee(order, p, vehicle)),
+                title=product.title,
+                quantity=f"{_dec(order.quantity).normalize():f}",
+                unit=_UNIT_LABEL.get(order.unit, {}).get(lang, order.unit or ""),
+            ))
+        db.commit()
+        notification_service.send_pending(db, created)
+    except Exception:
+        logger.exception("Push водителям не ушёл: material_order=%s", order.id)
+        db.rollback()
+
+
 def _lock(db: Session, order_id: int) -> MaterialOrder:
     order = (
         db.query(MaterialOrder)
@@ -432,6 +490,7 @@ def driver_cancel(db: Session, user: User, order_id: int) -> MaterialOrder:
     order.delivery_status = "searching"
     db.commit()
     db.refresh(order)
+    notify_new_job(db, order)
     return order
 
 

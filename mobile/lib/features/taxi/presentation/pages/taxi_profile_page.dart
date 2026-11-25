@@ -1,3 +1,4 @@
+import 'package:movex_go/core/services/push_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -280,6 +281,7 @@ class _TaxiProfilePageState extends State<TaxiProfilePage> {
       ),
     );
     if (ok != true) return;
+    await PushService.instance.unregister();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('role');

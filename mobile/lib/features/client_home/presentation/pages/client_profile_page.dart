@@ -1,3 +1,4 @@
+import 'package:movex_go/core/services/push_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -531,6 +532,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
     );
 
     if (result == true) {
+      await PushService.instance.unregister();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('token');
       await prefs.remove('role');

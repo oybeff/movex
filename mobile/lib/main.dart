@@ -27,6 +27,7 @@ import 'package:movex_go/features/balance/presentation/pages/balance_topup_page.
 import 'package:movex_go/core/models/equipment_model.dart';
 import 'dart:async';
 import 'package:movex_go/core/app_flavor.dart';
+import 'package:movex_go/core/services/push_service.dart';
 import 'package:movex_go/features/driver/presentation/driver_home_page.dart';
 
 // Global GoRouter instance
@@ -163,6 +164,18 @@ void main() async {
       ),
     ],
   );
+
+  // Push: нажатие на уведомление открывает экран (водитель — главная,
+  // клиент — лента). init не ждём, чтобы не держать заставку.
+  PushService.instance.onOpen = (data) {
+    final route = PushService.routeFor(data);
+    if (route == '/driverHome') {
+      appRouter.go(route);
+    } else {
+      appRouter.push(route);
+    }
+  };
+  unawaited(PushService.instance.init());
 
   runApp(
     EasyLocalization(

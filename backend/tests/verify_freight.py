@@ -203,6 +203,15 @@ try:
     b, f = money(client_id)
     check("цена заморожена на Go wallet", f == D(o["price"]), f"{f}")
 
+    head("2b. PUSH ВОДИТЕЛЯМ (freight_job)")
+    def job_notes(uid):
+        return sql("SELECT title FROM notifications WHERE user_id=:u AND type='freight_job'", u=uid) or []
+    n1, n3 = job_notes(d1_id), job_notes(d3_id)
+    check("подходящему водителю — уведомление «Yangi yuk»", len(n1) == 1, str(n1))
+    check("в заголовке сумма", n1 and any(ch.isdigit() for ch in n1[0][0]), str(n1))
+    check("водителю с другим кузовом — нет", len(n3) == 0, str(n3))
+    check("клиенту — нет", len(job_notes(client_id)) == 0)
+
     head("3. ВХОДЯЩИЕ И ГОНКА")
     inc3 = requests.get(f"{API}/drivers/freight/incoming", headers=d3).json()
     check("водитель с тентсиз не видит заказ «tentli»", not any(x["id"] == oid for x in inc3))

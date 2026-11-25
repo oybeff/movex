@@ -1,3 +1,4 @@
+import 'package:movex_go/core/services/push_service.dart';
 import '../../support/presentation/support_pages.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -91,6 +92,8 @@ class _DriverProfileTabState extends State<DriverProfileTab> {
   @override
   void initState() {
     super.initState();
+    // Вошёл — отдать серверу токен push (раз на токен и аккаунт).
+    PushService.instance.syncToken();
     AuthService().getCurrentUser().then((u) {
       if (mounted) setState(() => _me = u);
     }).catchError((_) {});
@@ -207,6 +210,7 @@ class _DriverProfileTabState extends State<DriverProfileTab> {
 
 /// Выход: токен, роль и ПИН стираются — как в клиентском профиле.
 Future<void> driverLogout() async {
+  await PushService.instance.unregister();
   final prefs = await SharedPreferences.getInstance();
   await prefs.remove('token');
   await prefs.remove('role');

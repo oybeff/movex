@@ -534,6 +534,8 @@ def confirm_order(db: Session, order_id: int, seller: User) -> MaterialOrder:
         "material_confirmed.title", "material_confirmed.body",
         None, None, None, order_number=order.id,
     )
+    if order.dispatch == "driver":
+        delivery_service.notify_new_job(db, order)
     return order
 
 

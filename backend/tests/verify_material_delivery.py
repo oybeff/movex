@@ -207,6 +207,13 @@ try:
     check("продавец не видит свой заказ как водитель",
           requests.get(f"{API}/drivers/delivery/incoming", headers=seller).json() == [])
 
+    def job_notes(uid):
+        return sql("SELECT body FROM notifications WHERE user_id=:u AND type='delivery_job'", u=uid) or []
+    check("push «Yangi yetkazish» подходящему водителю", len(job_notes(d1_id)) == 1, str(job_notes(d1_id)))
+    check("в тексте товар и количество", job_notes(d1_id) and "500" in job_notes(d1_id)[0][0], str(job_notes(d1_id)))
+    check("Labo и водителю с большим минимумом — нет",
+          not job_notes(d3_id) and not job_notes(d4_id))
+
     requests.post(f"{API}/drivers/delivery/heartbeat", headers=d2,
                   json={"online": True, "latitude": 40.10, "longitude": 65.30})  # Navoiy
     inc2 = requests.get(f"{API}/drivers/delivery/incoming", headers=d2).json()

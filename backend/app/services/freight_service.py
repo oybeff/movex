@@ -23,6 +23,7 @@
 Завершает КЛИЕНТ (как «Yetkazildi»): иначе водитель забирал бы деньги, не
 доехав.
 """
+import logging
 from datetime import datetime, timedelta, timezone
 from decimal import ROUND_CEILING, Decimal
 from typing import List, Optional
@@ -37,6 +38,8 @@ from app.models.user import User
 from app.services import delivery_service, notification_service, pricing_service
 from app.core.messages import insufficient_funds
 from app.services.balance_service import get_or_create_balance
+
+logger = logging.getLogger(__name__)
 
 ACTIVE = ("searching", "accepted", "loaded", "arrived")
 
@@ -264,6 +267,7 @@ def create(db: Session, client: User, data) -> FreightOrder:
     db.add(order)
     db.commit()
     db.refresh(order)
+    notify_new_job(db, order)
     return order
 
 
@@ -298,6 +302,40 @@ def _card(db: Session, order: FreightOrder, to_pickup: Decimal) -> dict:
         "driver_fee": fee, "commission": commission, "you_receive": fee - commission,
         "created_at": order.created_at,
     }
+
+
+def notify_new_job(db: Session, order: FreightOrder) -> None:
+    """
+    Push водителям: перевозка ищет исполнителя. Отбор тот же, что в
+    incoming(): онлайн, та же машина и кузов, радиус от точки А.
+    Ошибки глотаются — без push заказ всё равно виден в приложении.
+    """
+    try:
+        if order.status != "searching":
+            return
+        radius = delivery_service.radius_km(db)
+        profiles = (
+            db.query(DeliveryDriverProfile)
+            .filter(DeliveryDriverProfile.is_online.is_(True),
+                    DeliveryDriverProfile.vehicle_code == order.vehicle_code)
+            .all()
+        )
+        route = " → ".join(x for x in (order.from_address, order.to_address) if x) or ""
+        created = []
+        for p in profiles:
+            if _matches(order, p, radius) is None:
+                continue
+            created.append(notification_service.create_localized(
+                db, p.user_id, "freight_job", "freight_job.title", "freight_job.body",
+                None, None, None, commit=False,
+                fee=delivery_service.money(order.price),
+                route=route[:200],
+            ))
+        db.commit()
+        notification_service.send_pending(db, created)
+    except Exception:
+        logger.exception("Push водителям не ушёл: freight_order=%s", order.id)
+        db.rollback()
 
 
 def incoming(db: Session, driver: User) -> List[dict]:
@@ -427,6 +465,7 @@ def driver_cancel(db: Session, driver: User, order_id: int) -> FreightOrder:
     o.status = "searching"
     db.commit()
     db.refresh(o)
+    notify_new_job(db, o)
     return o
 
 

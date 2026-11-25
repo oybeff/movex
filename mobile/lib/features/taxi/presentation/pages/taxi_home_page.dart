@@ -1,3 +1,4 @@
+import 'package:movex_go/core/services/push_service.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -122,6 +123,8 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
   @override
   void initState() {
     super.initState();
+    // Вошёл — отдать серверу токен push (раз на токен и аккаунт).
+    PushService.instance.syncToken();
     _init();
   }
 

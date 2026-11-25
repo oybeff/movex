@@ -5,6 +5,7 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
 // Imzolash kalitlari android/key.properties dan o'qiladi.
@@ -36,6 +37,9 @@ android {
     //     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // flutter_local_notifications (push на открытом приложении) требует
+        // java.time на старых Android — desugaring.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -114,4 +118,5 @@ flutter {
 }
 dependencies {
     implementation("com.yandex.android:maps.mobile:4.2.2-full")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
