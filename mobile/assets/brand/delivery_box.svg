@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 84" width="120" height="84">
+  <!-- «Yetkazib berish»: qanotli quti (25.11.2026, Sherzodbek iltimosi) -->
+  <g id="wing" fill="#FFFFFF" stroke="#316DC8" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <!-- chap qanot: uchta pat, yuqoriga ko'tarilgan -->
+    <path d="M38 34 C28 20 14 12 3 12 C9 17 13 21 15 25 C8 24 4 26 2 29 C9 31 14 33 17 36 C10 37 7 40 6 44 C14 43 22 43 30 45 C33 45 36 44 38 42 Z"/>
+    <path d="M36 33 C28 27 21 25 15 25 M34 38 C27 36 22 36 17 36" fill="none" stroke="#9EC2EE" stroke-width="2"/>
+  </g>
+  <g fill="#FFFFFF" stroke="#316DC8" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M82 34 C92 20 106 12 117 12 C111 17 107 21 105 25 C112 24 116 26 118 29 C111 31 106 33 103 36 C110 37 113 40 114 44 C106 43 98 43 90 45 C87 45 84 44 82 42 Z"/>
+    <path d="M84 33 C92 27 99 25 105 25 M86 38 C93 36 98 36 103 36" fill="none" stroke="#9EC2EE" stroke-width="2"/>
+  </g>
+  <!-- quti -->
+  <path d="M36 28 L60 18 L84 28 L60 38 Z" fill="#F2C27A" stroke="#9A6424" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M36 28 L60 38 L60 74 L36 64 Z" fill="#E0A458" stroke="#9A6424" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M84 28 L60 38 L60 74 L84 64 Z" fill="#C98A3E" stroke="#9A6424" stroke-width="2.2" stroke-linejoin="round"/>
+  <!-- skotch -->
+  <path d="M47 23.5 L71 33.5 L71 42 L64 45 L64 36.5 L40 26.5 Z" fill="#F7DDB0"/>
+  <path d="M42 57 L52 61" stroke="#9A6424" stroke-width="2" stroke-linecap="round" opacity="0.55"/>
+</svg>

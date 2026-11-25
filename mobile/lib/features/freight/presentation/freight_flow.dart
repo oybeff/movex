@@ -402,6 +402,25 @@ void openAfterModel(BuildContext context, FreightDraft d) {
 }
 
 /// Открыть перевозку сразу с машиной (из «Barcha kategoriyalar»).
+/// «Yetkazib berish» plitkasi (24.11.2026, Sherzodbek): kichik mashinalar —
+/// Damas, Labo, Porter (1 t gacha). Oqim o'sha «Yuk tashish», faqat model
+/// tanlash shu mashinalar bilan boshlanadi. Narxi yo'q mashina serverdan
+/// kelmaydi — hech biri bo'lmasa, oddiy «Yuk tashish» ochiladi.
+const smallDeliveryMaxKg = 1000;
+
+Future<void> openSmallDelivery(BuildContext context, TaxiPlace from) async {
+  final d = FreightDraft(from);
+  final q = await _catalog(d);
+  final models = q.vehicles.where((v) => v.capacityKg <= smallDeliveryMaxKg).toList()
+    ..sort((a, b) => a.capacityKg.compareTo(b.capacityKg));
+  if (!context.mounted) return;
+  if (models.isEmpty) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => FreightBrandPage(from: from)));
+    return;
+  }
+  Navigator.of(context).push(MaterialPageRoute(builder: (_) => FreightModelPage(draft: d, models: models)));
+}
+
 Future<void> openFreightWithVehicle(BuildContext context, TaxiPlace from, String code) async {
   final d = FreightDraft(from);
   final q = await _catalog(d);

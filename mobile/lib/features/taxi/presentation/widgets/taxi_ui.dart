@@ -362,7 +362,7 @@ class TypeTile extends StatelessWidget {
       label: label ??
           (type == 'materials'
               ? 'taxi.materials'.tr()
-              : (type == 'freight' ? 'taxi.freight'.tr() : EquipmentTypes.label(type))),
+              : (type == 'freight' ? 'taxi.freight'.tr() : (type == 'delivery' ? 'taxi.delivery_tile'.tr() : EquipmentTypes.label(type)))),
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
@@ -384,14 +384,16 @@ class TypeTile extends StatelessWidget {
                         ? SvgPicture.asset('assets/material_types/brick.svg', width: 38, height: 38, fit: BoxFit.contain)
                         : (type == 'freight'
                             ? const TruckPhoto()
-                            : EquipmentPhoto(type))),
+                            : (type == 'delivery'
+                                ? SvgPicture.asset('assets/brand/delivery_box.svg', width: 56, height: 42, fit: BoxFit.contain)
+                                : EquipmentPhoto(type)))),
               ),
               const SizedBox(height: AppSpacing.sm),
               Builder(builder: (_) {
                 final text = label ??
                     (type == 'materials'
                         ? 'taxi.materials'.tr()
-                        : (type == 'freight' ? 'taxi.freight'.tr() : EquipmentTypes.label(type)));
+                        : (type == 'freight' ? 'taxi.freight'.tr() : (type == 'delivery' ? 'taxi.delivery_tile'.tr() : EquipmentTypes.label(type))));
                 final t = Text(
                   text,
                   textAlign: TextAlign.center,

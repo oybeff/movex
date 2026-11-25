@@ -348,6 +348,10 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => FreightBrandPage(from: _from)));
       return;
     }
+    if (type == 'delivery') {
+      openSmallDelivery(context, _from);
+      return;
+    }
     if (type.startsWith('truck:')) {
       openFreightWithVehicle(context, _from, type.substring(6));
       return;
@@ -1595,7 +1599,9 @@ class _TaxiHomePageState extends State<TaxiHomePage> {
     final materials = _status?.materialsEnabled ?? true;
     final tiles = <Widget>[
       TypeTile(type: 'excavator', onTap: _busy ? () {} : () => _pickType('excavator')),
-      TypeTile(type: 'bulldozer', onTap: _busy ? () {} : () => _pickType('bulldozer')),
+      // Buldozer «Barcha kategoriyalar»da qoldi; bu joyda — kichik yetkazish
+      // (Sherzodbek, 24.11.2026: Labo, Damas, furgon).
+      TypeTile(type: 'delivery', onTap: () => _pickType('delivery')),
       TypeTile(type: 'truck_crane', onTap: _busy ? () {} : () => _pickType('truck_crane')),
       TypeTile(type: 'dump_truck', onTap: _busy ? () {} : () => _pickType('dump_truck')),
       TypeTile(type: 'front_loader', onTap: _busy ? () {} : () => _pickType('front_loader')),
