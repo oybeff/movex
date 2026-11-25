@@ -110,12 +110,9 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    # Yangi texnika egasiga ro'yxatdan o'tganlik uchun sovg'a.
-    #
-    # Miqdor adminkadan boshqariladi. Sovg'a berilmasa ham ro'yxatdan o'tish
-    # buzilmaydi — xato ichida yutiladi.
-    from app.services import balance_service
-    balance_service.grant_signup_bonus(db, new_user)
+    # Sovg'a (signup bonus) bu yerda BERILMAYDI — 26.11.2026 dan admin
+    # haydovchi hujjatlarini tasdiqlaganda beriladi (driver_service.
+    # _notify_review). Aks holda har yangi SIM kartadan 50 000 olinardi.
 
     # Token shu yerda beriladi — qayta SMS so'ramaslik uchun.
     return _issue_login(new_user)

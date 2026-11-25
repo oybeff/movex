@@ -1,3 +1,4 @@
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from app.models.balance import Balance, BalanceTransaction
 from app.schemas.balance import BalanceTransactionCreate, BalanceTransactionUpdate
@@ -281,6 +282,10 @@ def has_signup_bonus(db: Session, user_id: int) -> bool:
         .filter(
             BalanceTransaction.user_id == user_id,
             BalanceTransaction.type == TX_TYPE_BONUS,
+            # Admin sovg'asi (users.php → Sovg'a) ro'yxatdan o'tish sovg'asi
+            # emas: uni olgan odam tasdiqdan keyin ham o'z sovg'asini oladi.
+            or_(BalanceTransaction.payment_method.is_(None),
+                BalanceTransaction.payment_method != "admin"),
         )
         .first()
         is not None

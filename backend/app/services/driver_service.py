@@ -254,6 +254,12 @@ def _notify_review(db: Session, doc: DriverDocument, before: str) -> None:
         notification_service.create_localized(
             db, doc.user_id, "driver_approved", "driver_approved.title", "driver_approved.body", language=lang,
         )
+        # Sovg'a — tekshiruvdan KEYIN (26.11.2026). Bir marta: muddati o'tib
+        # qayta tasdiqlangan hujjat ikkinchi sovg'a bermaydi.
+        from app.services import balance_service
+        user = db.query(User).filter(User.id == doc.user_id).first()
+        if user is not None and not balance_service.has_signup_bonus(db, user.id):
+            balance_service.grant_signup_bonus(db, user)
 
 
 def delete_all(db: Session, user_id: int) -> None:

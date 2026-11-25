@@ -1,8 +1,9 @@
 """
 Ro'yxatdan o'tganlik uchun sovg'a.
 
-Qoida: sovg'a faqat TEXNIKA EGASIGA (role='owner') va faqat ro'yxatdan
-o'tganda beriladi. Mijoz hech narsa olmaydi.
+Qoida: sovg'a faqat TEXNIKA EGASIGA (role='owner') va 26.11.2026 dan
+ro'yxatdan o'tganda EMAS, admin haydovchi hujjatlarini tasdiqlaganda
+beriladi (bir marta). Mijoz hech narsa olmaydi.
 
 Miqdor va yoqilganligi app_settings da — adminkadan boshqariladi. Shuning
 uchun bu yerda ikkalasi ham tekshiriladi: yoqilganda beriladi, o'chirilganda
@@ -105,6 +106,38 @@ def register(role: str) -> tuple:
     return phone, {"Authorization": f"Bearer {login['access_token']}"}
 
 
+import base64 as _b64
+PNG = _b64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==")
+DOCS = ("id_front", "id_back", "license_front", "license_back", "tech_front", "tech_back",
+        "car_front", "car_back", "car_left", "car_right")
+
+
+def approve_docs(phone, hdr):
+    """Haydovchi hujjatlarini yuklaydi va admin sifatida hammasini tasdiqlaydi."""
+    from app.core.config import settings
+    secret = {"X-Admin-Secret": settings.ADMIN_INTERNAL_SECRET}
+    for kind in DOCS:
+        requests.post(f"{API}/drivers/me/documents/{kind}", headers=hdr,
+                      files={"file": ("doc.png", PNG, "image/png")})
+    q = requests.get(f"{API}/drivers/internal/queue", headers=secret).json()
+    uid = _user_id(phone)
+    me = next(i for i in q if i["user_id"] == uid)
+    for d in me["documents"]:
+        requests.post(f"{API}/drivers/internal/documents/{d['id']}/review", headers=secret,
+                      json={"approve": True})
+    return uid
+
+
+def _user_id(phone):
+    from sqlalchemy import text
+    from app.db.session import SessionLocal
+    db = SessionLocal()
+    try:
+        return db.execute(text("SELECT id FROM users WHERE phone=:p"), {"p": phone}).scalar()
+    finally:
+        db.close()
+
+
 def balance_of(hdr) -> Decimal:
     body = requests.get(f"{API}/balance/me", headers=hdr).json()
     return Decimal(str(body["balance"]))
@@ -178,10 +211,13 @@ def main():
         head("Sovg'a yoqilganda: texnika egasi oladi, mijoz olmaydi")
         _settings({"signup_bonus_enabled": "1", "signup_bonus_amount": "50000"})
 
-        _, owner = register("owner")
+        phone1, owner = register("owner")
+        check("ro'yxatdan o'tganda sovg'a YO'Q (tekshiruvgacha)",
+              balance_of(owner) == Decimal("0"), f"balans={balance_of(owner)}")
+        approve_docs(phone1, owner)
         owner_balance = balance_of(owner)
         check(
-            "egasining balansiga 50 000 tushdi",
+            "hujjatlar tasdiqlangach balansga 50 000 tushdi",
             owner_balance == Decimal("50000"),
             f"balans={owner_balance}",
         )
@@ -207,7 +243,8 @@ def main():
 
         head("Adminkadan boshqarish")
         _settings({"signup_bonus_amount": "25000"})
-        _, owner2 = register("owner")
+        phone2, owner2 = register("owner")
+        approve_docs(phone2, owner2)
         check(
             "summa sozlamadan olinadi (25 000)",
             balance_of(owner2) == Decimal("25000"),
@@ -215,16 +252,30 @@ def main():
         )
 
         _settings({"signup_bonus_enabled": "0"})
-        _, owner3 = register("owner")
+        phone3, owner3 = register("owner")
+        approve_docs(phone3, owner3)
         check(
             "o'chirilganda sovg'a berilmaydi",
             balance_of(owner3) == Decimal("0"),
             f"balans={balance_of(owner3)}",
         )
 
+        head("Qayta tasdiqlash ikkinchi sovg'a bermaydi")
+        _settings({"signup_bonus_enabled": "1", "signup_bonus_amount": "50000"})
+        from sqlalchemy import text as _t
+        from app.db.session import SessionLocal as _S
+        _db = _S()
+        _db.execute(_t("UPDATE driver_documents SET status='pending' WHERE user_id=:u AND kind='tech_front'"),
+                    {"u": _user_id(phone1)})
+        _db.commit(); _db.close()
+        approve_docs(phone1, owner)
+        check("qayta tasdiqdan keyin ham 50 000 (ikki marta emas)",
+              balance_of(owner) == Decimal("50000"), f"balans={balance_of(owner)}")
+
         head("Sovg'ani KARTAGA yechib bo'lmaydi")
         _settings({"signup_bonus_enabled": "1", "signup_bonus_amount": "50000"})
         phone4, owner4 = register("owner")
+        approve_docs(phone4, owner4)
 
         row = raw_balance(phone4)
         check("sovg'a alohida belgilandi",

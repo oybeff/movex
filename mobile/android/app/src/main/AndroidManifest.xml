@@ -47,6 +47,18 @@
                 <data android:scheme="movexgo" android:host="payment" />
             </intent-filter>
         </activity>
+        <!-- Push (FCM), когда приложение свёрнуто или закрыто: наша
+             одноцветная иконка и фирменный цвет вместо квадрата из иконки
+             приложения; канал тот же, что создаёт push_service.dart. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="movex_orders" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

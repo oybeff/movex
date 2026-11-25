@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Иконка уведомления: знак MoveX (пин с экскаватором), одним цветом.
+     Android берёт у маленькой иконки только прозрачность — полноцветная
+     иконка приложения превращалась в белый квадрат. Источник —
+     assets/brand/logo_mark.svg (80×104), сдвинут в квадрат 104×104.
+     Круг внутри пина вырезан (evenOdd), экскаватор нарисован в вырезе. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="104"
+    android:viewportHeight="104">
+    <group android:translateX="12">
+        <path
+            android:fillType="evenOdd"
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M40,104C32,94 0,68 0,40C0,29.39 4.21,19.22 11.72,11.72C19.22,4.21 29.39,0 40,0C50.61,0 60.78,4.21 68.28,11.72C75.79,19.22 80,29.39 80,40C80,68 48,94 40,104Z M40,69C56.02,69 69,56.02 69,40C69,23.98 56.02,11 40,11C23.98,11 11,23.98 11,40C11,56.02 23.98,69 40,69Z" />
+        <path
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="6"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M26,50L38,26L54,34" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M51,32C57,32 62,35 62,40V50C56,50 51,47 50,42L51,32Z" />
+        <path
+            android:fillType="evenOdd"
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M16,58V48H28L32,52V58H16Z M24,50H20C19.45,50 19,50.45 19,51V53C19,53.55 19.45,54 20,54H24C24.55,54 25,53.55 25,53V51C25,50.45 24.55,50 24,50Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M41,60H15C13.34,60 12,61.34 12,63C12,64.66 13.34,66 15,66H41C42.66,66 44,64.66 44,63C44,61.34 42.66,60 41,60Z" />
+    </group>
+</vector>
